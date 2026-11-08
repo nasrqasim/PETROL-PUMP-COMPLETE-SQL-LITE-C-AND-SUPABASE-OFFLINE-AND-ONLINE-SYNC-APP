@@ -1,18 +1,27 @@
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OilShop.Core.Data;
-using OilShop.Core.Models;
 using OilShop.Core.Services;
+using OilShop.Web.Models;
+using OilShop.Web.Services;
 
 namespace OilShop.Web.Controllers;
 
-/// <summary>Reports Center with categorized reports: Main Reports, Purchase Reports,
-/// Sale Reports, Inventory Reports, Financial Reports, and Salary Reports.</summary>
+/// <summary>Reports Center with complete ERP reports, multi-criteria filtering,
+/// live sorting, pagination, Excel/CSV export, and PDF print formatting.</summary>
 public class ReportsController : Controller
 {
     private readonly OilShopDbContext _db;
     private readonly ProfitLossService _pl;
-    public ReportsController(OilShopDbContext db, ProfitLossService pl) { _db = db; _pl = pl; }
+    private readonly ReportEngineService _reportEngine;
+
+    public ReportsController(OilShopDbContext db, ProfitLossService pl, ReportEngineService reportEngine)
+    {
+        _db = db;
+        _pl = pl;
+        _reportEngine = reportEngine;
+    }
 
     public static readonly (string Category, string Name)[] AllReports =
     {
@@ -88,54 +97,104 @@ public class ReportsController : Controller
         return View(result);
     }
 
-    public async Task<IActionResult> Generate(string name, DateTime? fromDate = null, DateTime? toDate = null)
+    [HttpGet]
+    public async Task<IActionResult> Generate([FromQuery] ReportFilterModel filter)
     {
-        ViewBag.ReportName = name;
-        ViewBag.GeneratedAt = DateTime.Now;
-        ViewBag.FromDate = fromDate?.ToString("yyyy-MM-dd");
-        ViewBag.ToDate = toDate?.ToString("yyyy-MM-dd");
+        if (string.IsNullOrWhiteSpace(filter.ReportName))
+            filter.ReportName = "Sale Summary";
 
-        // Filter dates if specified
-        var salesQuery = _db.SalesInvoices.Include(s => s.Customer).Include(s => s.Lines).Include(s => s.Staff).AsQueryable();
-        var purchaseQuery = _db.PurchaseInvoices.Include(p => p.Supplier).Include(p => p.Lines).AsQueryable();
-        var paymentQuery = _db.Payments.Include(p => p.Customer).Include(p => p.Supplier).AsQueryable();
-        var expenseQuery = _db.Expenses.AsQueryable();
+        var result = await _reportEngine.GenerateReportAsync(filter);
 
-        if (fromDate.HasValue)
-        {
-            salesQuery = salesQuery.Where(s => s.Date >= fromDate.Value.Date);
-            purchaseQuery = purchaseQuery.Where(p => p.Date >= fromDate.Value.Date);
-            paymentQuery = paymentQuery.Where(p => p.Date >= fromDate.Value.Date);
-            expenseQuery = expenseQuery.Where(e => e.Date >= fromDate.Value.Date);
-        }
-        if (toDate.HasValue)
-        {
-            salesQuery = salesQuery.Where(s => s.Date <= toDate.Value.Date);
-            purchaseQuery = purchaseQuery.Where(p => p.Date <= toDate.Value.Date);
-            paymentQuery = paymentQuery.Where(p => p.Date <= toDate.Value.Date);
-            expenseQuery = expenseQuery.Where(e => e.Date <= toDate.Value.Date);
-        }
-
-        ViewBag.SalesInvoices = await salesQuery.OrderByDescending(s => s.Date).ToListAsync();
-        ViewBag.PurchaseInvoices = await purchaseQuery.OrderByDescending(p => p.Date).ToListAsync();
-        ViewBag.Payments = await paymentQuery.OrderByDescending(p => p.Date).ToListAsync();
-        ViewBag.Expenses = await expenseQuery.OrderByDescending(e => e.Date).ToListAsync();
         ViewBag.Customers = await _db.Customers.OrderBy(c => c.Name).ToListAsync();
         ViewBag.Suppliers = await _db.Suppliers.OrderBy(s => s.Name).ToListAsync();
         ViewBag.Products = await _db.Products.OrderBy(p => p.Name).ToListAsync();
-        ViewBag.Staff = await _db.Staff.Include(s => s.Attendances).OrderBy(s => s.Name).ToListAsync();
-        ViewBag.Advances = await _db.Advances.OrderByDescending(a => a.Date).ToListAsync();
-        ViewBag.Loans = await _db.Loans.OrderByDescending(l => l.DateIssued).ToListAsync();
+        ViewBag.Staff = await _db.Staff.OrderBy(s => s.Name).ToListAsync();
+        ViewBag.Categories = await _db.Products.Select(p => p.Category).Where(c => c != null).Distinct().ToListAsync();
 
-        ViewBag.SalesCount = await salesQuery.CountAsync();
-        ViewBag.PurchaseCount = await purchaseQuery.CountAsync();
-        ViewBag.CustomerCount = await _db.Customers.CountAsync();
-        ViewBag.ProductCount = await _db.Products.CountAsync();
-        ViewBag.TotalRevenue = (await salesQuery.Select(i => i.GrandTotal).ToListAsync()).Sum();
-        ViewBag.TotalPurchases = (await purchaseQuery.Select(i => i.GrandTotal).ToListAsync()).Sum();
-        ViewBag.TotalReceivables = (await _db.Customers.Select(c => c.BalanceDue).ToListAsync()).Sum();
-        ViewBag.TotalPayables = (await _db.Suppliers.Select(s => s.BalanceDue).ToListAsync()).Sum();
+        return View(result);
+    }
 
-        return View();
+    [HttpGet]
+    public async Task<IActionResult> ExportCsv([FromQuery] ReportFilterModel filter)
+    {
+        // Don't paginate for file export
+        filter.Page = 1;
+        filter.PageSize = 10000;
+
+        var result = await _reportEngine.GenerateReportAsync(filter);
+        var sb = new StringBuilder();
+
+        // Header info
+        sb.AppendLine($"Report: \"{result.ReportName}\"");
+        sb.AppendLine($"Category: \"{result.ReportCategory}\"");
+        sb.AppendLine($"Generated: \"{result.GeneratedAt:yyyy-MM-dd HH:mm:ss}\"");
+        sb.AppendLine();
+
+        // Columns
+        sb.AppendLine(string.Join(",", result.Columns.Select(c => $"\"{c.Title.Replace("\"", "\"\"")}\"")));
+
+        // Rows
+        foreach (var row in result.Rows)
+        {
+            var cells = result.Columns.Select(c =>
+            {
+                var text = row.ContainsKey(c.Key) ? row[c.Key].Text : "";
+                return $"\"{text.Replace("\"", "\"\"")}\"";
+            });
+            sb.AppendLine(string.Join(",", cells));
+        }
+
+        var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(sb.ToString())).ToArray();
+        var fileName = $"{result.ReportName.Replace(" ", "_")}_{DateTime.Now:yyyyMMddHHmmss}.csv";
+        return File(bytes, "text/csv", fileName);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ExportExcel([FromQuery] ReportFilterModel filter)
+    {
+        filter.Page = 1;
+        filter.PageSize = 10000;
+
+        var result = await _reportEngine.GenerateReportAsync(filter);
+        var sb = new StringBuilder();
+
+        sb.AppendLine("<html xmlns:o=\"urn:schemas-microsoft-com:office:office\" xmlns:x=\"urn:schemas-microsoft-com:office:excel\" xmlns=\"http://www.w3.org/TR/REC-html40\">");
+        sb.AppendLine("<head><meta charset=\"utf-8\"/><style>table{border-collapse:collapse;} th{background:#1e3a8a;color:white;padding:6px;border:1px solid #ddd;} td{padding:5px;border:1px solid #ddd;} .num{mso-number-format:\"\\#\\,\\#\\#0\";text-align:right;}</style></head>");
+        sb.AppendLine("<body>");
+        sb.AppendLine($"<h2>{result.ReportName}</h2>");
+        sb.AppendLine($"<p>Generated: {result.GeneratedAt:dd-MMM-yyyy hh:mm tt}</p>");
+
+        sb.AppendLine("<table>");
+        sb.AppendLine("<thead><tr>");
+        foreach (var col in result.Columns)
+        {
+            sb.AppendLine($"<th>{col.Title}</th>");
+        }
+        sb.AppendLine("</tr></thead>");
+        sb.AppendLine("<tbody>");
+
+        foreach (var row in result.Rows)
+        {
+            sb.AppendLine("<tr>");
+            foreach (var col in result.Columns)
+            {
+                var cell = row.ContainsKey(col.Key) ? row[col.Key] : null;
+                var val = cell?.Text ?? "";
+                if (col.IsNumeric && cell?.RawNumber != null)
+                {
+                    sb.AppendLine($"<td class=\"num\">{cell.RawNumber.Value}</td>");
+                }
+                else
+                {
+                    sb.AppendLine($"<td>{val}</td>");
+                }
+            }
+            sb.AppendLine("</tr>");
+        }
+        sb.AppendLine("</tbody></table></body></html>");
+
+        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+        var fileName = $"{result.ReportName.Replace(" ", "_")}_{DateTime.Now:yyyyMMddHHmmss}.xls";
+        return File(bytes, "application/vnd.ms-excel", fileName);
     }
 }

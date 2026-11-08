@@ -26,6 +26,7 @@ builder.Services.AddScoped<ProfitLossService>();
 builder.Services.AddScoped<ReturnService>();
 builder.Services.AddScoped<AdvanceLoanService>();
 builder.Services.AddScoped<SupabaseSyncService>();
+builder.Services.AddScoped<OilShop.Web.Services.ReportEngineService>();
 
 builder.Services.AddControllersWithViews();
 
