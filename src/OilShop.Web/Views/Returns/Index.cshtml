@@ -1,0 +1,29 @@
+@model List<Return>
+@{
+    ViewData["Title"] = "Returns Management";
+}
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+    <div class="card border-l-4 border-green-600"><div class="text-sm text-slate-500">Total Sales Returns</div><div class="text-2xl font-bold text-green-600">Rs. @(((decimal)ViewBag.TotalSalesReturns).ToString("N0"))</div></div>
+    <div class="card border-l-4 border-red-600"><div class="text-sm text-slate-500">Total Purchase Returns</div><div class="text-2xl font-bold text-red-600">Rs. @(((decimal)ViewBag.TotalPurchaseReturns).ToString("N0"))</div></div>
+</div>
+<div class="card">
+    <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-lg">Returns Management</h2>
+        <a class="btn" asp-action="Create">+ New Return</a>
+    </div>
+    <table class="tbl">
+        <thead><tr><th>Return No.</th><th>Date</th><th>Type</th><th>Customer / Supplier</th><th>Reason</th><th class="text-right">Refund</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var r in Model)
+        {
+            <tr>
+                <td>@r.ReturnNumber</td><td>@r.Date.ToString("dd-MMM-yyyy")</td><td>@r.Type</td>
+                <td>@(r.Customer?.Name ?? r.Supplier?.Name)</td><td>@r.Reason</td>
+                <td class="text-right font-semibold">Rs. @r.RefundAmount.ToString("N0")</td>
+                <td>@r.Status</td>
+                <td><a class="text-blue-700 underline" asp-action="Slip" asp-route-id="@r.Id">Print Slip</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>

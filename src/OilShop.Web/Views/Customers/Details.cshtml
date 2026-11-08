@@ -1,0 +1,34 @@
+@model Customer
+@{
+    ViewData["Title"] = $"Customer Ledger — {Model.Name}";
+}
+<div class="grid md:grid-cols-3 gap-4 mb-4">
+    <div class="card"><div class="text-sm text-slate-500">Balance Due</div><div class="text-2xl font-bold text-red-600">Rs. @Model.BalanceDue.ToString("N0")</div></div>
+    <div class="card"><div class="text-sm text-slate-500">Advance</div><div class="text-2xl font-bold text-green-600">Rs. @Model.Advance.ToString("N0")</div></div>
+    <div class="card"><div class="text-sm text-slate-500">Phone</div><div class="text-xl font-bold">@Model.Phone</div>
+        <a class="btn btn-green mt-2" target="_blank" href="@OilShop.Core.Services.WhatsAppService.BalanceLink(Model.Phone, "Roonjha Oil Traders", Model.Name, Model.BalanceDue)">WhatsApp Balance</a>
+    </div>
+</div>
+<div class="card mb-4">
+    <h3 class="font-bold mb-2">Receive Payment (Cash / Bank Receipt)</h3>
+    <form asp-action="ReceivePayment" method="post" class="flex flex-wrap gap-2">
+        <input type="hidden" name="id" value="@Model.Id" />
+        <input class="input max-w-xs" type="number" step="0.01" min="0" name="amount" placeholder="Amount Rs." required />
+        <select class="input max-w-xs" name="mode"><option>Cash</option><option>Bank</option></select>
+        <button class="btn btn-green" type="submit">Receive Payment</button>
+    </form>
+    <p class="text-xs text-slate-500 mt-2">Overpayment automatically becomes advance.</p>
+</div>
+<div class="card">
+    <h3 class="font-bold mb-2">Sales Invoices</h3>
+    <table class="tbl">
+        <thead><tr><th>Invoice</th><th>Date</th><th>Mode</th><th class="text-right">Total</th><th class="text-right">Paid</th></tr></thead>
+        <tbody>
+        @foreach (var i in Model.SalesInvoices.OrderByDescending(x => x.Date))
+        {
+            <tr><td>@i.InvoiceNumber</td><td>@i.Date.ToString("dd-MMM-yyyy")</td><td>@i.PaymentMode</td>
+            <td class="text-right">Rs. @i.GrandTotal.ToString("N0")</td><td class="text-right">Rs. @i.PaidAmount.ToString("N0")</td></tr>
+        }
+        </tbody>
+    </table>
+</div>

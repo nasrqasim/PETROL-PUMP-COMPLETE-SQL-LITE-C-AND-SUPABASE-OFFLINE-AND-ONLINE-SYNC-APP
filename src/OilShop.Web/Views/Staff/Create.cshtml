@@ -1,0 +1,86 @@
+@model StaffMember
+@{
+    ViewData["Title"] = "Add Staff Member";
+    var roles = (List<Role>)ViewBag.Roles;
+}
+<div class="card max-w-2xl mx-auto border-t-4 border-green-600">
+    <h2 class="font-bold text-lg mb-3 text-slate-800">New Staff Registration</h2>
+    <form asp-action="Create" method="post" enctype="multipart/form-data" class="space-y-4">
+        <div class="grid md:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-sm font-medium mb-1">Full Name</label>
+                <input class="input w-full" asp-for="Name" placeholder="e.g. Ali Ahmed" required />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">CNIC Number</label>
+                <input class="input w-full" asp-for="Cnic" placeholder="e.g. 35201-1234567-1" />
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-sm font-medium mb-1">Designation</label>
+                <input class="input w-full" asp-for="Designation" placeholder="e.g. Sales Manager, Cashier, Operator" required />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Department</label>
+                <input class="input w-full" asp-for="Department" placeholder="Sales / Inventory / Accounts" required />
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-3">
+            <div>
+                <label class="block text-sm font-medium mb-1">Contact Phone</label>
+                <input class="input w-full" asp-for="ContactNumber" required />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Monthly Salary (Rs.)</label>
+                <input class="input w-full" asp-for="Salary" type="number" step="0.01" required />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Joining Date</label>
+                <input class="input w-full" asp-for="JoiningDate" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-sm font-medium mb-1">Assign System Role</label>
+                <select class="input w-full" asp-for="RoleId" required>
+                    @foreach (var r in roles)
+                    {
+                        <option value="@r.Id">@r.Name</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Address</label>
+                <input class="input w-full" asp-for="Address" placeholder="Residential Address" />
+            </div>
+        </div>
+
+        <!-- CNIC & Photo Document Upload Section -->
+        <div class="border rounded-lg p-3 bg-slate-50 space-y-3">
+            <h3 class="font-bold text-sm text-[#1e3a8a]">Documents &amp; CNIC Upload</h3>
+            <div class="grid md:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Staff Photo</label>
+                    <input class="input w-full text-xs" type="file" name="photoFile" accept="image/*" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">CNIC Front Side</label>
+                    <input class="input w-full text-xs" type="file" name="cnicFrontFile" accept="image/*,.pdf" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">CNIC Back Side</label>
+                    <input class="input w-full text-xs" type="file" name="cnicBackFile" accept="image/*,.pdf" />
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+            <button class="btn btn-green px-6" type="submit">Register Staff</button>
+            <a class="btn" asp-action="Index">Cancel</a>
+        </div>
+    </form>
+</div>

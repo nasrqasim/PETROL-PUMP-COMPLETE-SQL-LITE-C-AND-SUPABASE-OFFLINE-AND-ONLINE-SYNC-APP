@@ -1,0 +1,47 @@
+@model Expense
+@{
+    ViewData["Title"] = "Edit Expense";
+}
+<div class="card max-w-lg mx-auto border-t-4 border-blue-600">
+    <h2 class="font-bold text-lg mb-3 text-slate-800">Edit Expense entry #EXP-@Model.Id.ToString("D4")</h2>
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post" class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium mb-1">Date</label>
+            <input class="input w-full" asp-for="Date" type="date" value="@Model.Date.ToString("yyyy-MM-dd")" required />
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Expense Category</label>
+            <input class="input w-full" asp-for="Category" list="catSuggestions" required />
+            <datalist id="catSuggestions">
+                <option value="Utilities Bill" />
+                <option value="Rent Expense" />
+                <option value="Fuel Cost" />
+                <option value="Staff Salaries" />
+                <option value="Stationery & Printing" />
+                <option value="Refreshment / Tea" />
+                <option value="Repair & Maintenance" />
+                <option value="Purchase Cost" />
+                <option value="Miscellaneous" />
+            </datalist>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Payment Method</label>
+            <select class="input w-full" asp-for="PaidFrom">
+                <option value="Cash">Cash</option>
+                <option value="Bank">Bank</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Amount (Rs.)</label>
+            <input class="input w-full font-bold text-lg text-red-600" asp-for="Amount" type="number" step="0.01" min="1" required />
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Remarks / Note</label>
+            <input class="input w-full" asp-for="Remarks" />
+        </div>
+        <div class="flex gap-2 pt-2">
+            <button class="btn btn-green px-6 py-2" type="submit">Update Expense</button>
+            <a asp-action="Index" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>

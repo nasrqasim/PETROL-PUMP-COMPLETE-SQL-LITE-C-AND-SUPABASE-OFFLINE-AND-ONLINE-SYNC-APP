@@ -1,0 +1,62 @@
+@model PurchaseInvoice
+@{
+    ViewData["Title"] = "Purchase Invoice Details";
+}
+<div class="card max-w-2xl mx-auto">
+    <div class="flex justify-between items-center mb-4 pb-2 border-b">
+        <div>
+            <span class="text-xs text-slate-500 uppercase font-semibold">Purchase Voucher</span>
+            <h2 class="text-xl font-bold text-[#1e3a8a]">@Model.InvoiceNumber</h2>
+        </div>
+        <div class="text-right">
+            <div class="text-xs text-slate-500">Date</div>
+            <div class="font-bold">@Model.Date.ToString("dd-MMM-yyyy")</div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-4 text-sm bg-slate-50 p-3 rounded">
+        <div>
+            <div class="text-xs text-slate-500">Supplier</div>
+            <div class="font-bold text-base text-slate-800">@(Model.Supplier?.Name ?? "Vendor")</div>
+            <div class="text-xs text-slate-500">Phone: @Model.Supplier?.Phone</div>
+        </div>
+        <div>
+            <div class="text-xs text-slate-500">Payment Mode</div>
+            <div class="font-bold text-base">@Model.PaymentMode</div>
+            <div class="text-xs text-slate-500">Remarks: @Model.Remarks</div>
+        </div>
+    </div>
+
+    <table class="tbl mb-4">
+        <thead>
+            <tr>
+                <th>Product Item</th>
+                <th class="text-right">Qty</th>
+                <th class="text-right">Unit Price</th>
+                <th class="text-right">Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var l in Model.Lines)
+            {
+                <tr>
+                    <td class="font-medium">@l.ProductName</td>
+                    <td class="text-right">@l.Quantity</td>
+                    <td class="text-right">Rs. @l.UnitPrice.ToString("N0")</td>
+                    <td class="text-right font-bold">Rs. @((l.Quantity * l.UnitPrice).ToString("N0"))</td>
+                </tr>
+            }
+        </tbody>
+        <tfoot>
+            <tr class="font-bold border-t">
+                <td colspan="3" class="text-right">Grand Total:</td>
+                <td class="text-right text-lg text-slate-900">Rs. @Model.GrandTotal.ToString("N0")</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="flex gap-2 justify-end">
+        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn">Edit Invoice</a>
+        <a asp-action="Index" class="btn">Back to Purchases</a>
+    </div>
+</div>

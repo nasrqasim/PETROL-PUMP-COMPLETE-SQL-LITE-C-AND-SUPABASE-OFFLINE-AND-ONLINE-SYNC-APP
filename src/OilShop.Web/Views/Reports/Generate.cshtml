@@ -1,0 +1,304 @@
+@{
+    string reportName = ViewBag.ReportName as string ?? "Report";
+    ViewData["Title"] = reportName;
+    var sales = (List<OilShop.Core.Models.SalesInvoice>)ViewBag.SalesInvoices;
+    var purchases = (List<OilShop.Core.Models.PurchaseInvoice>)ViewBag.PurchaseInvoices;
+    var payments = (List<OilShop.Core.Models.Payment>)ViewBag.Payments;
+    var expenses = (List<OilShop.Core.Models.Expense>)ViewBag.Expenses;
+    var customers = (List<OilShop.Core.Models.Customer>)ViewBag.Customers;
+    var suppliers = (List<OilShop.Core.Models.Supplier>)ViewBag.Suppliers;
+    var products = (List<OilShop.Core.Models.Product>)ViewBag.Products;
+    var staff = (List<OilShop.Core.Models.StaffMember>)ViewBag.Staff;
+    var advances = (List<OilShop.Core.Models.Advance>)ViewBag.Advances;
+    var loans = (List<OilShop.Core.Models.Loan>)ViewBag.Loans;
+}
+<div class="space-y-4">
+    <!-- Header banner -->
+    <div class="card flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+        <div>
+            <div class="text-xs text-blue-700 font-bold uppercase tracking-wider">ROONJHA DEVELOPERS OIL SHOP</div>
+            <h1 class="text-2xl font-black text-slate-800">@reportName</h1>
+            <p class="text-xs text-slate-500">Generated on @(((DateTime)ViewBag.GeneratedAt).ToString("dd-MMM-yyyy hh:mm tt"))</p>
+        </div>
+        <div class="flex gap-2 no-print">
+            <button class="btn btn-green text-xs" onclick="window.print()">🖨️ Print / Export PDF</button>
+            <a class="btn text-xs" asp-action="Index">← Back to Reports</a>
+        </div>
+    </div>
+
+    <!-- Date Filter for Report -->
+    <div class="card bg-slate-50 border no-print">
+        <form method="get" class="grid md:grid-cols-4 gap-3 items-end">
+            <input type="hidden" name="name" value="@reportName" />
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">From Date</label>
+                <input class="input w-full text-sm" type="date" name="fromDate" value="@ViewBag.FromDate" />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">To Date</label>
+                <input class="input w-full text-sm" type="date" name="toDate" value="@ViewBag.ToDate" />
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="btn w-full text-sm">Update Report</button>
+                <a asp-action="Generate" asp-route-name="@reportName" class="btn text-sm">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Dynamic report content based on reportName -->
+    <div class="card">
+        @if (reportName.Contains("Sale") || reportName.Contains("POS") || reportName.Contains("SO Tracking") || reportName.Contains("Collection") || reportName.Contains("Receivable") || reportName.Contains("Salesperson") || reportName.Contains("Incentive") || reportName.Contains("Customer Balances"))
+        {
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-base text-slate-800">Sales Records &amp; Breakdown</h3>
+                <span class="text-xs font-bold text-green-700">Total Sales: Rs. @(((decimal)ViewBag.TotalRevenue).ToString("N0"))</span>
+            </div>
+            @if (reportName == "Customer Balances" || reportName == "Accounts Receivable Aging")
+            {
+                <table class="tbl text-sm">
+                    <thead>
+                        <tr><th>Customer Name</th><th>Contact</th><th>Address</th><th class="text-right">Advance Paid</th><th class="text-right">Outstanding Balance</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in customers)
+                        {
+                            <tr>
+                                <td class="font-bold text-blue-900">@c.Name</td>
+                                <td>@c.Phone</td>
+                                <td class="text-xs text-slate-600">@c.Address</td>
+                                <td class="text-right text-slate-600">Rs. @c.Advance.ToString("N0")</td>
+                                <td class="text-right font-bold text-red-600">Rs. @c.BalanceDue.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else if (reportName == "Salesperson Performance" || reportName == "Salesman Incentive")
+            {
+                <table class="tbl text-sm">
+                    <thead>
+                        <tr><th>Staff Member</th><th>Emp ID</th><th>Department</th><th>Designation</th><th class="text-right">Invoices Made</th><th class="text-right">Total Sales</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in staff)
+                        {
+                            var staffInvoices = sales.Where(i => i.StaffId == s.Id).ToList();
+                            var total = staffInvoices.Sum(i => i.GrandTotal);
+                            <tr>
+                                <td class="font-bold text-blue-900">@s.Name</td>
+                                <td class="font-mono text-xs">@s.EmployeeId</td>
+                                <td>@s.Department</td>
+                                <td>@s.Designation</td>
+                                <td class="text-right">@staffInvoices.Count</td>
+                                <td class="text-right font-bold text-green-700">Rs. @total.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <table class="tbl text-sm">
+                    <thead>
+                        <tr><th>Invoice No.</th><th>Date</th><th>Customer</th><th>Mode</th><th>Staff</th><th class="text-right">Subtotal</th><th class="text-right">Discount</th><th class="text-right">Grand Total</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in sales)
+                        {
+                            <tr>
+                                <td class="font-mono font-medium text-blue-800">@s.InvoiceNumber</td>
+                                <td>@s.Date.ToString("dd-MMM-yyyy")</td>
+                                <td class="font-medium">@(s.Customer?.Name ?? "Walk-in")</td>
+                                <td><span class="px-1.5 py-0.5 rounded text-xs bg-slate-100">@s.PaymentMode</span></td>
+                                <td class="text-xs text-slate-600">@(s.Staff?.Name ?? "—")</td>
+                                <td class="text-right">Rs. @s.SubTotal.ToString("N0")</td>
+                                <td class="text-right text-red-600">Rs. @s.Discount.ToString("N0")</td>
+                                <td class="text-right font-bold text-slate-900">Rs. @s.GrandTotal.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+        else if (reportName.Contains("Purchase") || reportName.Contains("PO Tracking") || reportName.Contains("Vendor") || reportName.Contains("Payable"))
+        {
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-base text-slate-800">Purchase Records &amp; Breakdown</h3>
+                <span class="text-xs font-bold text-amber-700">Total Purchases: Rs. @(((decimal)ViewBag.TotalPurchases).ToString("N0"))</span>
+            </div>
+            @if (reportName == "Vendor Balances" || reportName == "Accounts Payable Aging")
+            {
+                <table class="tbl text-sm">
+                    <thead>
+                        <tr><th>Vendor / Company</th><th>Contact</th><th>Address</th><th class="text-right">Advance Given</th><th class="text-right">Payable Balance</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in suppliers)
+                        {
+                            <tr>
+                                <td class="font-bold text-blue-900">@s.Name</td>
+                                <td>@s.Phone</td>
+                                <td class="text-xs text-slate-600">@s.Address</td>
+                                <td class="text-right text-slate-600">Rs. @s.Advance.ToString("N0")</td>
+                                <td class="text-right font-bold text-red-600">Rs. @s.BalanceDue.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <table class="tbl text-sm">
+                    <thead>
+                        <tr><th>Invoice No.</th><th>Date</th><th>Supplier</th><th>Mode</th><th class="text-right">Subtotal</th><th class="text-right">Tax</th><th class="text-right">Grand Total</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var p in purchases)
+                        {
+                            <tr>
+                                <td class="font-mono font-medium text-amber-800">@p.InvoiceNumber</td>
+                                <td>@p.Date.ToString("dd-MMM-yyyy")</td>
+                                <td class="font-medium">@(p.Supplier?.Name ?? "Vendor")</td>
+                                <td><span class="px-1.5 py-0.5 rounded text-xs bg-slate-100">@p.PaymentMode</span></td>
+                                <td class="text-right">Rs. @p.SubTotal.ToString("N0")</td>
+                                <td class="text-right">Rs. @p.Tax.ToString("N0")</td>
+                                <td class="text-right font-bold text-slate-900">Rs. @p.GrandTotal.ToString("N0")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        }
+        else if (reportName.Contains("Inventory") || reportName.Contains("Stock") || reportName.Contains("Serial"))
+        {
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-base text-slate-800">Inventory Stock &amp; Balances</h3>
+                <span class="text-xs font-mono bg-purple-100 text-purple-800 px-2 py-0.5 rounded">Total Items: @products.Count</span>
+            </div>
+            <table class="tbl text-sm">
+                <thead>
+                    <tr><th>Product Name</th><th>Category</th><th>Unit</th><th class="text-right">Purchase Price</th><th class="text-right">Sale Price</th><th class="text-right">Stock Quantity</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var pr in products)
+                    {
+                        <tr>
+                            <td class="font-bold text-slate-900">@pr.Name</td>
+                            <td>@pr.Category</td>
+                            <td>@pr.Unit</td>
+                            <td class="text-right text-slate-600">Rs. @pr.PurchasePrice.ToString("N0")</td>
+                            <td class="text-right font-semibold">Rs. @pr.SalePrice.ToString("N0")</td>
+                            <td class="text-right font-bold">@pr.StockQuantity @pr.Unit</td>
+                            <td>
+                                <span class="px-2 py-0.5 rounded text-xs font-semibold @(pr.StockQuantity <= pr.LowStockAlert ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800")">
+                                    @(pr.StockQuantity <= pr.LowStockAlert ? "Low Stock" : "Sufficient")
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else if (reportName.Contains("Salary") || reportName.Contains("Advance") || reportName.Contains("Loan"))
+        {
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="font-bold text-base text-slate-800">Staff Salary, Loan &amp; Advance Register</h3>
+                <span class="text-xs bg-slate-100 px-2 py-0.5 rounded font-mono">@staff.Count Active Personnel</span>
+            </div>
+            <table class="tbl text-sm mb-4">
+                <thead>
+                    <tr><th>Employee ID</th><th>Staff Name</th><th>Designation</th><th>Department</th><th>Joining Date</th><th class="text-right">Monthly Salary</th><th>Status</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var st in staff)
+                    {
+                        <tr>
+                            <td class="font-mono text-xs font-semibold">@st.EmployeeId</td>
+                            <td class="font-bold">@st.Name</td>
+                            <td>@st.Designation</td>
+                            <td>@st.Department</td>
+                            <td>@st.JoiningDate.ToString("dd-MMM-yyyy")</td>
+                            <td class="text-right font-bold text-slate-900">Rs. @st.Salary.ToString("N0")</td>
+                            <td>
+                                <span class="px-2 py-0.5 rounded text-xs font-semibold @(st.IsActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")">
+                                    @(st.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            @if (reportName.Contains("Loan") || reportName.Contains("Advance"))
+            {
+                <h4 class="font-bold text-sm mb-2 text-slate-700">Advances &amp; Loans Issued</h4>
+                <div class="grid md:grid-cols-2 gap-3">
+                    <div class="border rounded p-3 bg-slate-50">
+                        <div class="font-bold text-xs uppercase mb-2 text-slate-600">Customer Advances</div>
+                        <ul class="text-xs space-y-1">
+                            @foreach (var a in advances)
+                            {
+                                <li class="flex justify-between"><span>@a.CustomerName (@a.Date.ToString("dd-MMM"))</span><span class="font-bold text-green-700">Rs. @a.Amount.ToString("N0")</span></li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="border rounded p-3 bg-slate-50">
+                        <div class="font-bold text-xs uppercase mb-2 text-slate-600">Loans Issued</div>
+                        <ul class="text-xs space-y-1">
+                            @foreach (var l in loans)
+                            {
+                                <li class="flex justify-between"><span>@l.CustomerName (Due: @l.RepaymentDueDate.ToString("dd-MMM"))</span><span class="font-bold text-red-700">Rs. @l.LoanAmount.ToString("N0")</span></li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            }
+        }
+        else
+        {
+            <!-- General Financial / Voucher / Journal Summary -->
+            <div class="mb-4">
+                <h3 class="font-bold text-base text-slate-800 mb-2">Financial Overview &amp; Journal Log</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    <div class="p-3 bg-slate-50 rounded border">
+                        <div class="text-xs text-slate-500">Total Sales</div>
+                        <div class="text-base font-bold text-green-700">Rs. @(((decimal)ViewBag.TotalRevenue).ToString("N0"))</div>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded border">
+                        <div class="text-xs text-slate-500">Total Purchases</div>
+                        <div class="text-base font-bold text-amber-700">Rs. @(((decimal)ViewBag.TotalPurchases).ToString("N0"))</div>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded border">
+                        <div class="text-xs text-slate-500">Total Receivables</div>
+                        <div class="text-base font-bold text-blue-700">Rs. @(((decimal)ViewBag.TotalReceivables).ToString("N0"))</div>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded border">
+                        <div class="text-xs text-slate-500">Total Payables</div>
+                        <div class="text-base font-bold text-red-700">Rs. @(((decimal)ViewBag.TotalPayables).ToString("N0"))</div>
+                    </div>
+                </div>
+            </div>
+
+            <h4 class="font-bold text-sm mb-2 text-slate-700">Transaction Vouchers Log</h4>
+            <table class="tbl text-sm">
+                <thead>
+                    <tr><th>Voucher #</th><th>Date</th><th>Type</th><th>Party</th><th>Remarks</th><th class="text-right">Amount</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var pay in payments)
+                    {
+                        var isReceipt = pay.Type.ToString().Contains("Receipt");
+                        <tr>
+                            <td class="font-mono text-xs font-semibold">@pay.VoucherNumber</td>
+                            <td>@pay.Date.ToString("dd-MMM-yyyy")</td>
+                            <td><span class="px-1.5 py-0.5 rounded text-xs @(isReceipt ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")">@pay.Type</span></td>
+                            <td>@(pay.PartyType == OilShop.Core.Models.PartyType.Customer ? pay.Customer?.Name : (pay.PartyType == OilShop.Core.Models.PartyType.Supplier ? pay.Supplier?.Name : pay.PartyType.ToString()))</td>
+                            <td class="text-xs text-slate-600">@pay.Remarks</td>
+                            <td class="text-right font-bold @(isReceipt ? "text-green-600" : "text-red-600")">Rs. @pay.Amount.ToString("N0")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+    </div>
+</div>

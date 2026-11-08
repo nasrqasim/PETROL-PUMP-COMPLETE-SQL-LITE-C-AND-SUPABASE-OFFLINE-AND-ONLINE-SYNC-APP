@@ -1,0 +1,161 @@
+@model ShopSettings
+@{
+    ViewData["Title"] = "Settings";
+    var users = (List<OilShop.Core.Models.AppUser>)ViewBag.Users;
+    var roles = (List<OilShop.Core.Models.Role>)ViewBag.Roles;
+}
+<div class="space-y-6">
+    <div class="card border-l-4 border-[#1e3a8a]">
+        <div class="flex justify-between items-center mb-4 pb-2 border-b">
+            <div>
+                <h2 class="font-bold text-xl text-[#1e3a8a]">User Login &amp; Role Management</h2>
+                <p class="text-xs text-slate-500">Create login IDs and assign roles (permissions configured on Roles &amp; Permissions page)</p>
+            </div>
+            <a asp-controller="Roles" asp-action="Index" class="btn text-xs">Manage Roles &amp; Permissions →</a>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6">
+            <!-- Add User Form -->
+            <div class="bg-slate-50 p-4 rounded-lg border">
+                <h3 class="font-bold text-sm mb-3 text-slate-800">+ Add New Login ID</h3>
+                <form asp-action="AddUser" method="post" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Username / Login ID</label>
+                        <input class="input w-full" type="text" name="username" placeholder="e.g. cashier2" required />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Password</label>
+                        <input class="input w-full" type="password" name="password" placeholder="••••••••" required />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
+                        <input class="input w-full" type="text" name="fullName" placeholder="e.g. Ali Ahmed" required />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">Assign Role</label>
+                        <select class="input w-full" name="roleId" required>
+                            @foreach (var r in roles)
+                            {
+                                <option value="@r.Id">@r.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-green w-full py-2">Create Login Account</button>
+                </form>
+            </div>
+
+            <!-- Existing Users Table -->
+            <div class="md:col-span-2">
+                <h3 class="font-bold text-sm mb-3 text-slate-800">Existing System Accounts</h3>
+                <table class="tbl">
+                    <thead>
+                        <tr>
+                            <th>Login ID</th>
+                            <th>Full Name</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var u in users)
+                        {
+                            <tr>
+                                <td class="font-bold text-[#1e3a8a]">@u.Username</td>
+                                <td>@u.FullName</td>
+                                <td>
+                                    <form asp-action="UpdateUserRole" method="post" class="flex items-center gap-1">
+                                        <input type="hidden" name="userId" value="@u.Id" />
+                                        <select class="input py-0.5 text-xs" name="roleId" onchange="this.form.submit()">
+                                            @foreach (var r in roles)
+                                            {
+                                                if (u.RoleId == r.Id)
+                                                {
+                                                    <option value="@r.Id" selected>@r.Name</option>
+                                                }
+                                                else
+                                                {
+                                                    <option value="@r.Id">@r.Name</option>
+                                                }
+                                            }
+                                        </select>
+                                        <input type="hidden" name="isActive" value="@(u.IsActive ? "true" : "false")" />
+                                    </form>
+                                </td>
+                                <td>
+                                    <span class="px-2 py-0.5 rounded text-xs font-bold @(u.IsActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")">
+                                        @(u.IsActive ? "Active" : "Disabled")
+                                    </span>
+                                </td>
+                                <td>
+                                    @if (!u.Username.Equals("admin", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <form asp-action="DeleteUser" method="post" onsubmit="return confirm('Delete this login?');" class="inline">
+                                            <input type="hidden" name="userId" value="@u.Id" />
+                                            <button type="submit" class="text-xs text-red-600 hover:underline">Delete</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+        <div class="card">
+            <h2 class="font-bold text-lg mb-3">Shop Profile Settings</h2>
+            <form asp-action="Index" method="post" enctype="multipart/form-data" class="space-y-3">
+                <div><label class="text-sm font-medium">Shop Name</label><input class="input" asp-for="ShopName" /></div>
+                <div><label class="text-sm font-medium">Shop Address</label><input class="input" asp-for="ShopAddress" /></div>
+                <div><label class="text-sm font-medium">Phone Number</label><input class="input" asp-for="PhoneNumber" /></div>
+                <div><label class="text-sm font-medium">Contact Number</label><input class="input" asp-for="ContactNumber" /></div>
+                <div><label class="text-sm font-medium">Email Address</label><input class="input" asp-for="EmailAddress" /></div>
+                <div><label class="text-sm font-medium">Tax Registration Number (NTN)</label><input class="input" asp-for="TaxRegistrationNumber" /></div>
+                <div>
+                    <label class="text-sm font-medium">Theme Color</label>
+                    <select class="input" asp-for="ThemeColor">
+                        <option>Navy Blue</option><option>Dark Green</option><option>Black</option><option>Maroon</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-sm font-medium">Logo Upload</label>
+                    @if (!string.IsNullOrEmpty(Model.LogoPath)) { <div class="text-sm text-slate-600 mb-1">Current logo: @Model.LogoPath</div> }
+                    <input class="input" type="file" name="logoFile" accept="image/*" />
+                </div>
+                <div><label class="text-sm font-medium">Invoice Header Text</label><input class="input" asp-for="InvoiceHeaderText" /></div>
+                <div><label class="text-sm font-medium">Receipt Footer Text</label><input class="input" asp-for="ReceiptFooterText" /></div>
+                <div class="flex gap-2 pt-2">
+                    <button class="btn" type="submit">Save Settings</button>
+                </div>
+            </form>
+            <form asp-action="ResetDefaults" method="post" class="mt-4 pt-3 border-t">
+                <button class="btn btn-red text-xs" type="submit" onclick="return confirm('Reset to defaults?')">Reset Defaults</button>
+            </form>
+        </div>
+        <div class="card">
+            <h2 class="font-bold text-lg mb-3">Shop Branding Preview</h2>
+            <div class="border rounded p-4 text-center">
+                @if (!string.IsNullOrEmpty(Model.LogoPath))
+                {
+                    <img src="@Model.LogoPath" alt="Shop logo" class="mx-auto max-h-32 mb-2" />
+                }
+                else
+                {
+                    <div class="font-black text-2xl text-[#1e3a8a]">R ROONJHA DEVELOPERS</div>
+                }
+                <p class="text-sm text-slate-500 mt-2">Logo displayed on printed invoices and system header.</p>
+                <p class="text-sm mt-2">Theme Color: <strong>@Model.ThemeColor</strong></p>
+            </div>
+            <h3 class="font-bold mt-4 mb-2">Invoice Header Preview</h3>
+            <div class="border rounded p-3 text-sm bg-slate-50">
+                <div class="font-bold text-base text-[#1e3a8a]">@Model.ShopName</div>
+                <div class="text-slate-600">@Model.ShopAddress</div>
+                <div class="text-slate-600">@Model.InvoiceHeaderText</div>
+                <div class="text-xs text-slate-500 mt-1">Phone: @Model.PhoneNumber | NTN: @Model.TaxRegistrationNumber</div>
+            </div>
+        </div>
+    </div>
+</div>

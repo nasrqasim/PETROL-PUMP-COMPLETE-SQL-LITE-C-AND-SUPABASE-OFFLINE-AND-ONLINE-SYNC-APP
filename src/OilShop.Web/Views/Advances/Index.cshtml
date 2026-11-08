@@ -1,0 +1,97 @@
+@{
+    ViewData["Title"] = "Advance & Loan Management";
+    var advances = (List<Advance>)ViewBag.Advances;
+    var loans = (List<Loan>)ViewBag.Loans;
+    var customers = (List<Customer>)ViewBag.Customers;
+}
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+    <div class="card border-l-4 border-green-600"><div class="text-sm text-slate-500">Total Advances Given</div><div class="text-2xl font-bold text-green-600">Rs. @(((decimal)ViewBag.TotalAdvancesGiven).ToString("N0"))</div></div>
+    <div class="card border-l-4 border-red-600"><div class="text-sm text-slate-500">Total Loans Outstanding</div><div class="text-2xl font-bold text-red-600">Rs. @(((decimal)ViewBag.TotalLoansOutstanding).ToString("N0"))</div></div>
+</div>
+
+<div class="card mb-4">
+    <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-lg">Customer Advance</h2>
+        <a class="btn" asp-controller="Reports" asp-action="Generate" asp-route-name="Advance Report">Generate Report</a>
+    </div>
+    <table class="tbl">
+        <thead><tr><th>Customer</th><th>Date</th><th class="text-right">Advance Amount</th><th class="text-right">Paid</th><th class="text-right">Remaining</th><th>Status</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var a in advances)
+        {
+            <tr>
+                <td>@a.CustomerName</td><td>@a.Date.ToString("dd-MMM-yyyy")</td>
+                <td class="text-right">Rs. @a.Amount.ToString("N0")</td>
+                <td class="text-right">Rs. @a.PaidAmount.ToString("N0")</td>
+                <td class="text-right font-semibold">Rs. @a.RemainingBalance.ToString("N0")</td>
+                <td>@a.Status</td>
+                <td>
+                    <form asp-action="RecordPayment" method="post" class="inline-flex gap-1">
+                        <input type="hidden" name="kind" value="Advance" />
+                        <input type="hidden" name="id" value="@a.Id" />
+                        <input class="input" style="width:90px" type="number" step="0.01" min="0" name="amount" placeholder="Rs." required />
+                        <button class="btn btn-green" type="submit">Record Payment</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<div class="card mb-4">
+    <h2 class="font-bold text-lg mb-3">Customer Loan</h2>
+    <table class="tbl">
+        <thead><tr><th>Customer</th><th>Advance</th><th>Loan Amount</th><th>Issued</th><th>Due Date</th><th>Plan</th><th class="text-right">Paid</th><th class="text-right">Remaining</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var l in loans)
+        {
+            <tr>
+                <td>@l.CustomerName</td><td>Rs. @l.AdvanceAmount.ToString("N0")</td>
+                <td>Rs. @l.LoanAmount.ToString("N0")</td>
+                <td>@l.DateIssued.ToString("dd-MMM-yyyy")</td><td>@l.RepaymentDueDate.ToString("dd-MMM-yyyy")</td>
+                <td>@l.InstallmentPlan</td>
+                <td class="text-right">Rs. @l.PaidAmount.ToString("N0")</td>
+                <td class="text-right font-semibold">Rs. @l.RemainingBalance.ToString("N0")</td>
+                <td>
+                    <form asp-action="RecordPayment" method="post" class="inline-flex gap-1">
+                        <input type="hidden" name="kind" value="Loan" />
+                        <input type="hidden" name="id" value="@l.Id" />
+                        <input class="input" style="width:90px" type="number" step="0.01" min="0" name="amount" placeholder="Rs." required />
+                        <button class="btn btn-green" type="submit">Record Payment</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
+
+<div class="grid md:grid-cols-2 gap-4">
+    <div class="card">
+        <h3 class="font-bold mb-2">Add Advance</h3>
+        <form asp-action="AddAdvance" method="post" class="space-y-2">
+            <select class="input" name="CustomerId" required>
+                @foreach (var c in customers) { <option value="@c.Id">@c.Name</option> }
+            </select>
+            <input class="input" type="number" step="0.01" min="0" name="Amount" placeholder="Advance Amount Rs." required />
+            <input class="input" type="date" name="Date" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+            <input class="input" name="Remarks" placeholder="Remarks" />
+            <button class="btn" type="submit">Add Advance</button>
+        </form>
+    </div>
+    <div class="card">
+        <h3 class="font-bold mb-2">Add Loan</h3>
+        <form asp-action="AddLoan" method="post" class="space-y-2">
+            <select class="input" name="CustomerId" required>
+                @foreach (var c in customers) { <option value="@c.Id">@c.Name</option> }
+            </select>
+            <input class="input" type="number" step="0.01" min="0" name="LoanAmount" placeholder="Loan Amount Rs." required />
+            <input class="input" type="number" step="0.01" min="0" name="AdvanceAmount" placeholder="Advance Amount Rs." value="0" />
+            <input class="input" type="date" name="DateIssued" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+            <input class="input" type="date" name="RepaymentDueDate" value="@DateTime.Today.AddDays(15).ToString("yyyy-MM-dd")" />
+            <select class="input" name="InstallmentPlan"><option>Monthly</option><option>Weekly</option><option>Lump Sum</option></select>
+            <button class="btn" type="submit">Add Loan</button>
+        </form>
+    </div>
+</div>

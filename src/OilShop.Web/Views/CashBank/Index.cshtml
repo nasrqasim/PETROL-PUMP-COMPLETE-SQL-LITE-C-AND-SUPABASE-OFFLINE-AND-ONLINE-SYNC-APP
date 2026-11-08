@@ -1,0 +1,122 @@
+@model List<Payment>
+@{
+    ViewData["Title"] = "Cash & Bank Vouchers";
+}
+<div class="grid md:grid-cols-2 gap-4 mb-4">
+    <a asp-action="CashHistory" class="card border-l-4 border-green-600 hover:shadow-lg transition cursor-pointer group">
+        <div class="flex justify-between items-center">
+            <div class="text-sm text-slate-500 group-hover:text-green-700">Cash in Hand ↗</div>
+            <span class="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded font-semibold">View History</span>
+        </div>
+        <div class="text-2xl font-bold text-green-600">Rs. @(((decimal)ViewBag.Cash).ToString("N0"))</div>
+    </a>
+    <a asp-action="BankHistory" class="card border-l-4 border-blue-800 hover:shadow-lg transition cursor-pointer group">
+        <div class="flex justify-between items-center">
+            <div class="text-sm text-slate-500 group-hover:text-blue-700">Bank Balance ↗</div>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded font-semibold">View History</span>
+        </div>
+        <div class="text-2xl font-bold text-[#1e3a8a]">Rs. @(((decimal)ViewBag.Bank).ToString("N0"))</div>
+    </a>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+    <a asp-action="CashPayment" class="p-4 bg-white rounded-lg shadow border-t-4 border-red-500 hover:shadow-md transition block text-center">
+        <div class="text-2xl mb-1">💸</div>
+        <div class="font-bold text-slate-800">Cash Payment</div>
+        <div class="text-xs text-slate-500">Pay vendor or customer</div>
+    </a>
+    <a asp-action="CashReceipt" class="p-4 bg-white rounded-lg shadow border-t-4 border-green-500 hover:shadow-md transition block text-center">
+        <div class="text-2xl mb-1">💵</div>
+        <div class="font-bold text-slate-800">Cash Receipt</div>
+        <div class="text-xs text-slate-500">Receive from customer/vendor</div>
+    </a>
+    <a asp-action="BankPayment" class="p-4 bg-white rounded-lg shadow border-t-4 border-blue-600 hover:shadow-md transition block text-center">
+        <div class="text-2xl mb-1">🏦</div>
+        <div class="font-bold text-slate-800">Bank Payment</div>
+        <div class="text-xs text-slate-500">Bank transfer / Cheque</div>
+    </a>
+    <a asp-action="BankReceipt" class="p-4 bg-white rounded-lg shadow border-t-4 border-teal-600 hover:shadow-md transition block text-center">
+        <div class="text-2xl mb-1">💳</div>
+        <div class="font-bold text-slate-800">Bank Receipt</div>
+        <div class="text-xs text-slate-500">Online transfer / Deposit</div>
+    </a>
+</div>
+
+<!-- Filter Box -->
+<div class="card bg-slate-50 border mb-4">
+    <form method="get" class="grid md:grid-cols-4 gap-3 items-end">
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">Search Vouchers</label>
+            <input class="input w-full text-sm" name="search" value="@ViewBag.Search" placeholder="Voucher #, Party, Account, Remarks..." />
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">From Date</label>
+            <input class="input w-full text-sm" type="date" name="fromDate" value="@ViewBag.FromDate" />
+        </div>
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">To Date</label>
+            <input class="input w-full text-sm" type="date" name="toDate" value="@ViewBag.ToDate" />
+        </div>
+        <div class="flex gap-2">
+            <button type="submit" class="btn w-full text-sm">🔍 Filter</button>
+            <a asp-action="Index" class="btn text-sm">Reset</a>
+        </div>
+    </form>
+</div>
+
+<div class="card">
+    <div class="flex justify-between items-center mb-3">
+        <h3 class="font-bold text-lg">Cash &amp; Bank Voucher Records</h3>
+        <span class="text-xs text-slate-500">Total: @Model.Count records</span>
+    </div>
+    <table class="tbl">
+        <thead>
+            <tr>
+                <th>Voucher No.</th>
+                <th>Date</th>
+                <th>Voucher Type</th>
+                <th>Party</th>
+                <th>Account / Remarks</th>
+                <th class="text-right">Amount</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var p in Model)
+        {
+            var isReceipt = p.Type.ToString().Contains("Receipt");
+            var partyName = p.PartyType == PartyType.Customer ? p.Customer?.Name : (p.PartyType == PartyType.Supplier ? p.Supplier?.Name : p.PartyType.ToString());
+            <tr>
+                <td class="font-mono font-medium text-blue-800">@p.VoucherNumber</td>
+                <td>@p.Date.ToString("dd-MMM-yyyy")</td>
+                <td>
+                    <span class="px-2 py-0.5 rounded text-xs font-semibold @(isReceipt ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")">
+                        @p.Type
+                    </span>
+                </td>
+                <td>
+                    <span class="text-xs font-semibold text-slate-500 uppercase mr-1">[@p.PartyType]</span>
+                    @(partyName ?? "—")
+                </td>
+                <td class="text-slate-600 text-sm">
+                    @if (!string.IsNullOrEmpty(p.BankAccount)) { <span class="font-mono text-xs bg-slate-100 px-1 py-0.5 rounded mr-1">Bank: @p.BankAccount</span> }
+                    @p.Remarks
+                </td>
+                <td class="text-right font-bold @(isReceipt ? "text-green-600" : "text-red-600")">
+                    Rs. @p.Amount.ToString("N0")
+                </td>
+                <td>
+                    <form asp-action="DeleteVoucher" method="post" onsubmit="return confirm('Delete this voucher and reverse ledger balance?');" class="inline">
+                        <input type="hidden" name="id" value="@p.Id" />
+                        <button type="submit" class="text-xs text-red-600 hover:underline">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        }
+        @if (!Model.Any())
+        {
+            <tr><td colspan="7" class="text-center py-6 text-slate-500">No vouchers found matching search criteria.</td></tr>
+        }
+        </tbody>
+    </table>
+</div>

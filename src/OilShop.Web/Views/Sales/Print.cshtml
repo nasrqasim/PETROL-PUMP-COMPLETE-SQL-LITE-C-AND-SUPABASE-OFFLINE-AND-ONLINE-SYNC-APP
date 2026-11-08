@@ -1,0 +1,43 @@
+@model SalesInvoice
+@{
+    ViewData["Title"] = $"Invoice {Model.InvoiceNumber}";
+    var settings = (ShopSettings?)ViewBag.Settings;
+}
+<div class="card max-w-2xl mx-auto">
+    <div class="flex justify-between items-start border-b pb-3 mb-3">
+        <div>
+            <div class="font-black text-xl text-[#1e3a8a]">ROONJHA DEVELOPERS</div>
+            <div class="text-sm">@(settings?.InvoiceHeaderText ?? "Oil Shop Management Software")</div>
+            <div class="text-sm text-slate-600">@settings?.ShopAddress</div>
+            <div class="text-sm text-slate-600">Phone: @settings?.PhoneNumber | @settings?.EmailAddress</div>
+        </div>
+        <div class="text-right">
+            <div class="font-bold">Sales Invoice</div>
+            <div>@Model.InvoiceNumber</div>
+            <div>@Model.Date.ToString("dd-MMM-yyyy")</div>
+        </div>
+    </div>
+    <p><strong>Customer:</strong> @Model.Customer?.Name</p>
+    <p><strong>Payment Mode:</strong> @Model.PaymentMode</p>
+    <table class="tbl mt-3">
+        <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Tax</th><th class="text-right">Total</th></tr></thead>
+        <tbody>
+        @foreach (var l in Model.Lines)
+        {
+            <tr><td>@l.ProductName</td><td>@l.Quantity</td><td>Rs. @l.UnitPrice.ToString("N0")</td><td>Rs. @l.Tax.ToString("N0")</td><td class="text-right">Rs. @l.TotalAmount.ToString("N0")</td></tr>
+        }
+        </tbody>
+    </table>
+    <div class="text-right mt-3 space-y-1">
+        <div>Subtotal: Rs. @Model.SubTotal.ToString("N0")</div>
+        <div>Discount: Rs. @Model.Discount.ToString("N0")</div>
+        <div>Tax: Rs. @Model.Tax.ToString("N0")</div>
+        <div class="text-xl font-bold">Grand Total: Rs. @Model.GrandTotal.ToString("N0")</div>
+    </div>
+    <p class="text-sm text-slate-500 mt-4">@settings?.ReceiptFooterText</p>
+    <div class="mt-4 flex gap-2 no-print">
+        <button class="btn" onclick="window.print()">🖨️ Print</button>
+        <a class="btn" asp-controller="Print" asp-action="Index" asp-route-invoiceId="@Model.Id">Print Preview</a>
+        <a class="btn btn-green" asp-action="Index">Back to Sales</a>
+    </div>
+</div>

@@ -1,0 +1,120 @@
+@model StaffMember
+@{
+    ViewData["Title"] = "Edit Staff Member";
+    var roles = (List<Role>)ViewBag.Roles;
+}
+<div class="card max-w-2xl mx-auto border-t-4 border-blue-600">
+    <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-lg text-slate-800">Edit Staff: @Model.Name (@Model.EmployeeId)</h2>
+        <a asp-action="Details" asp-route-id="@Model.Id" class="text-xs text-blue-700 hover:underline">View ID Card →</a>
+    </div>
+
+    <form asp-action="Edit" asp-route-id="@Model.Id" method="post" enctype="multipart/form-data" class="space-y-4">
+        <div class="grid md:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-sm font-medium mb-1">Full Name</label>
+                <input class="input w-full" asp-for="Name" required />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">CNIC Number</label>
+                <input class="input w-full" asp-for="Cnic" />
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-3">
+            <div>
+                <label class="block text-sm font-medium mb-1">Designation</label>
+                <input class="input w-full" asp-for="Designation" required />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Department</label>
+                <input class="input w-full" asp-for="Department" required />
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-3">
+            <div>
+                <label class="block text-sm font-medium mb-1">Contact Phone</label>
+                <input class="input w-full" asp-for="ContactNumber" required />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Monthly Salary (Rs.)</label>
+                <input class="input w-full" asp-for="Salary" type="number" step="0.01" required />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Joining Date</label>
+                <input class="input w-full" asp-for="JoiningDate" type="date" value="@Model.JoiningDate.ToString("yyyy-MM-dd")" required />
+            </div>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-3 items-end">
+            <div>
+                <label class="block text-sm font-medium mb-1">System Role</label>
+                <select class="input w-full" asp-for="RoleId" required>
+                    @foreach (var r in roles)
+                    {
+                        if (Model.RoleId == r.Id)
+                        {
+                            <option value="@r.Id" selected>@r.Name</option>
+                        }
+                        else
+                        {
+                            <option value="@r.Id">@r.Name</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="flex items-center gap-2 pb-2">
+                <label class="inline-flex items-center gap-1 text-sm font-medium cursor-pointer">
+                    <input type="checkbox" asp-for="IsActive" class="rounded" /> Active Employee
+                </label>
+            </div>
+            <div class="flex items-center gap-2 pb-2">
+                <label class="inline-flex items-center gap-1 text-sm font-medium cursor-pointer">
+                    <input type="checkbox" asp-for="OnLeave" class="rounded" /> On Leave
+                </label>
+            </div>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium mb-1">Address</label>
+            <input class="input w-full" asp-for="Address" />
+        </div>
+
+        <!-- CNIC & Photo Document Upload Section -->
+        <div class="border rounded-lg p-3 bg-slate-50 space-y-3">
+            <h3 class="font-bold text-sm text-[#1e3a8a]">Documents &amp; CNIC Upload</h3>
+            <div class="grid md:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Staff Photo</label>
+                    @if (!string.IsNullOrEmpty(Model.PhotoPath))
+                    {
+                        <div class="mb-1"><img src="@Model.PhotoPath" alt="Photo" class="w-12 h-12 rounded object-cover border" /></div>
+                    }
+                    <input class="input w-full text-xs" type="file" name="photoFile" accept="image/*" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">CNIC Front</label>
+                    @if (!string.IsNullOrEmpty(Model.CnicFrontPath))
+                    {
+                        <div class="mb-1"><a href="@Model.CnicFrontPath" target="_blank" class="text-xs text-blue-700 underline">View Current Front</a></div>
+                    }
+                    <input class="input w-full text-xs" type="file" name="cnicFrontFile" accept="image/*,.pdf" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">CNIC Back</label>
+                    @if (!string.IsNullOrEmpty(Model.CnicBackPath))
+                    {
+                        <div class="mb-1"><a href="@Model.CnicBackPath" target="_blank" class="text-xs text-blue-700 underline">View Current Back</a></div>
+                    }
+                    <input class="input w-full text-xs" type="file" name="cnicBackFile" accept="image/*,.pdf" />
+                </div>
+            </div>
+        </div>
+
+        <div class="flex gap-2 pt-2">
+            <button class="btn btn-green px-6" type="submit">Update Staff</button>
+            <a class="btn" asp-action="Index">Cancel</a>
+        </div>
+    </form>
+</div>

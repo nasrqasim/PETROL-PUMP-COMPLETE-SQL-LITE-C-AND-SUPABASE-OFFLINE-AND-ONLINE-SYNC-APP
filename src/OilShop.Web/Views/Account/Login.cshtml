@@ -1,0 +1,51 @@
+@{
+    ViewData["Title"] = "Login - Oil Shop Management";
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login - Oil Shop Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md">
+        <div class="text-center mb-6">
+            <div class="inline-flex w-16 h-16 rounded-full bg-[#1e3a8a] text-white items-center justify-center font-black text-2xl mb-2">R</div>
+            <h1 class="text-2xl font-bold text-[#1e3a8a]">ROONJHA DEVELOPERS</h1>
+            <p class="text-xs tracking-wider text-slate-500 uppercase mt-1">Oil Shop Management System</p>
+        </div>
+
+        @if (ViewBag.Error != null)
+        {
+            <div class="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded text-sm">
+                @ViewBag.Error
+            </div>
+        }
+
+        <form asp-action="Login" method="post" class="space-y-4">
+            <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Username / Login ID</label>
+                <input class="input w-full" type="text" name="username" placeholder="e.g. admin" required autofocus />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                <input class="input w-full" type="password" name="password" placeholder="••••••••" required />
+            </div>
+            <button type="submit" class="w-full py-2.5 px-4 bg-[#1e3a8a] hover:bg-blue-900 text-white font-semibold rounded-lg shadow transition duration-150">
+                Sign In
+            </button>
+        </form>
+
+        <div class="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-500 text-center">
+            Default credentials: <br />
+            <strong>Username:</strong> admin | <strong>Password:</strong> admin123<br />
+            <strong>Username:</strong> cashier | <strong>Password:</strong> cashier123
+        </div>
+    </div>
+</body>
+</html>

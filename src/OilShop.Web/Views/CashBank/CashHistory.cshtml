@@ -1,0 +1,130 @@
+@model List<OilShop.Web.Models.CashBankHistoryItem>
+@{
+    ViewData["Title"] = "Cash Ledger & History";
+}
+<div class="space-y-4">
+    <!-- Header Card -->
+    <div class="card border-l-4 border-amber-500 flex flex-col md:flex-row justify-between md:items-center gap-3">
+        <div>
+            <div class="flex items-center gap-2">
+                <span class="text-2xl">💵</span>
+                <h2 class="font-bold text-xl text-slate-800">Cash in Hand — Statement &amp; History</h2>
+            </div>
+            <p class="text-xs text-slate-500">Chronological transaction record of all cash sales, cash purchases, receipts, cash payments, and cash expenses.</p>
+        </div>
+        <div class="flex gap-4">
+            <div class="bg-amber-50 border border-amber-200 px-4 py-2 rounded-lg text-right">
+                <div class="text-xs text-amber-700 font-semibold uppercase">Current Cash in Hand</div>
+                <div class="text-2xl font-black text-amber-900">Rs. @(((decimal)ViewBag.Cash).ToString("N0"))</div>
+            </div>
+            <div class="flex items-center gap-2">
+                <a asp-action="CashReceipt" class="btn btn-green text-xs">+ Cash Receipt</a>
+                <a asp-action="CashPayment" class="btn btn-red text-xs">+ Cash Payment</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <div class="card bg-slate-50 border">
+        <form method="get" class="grid md:grid-cols-4 gap-3 items-end">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">Search Keywords</label>
+                <input class="input w-full text-sm" name="search" value="@ViewBag.Search" placeholder="Ref #, Customer, Vendor, Remarks..." />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">From Date</label>
+                <input class="input w-full text-sm" type="date" name="fromDate" value="@ViewBag.FromDate" />
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">To Date</label>
+                <input class="input w-full text-sm" type="date" name="toDate" value="@ViewBag.ToDate" />
+            </div>
+            <div class="flex gap-2">
+                <button type="submit" class="btn w-full text-sm">🔍 Filter</button>
+                <a asp-action="CashHistory" class="btn text-sm">Reset</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Summary strip -->
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div class="p-3 bg-white rounded border border-green-200 text-center">
+            <div class="text-xs text-slate-500 font-semibold">Total Cash Received (Inflow)</div>
+            <div class="text-lg font-bold text-green-600">Rs. @(((decimal)ViewBag.TotalDebit).ToString("N0"))</div>
+        </div>
+        <div class="p-3 bg-white rounded border border-red-200 text-center">
+            <div class="text-xs text-slate-500 font-semibold">Total Cash Paid (Outflow)</div>
+            <div class="text-lg font-bold text-red-600">Rs. @(((decimal)ViewBag.TotalCredit).ToString("N0"))</div>
+        </div>
+        <div class="p-3 bg-white rounded border border-blue-200 text-center col-span-2 md:col-span-1">
+            <div class="text-xs text-slate-500 font-semibold">Records Matched</div>
+            <div class="text-lg font-bold text-[#1e3a8a]">@Model.Count Transactions</div>
+        </div>
+    </div>
+
+    <!-- Ledger Table -->
+    <div class="card overflow-x-auto">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Ref / Invoice #</th>
+                    <th>Source Type</th>
+                    <th>Party</th>
+                    <th>Description &amp; Remarks</th>
+                    <th class="text-right text-green-700">Cash In (+)</th>
+                    <th class="text-right text-red-700">Cash Out (-)</th>
+                    <th class="text-right">Balance</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td class="whitespace-nowrap">@item.Date.ToString("dd-MMM-yyyy")</td>
+                        <td class="font-mono text-xs font-semibold text-blue-800">
+                            @if (!string.IsNullOrEmpty(item.DetailsUrl))
+                            {
+                                <a href="@item.DetailsUrl" class="hover:underline">@item.RefNumber</a>
+                            }
+                            else
+                            {
+                                @item.RefNumber
+                            }
+                        </td>
+                        <td>
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold @(item.Debit > 0 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")">
+                                @item.SourceType
+                            </span>
+                        </td>
+                        <td class="font-medium">@item.Party</td>
+                        <td class="text-xs text-slate-600">
+                            <div>@item.Description</div>
+                            @if (!string.IsNullOrEmpty(item.Remarks))
+                            {
+                                <div class="italic text-slate-500">Note: @item.Remarks</div>
+                            }
+                        </td>
+                        <td class="text-right font-bold text-green-600 whitespace-nowrap">
+                            @(item.Debit > 0 ? "Rs. " + item.Debit.ToString("N0") : "—")
+                        </td>
+                        <td class="text-right font-bold text-red-600 whitespace-nowrap">
+                            @(item.Credit > 0 ? "Rs. " + item.Credit.ToString("N0") : "—")
+                        </td>
+                        <td class="text-right font-bold text-slate-800 whitespace-nowrap">
+                            Rs. @item.Balance.ToString("N0")
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Any())
+                {
+                    <tr>
+                        <td colspan="8" class="text-center py-6 text-slate-500">
+                            No cash transactions found for the selected period / criteria.
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

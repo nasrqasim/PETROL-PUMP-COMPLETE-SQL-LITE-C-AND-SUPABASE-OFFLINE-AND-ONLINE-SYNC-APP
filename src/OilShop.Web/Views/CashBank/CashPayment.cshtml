@@ -1,0 +1,80 @@
+@{
+    ViewData["Title"] = "Cash Payment";
+    var customers = (List<OilShop.Core.Models.Customer>)ViewBag.Customers;
+    var suppliers = (List<OilShop.Core.Models.Supplier>)ViewBag.Suppliers;
+}
+<div class="max-w-2xl mx-auto card border-t-4 border-red-500">
+    <div class="flex items-center justify-between mb-4 border-b pb-3">
+        <div>
+            <h2 class="text-xl font-bold text-red-700">💸 New Cash Payment Voucher</h2>
+            <p class="text-xs text-slate-500">Pay cash out to vendors or customers (deducts cash from register and adjusts ledger balance)</p>
+        </div>
+        <span class="px-3 py-1 bg-red-100 text-red-800 text-xs font-bold rounded-full">Cash Outflow</span>
+    </div>
+
+    <form asp-action="ProcessVoucher" method="post" class="space-y-4">
+        <input type="hidden" name="type" value="CashPayment" />
+
+        <div class="grid md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">Date</label>
+                <input class="input w-full" type="date" name="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Party Type</label>
+                <select class="input w-full" id="partyTypeSelect" name="partyType" onchange="togglePartySelect()">
+                    <option value="Supplier">Supplier / Vendor</option>
+                    <option value="Customer">Customer</option>
+                    <option value="Other">Other Expense</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="supplierGroup">
+            <label class="block text-sm font-medium mb-1">Select Supplier / Vendor</label>
+            <select class="input w-full" name="supplierId">
+                <option value="">-- Choose Vendor --</option>
+                @foreach (var s in suppliers)
+                {
+                    <option value="@s.Id">@s.Name (Payable: Rs. @s.BalanceDue.ToString("N0") | Advance: Rs. @s.Advance.ToString("N0"))</option>
+                }
+            </select>
+        </div>
+
+        <div id="customerGroup" style="display:none;">
+            <label class="block text-sm font-medium mb-1">Select Customer</label>
+            <select class="input w-full" name="customerId">
+                <option value="">-- Choose Customer --</option>
+                @foreach (var c in customers)
+                {
+                    <option value="@c.Id">@c.Name (Receivable: Rs. @c.BalanceDue.ToString("N0") | Advance: Rs. @c.Advance.ToString("N0"))</option>
+                }
+            </select>
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium mb-1">Payment Amount (Rs.)</label>
+            <input class="input w-full font-bold text-lg text-red-600" type="number" step="0.01" min="1" name="amount" placeholder="0.00" required />
+        </div>
+
+        <div>
+            <label class="block text-sm font-medium mb-1">Remarks / Note</label>
+            <input class="input w-full" type="text" name="remarks" placeholder="e.g. Paid against bill / advance return" />
+        </div>
+
+        <div class="flex gap-2 pt-2">
+            <button type="submit" class="btn btn-red px-6 py-2">Confirm Cash Payment</button>
+            <a asp-action="Index" class="btn">Cancel</a>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+<script>
+function togglePartySelect() {
+    var type = document.getElementById('partyTypeSelect').value;
+    document.getElementById('supplierGroup').style.display = type === 'Supplier' ? 'block' : 'none';
+    document.getElementById('customerGroup').style.display = type === 'Customer' ? 'block' : 'none';
+}
+</script>
+}

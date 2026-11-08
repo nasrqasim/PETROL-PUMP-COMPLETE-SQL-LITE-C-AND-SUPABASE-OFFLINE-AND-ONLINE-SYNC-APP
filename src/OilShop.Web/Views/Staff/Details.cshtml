@@ -1,0 +1,131 @@
+@model StaffMember
+@{
+    ViewData["Title"] = $"Staff ID Card — {Model.Name}";
+}
+<div class="space-y-4">
+    <div class="flex justify-between items-center">
+        <h2 class="text-xl font-bold text-[#1e3a8a]">Employee Profile &amp; ID Card</h2>
+        <div class="space-x-2">
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn text-xs">✏️ Edit Staff</a>
+            <a asp-action="Index" class="btn text-xs">← Back to Staff List</a>
+        </div>
+    </div>
+
+    <div class="grid md:grid-cols-2 gap-4">
+        <!-- Staff ID Card -->
+        <div class="card border-t-4 border-[#1e3a8a]">
+            <div class="flex justify-between items-center mb-3 pb-2 border-b">
+                <span class="text-xs font-bold text-[#1e3a8a] tracking-widest uppercase">ROONJHA DEVELOPERS OIL SHOP</span>
+                <span class="px-2 py-0.5 rounded text-xs font-semibold @(Model.IsActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800")">
+                    @(Model.IsActive ? "Active" : "Inactive")
+                </span>
+            </div>
+
+            <div class="border rounded-lg p-4 flex gap-4 bg-slate-50 items-start">
+                <div class="w-24 h-28 bg-slate-200 rounded border flex items-center justify-center overflow-hidden shrink-0">
+                    @if (!string.IsNullOrEmpty(Model.PhotoPath))
+                    {
+                        <img src="@Model.PhotoPath" alt="Photo" class="w-full h-full object-cover" />
+                    }
+                    else
+                    {
+                        <span class="text-4xl text-slate-400">👤</span>
+                    }
+                </div>
+                <div class="text-sm space-y-1">
+                    <div class="font-bold text-lg text-slate-900">@Model.Name</div>
+                    <div class="text-xs font-mono font-semibold text-blue-800">EMP ID: @Model.EmployeeId</div>
+                    <div><span class="text-xs text-slate-500">Designation:</span> <strong>@Model.Designation</strong></div>
+                    <div><span class="text-xs text-slate-500">Department:</span> @Model.Department</div>
+                    <div><span class="text-xs text-slate-500">CNIC:</span> <strong class="font-mono">@(Model.Cnic ?? "N/A")</strong></div>
+                    <div><span class="text-xs text-slate-500">Joining Date:</span> @Model.JoiningDate.ToString("dd-MMM-yyyy")</div>
+                    <div><span class="text-xs text-slate-500">Contact:</span> @Model.ContactNumber</div>
+                    <div><span class="text-xs text-slate-500">Address:</span> @Model.Address</div>
+                    <div><span class="text-xs text-slate-500">System Role:</span> <span class="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-semibold">@Model.Role?.Name</span></div>
+                </div>
+                <div class="ml-auto text-center shrink-0">
+                    <div class="w-20 h-20 bg-white border flex items-center justify-center text-xs font-mono p-1">
+                        QR<br />@Model.EmployeeId
+                    </div>
+                    <div class="text-[10px] text-slate-500 mt-1 uppercase">Official ID</div>
+                </div>
+            </div>
+
+            <!-- CNIC Copies Display -->
+            @if (!string.IsNullOrEmpty(Model.CnicFrontPath) || !string.IsNullOrEmpty(Model.CnicBackPath))
+            {
+                <div class="mt-4 pt-3 border-t">
+                    <h3 class="font-bold text-xs uppercase tracking-wider text-slate-600 mb-2">Attached CNIC Copies</h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        @if (!string.IsNullOrEmpty(Model.CnicFrontPath))
+                        {
+                            <div class="border rounded p-2 text-center bg-white">
+                                <div class="text-[11px] font-semibold text-slate-500 mb-1">CNIC Front</div>
+                                <a href="@Model.CnicFrontPath" target="_blank">
+                                    <img src="@Model.CnicFrontPath" alt="CNIC Front" class="max-h-28 mx-auto rounded border hover:opacity-90" />
+                                </a>
+                            </div>
+                        }
+                        @if (!string.IsNullOrEmpty(Model.CnicBackPath))
+                        {
+                            <div class="border rounded p-2 text-center bg-white">
+                                <div class="text-[11px] font-semibold text-slate-500 mb-1">CNIC Back</div>
+                                <a href="@Model.CnicBackPath" target="_blank">
+                                    <img src="@Model.CnicBackPath" alt="CNIC Back" class="max-h-28 mx-auto rounded border hover:opacity-90" />
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+
+            <div class="mt-4 flex gap-2">
+                <form asp-action="CheckIn" method="post"><input type="hidden" name="id" value="@Model.Id" /><button class="btn btn-green" type="submit">Check In</button></form>
+                <form asp-action="CheckOut" method="post"><input type="hidden" name="id" value="@Model.Id" /><button class="btn" type="submit">Check Out</button></form>
+            </div>
+        </div>
+
+        <!-- Attendance & Invoices -->
+        <div class="space-y-4">
+            <div class="card">
+                <h2 class="font-bold text-base mb-2">Attendance Record</h2>
+                <table class="tbl text-xs">
+                    <thead><tr><th>Date</th><th>Check In</th><th>Check Out</th><th>Status</th><th class="text-right">Sales Made</th></tr></thead>
+                    <tbody>
+                    @foreach (var a in Model.Attendances.OrderByDescending(x => x.Date))
+                    {
+                        <tr><td>@a.Date.ToString("dd-MMM-yyyy")</td><td>@a.CheckInTime?.ToString("hh:mm tt")</td><td>@a.CheckOutTime?.ToString("hh:mm tt")</td><td>@a.Status</td><td class="text-right font-semibold">Rs. @a.SalesMade.ToString("N0")</td></tr>
+                    }
+                    @if (!Model.Attendances.Any())
+                    {
+                        <tr><td colspan="5" class="text-center py-3 text-slate-500">No attendance entries recorded yet.</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card">
+                <h3 class="font-bold text-base mb-2">Invoices Generated by Staff</h3>
+                <table class="tbl text-xs">
+                    <thead><tr><th>Invoice</th><th>Date</th><th class="text-right">Grand Total</th></tr></thead>
+                    <tbody>
+                    @foreach (var i in Model.SalesInvoices.OrderByDescending(x => x.Date))
+                    {
+                        <tr>
+                            <td class="font-mono font-medium text-blue-700">
+                                <a asp-controller="Sales" asp-action="Print" asp-route-id="@i.Id" class="hover:underline">@i.InvoiceNumber</a>
+                            </td>
+                            <td>@i.Date.ToString("dd-MMM-yyyy")</td>
+                            <td class="text-right font-bold">Rs. @i.GrandTotal.ToString("N0")</td>
+                        </tr>
+                    }
+                    @if (!Model.SalesInvoices.Any())
+                    {
+                        <tr><td colspan="3" class="text-center py-3 text-slate-500">No sales invoices generated by this staff member.</td></tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

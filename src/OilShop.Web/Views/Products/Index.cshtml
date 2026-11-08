@@ -1,0 +1,109 @@
+@model List<Product>
+@{
+    ViewData["Title"] = "Inventory & Stock";
+    var categories = (List<string?>)ViewBag.Categories;
+}
+<div class="space-y-4">
+    <div class="card">
+        <div class="flex justify-between items-center mb-3">
+            <div>
+                <h2 class="font-bold text-lg text-slate-800">Inventory &amp; Product Stock</h2>
+                <p class="text-xs text-slate-500">Track fuel barrels, motor oil, lubricants, and packaging units (Liters, Gallons, Cartons)</p>
+            </div>
+            <a class="btn btn-green text-sm" asp-action="Create">+ Add Product</a>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="bg-slate-50 p-3 rounded border mb-4">
+            <form method="get" class="grid md:grid-cols-5 gap-3 items-end">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Search Products</label>
+                    <input class="input w-full text-sm" name="search" value="@ViewBag.Search" placeholder="Product name, unit..." />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Category</label>
+                    <select class="input w-full text-sm" name="category">
+                        <option value="">All Categories</option>
+                        @foreach (var c in categories)
+                        {
+                            if (!string.IsNullOrEmpty(c))
+                            {
+                                if (ViewBag.Category == c)
+                                {
+                                    <option value="@c" selected>@c</option>
+                                }
+                                else
+                                {
+                                    <option value="@c">@c</option>
+                                }
+                            }
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Created From</label>
+                    <input class="input w-full text-sm" type="date" name="fromDate" value="@ViewBag.FromDate" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Created To</label>
+                    <input class="input w-full text-sm" type="date" name="toDate" value="@ViewBag.ToDate" />
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="btn w-full text-sm">🔍 Filter</button>
+                    <a asp-action="Index" class="btn text-sm">Reset</a>
+                </div>
+            </form>
+        </div>
+
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Product Item</th>
+                    <th>Category</th>
+                    <th>Unit</th>
+                    <th class="text-right">Purchase Price</th>
+                    <th class="text-right">Sale Price</th>
+                    <th class="text-right">Stock In Hand</th>
+                    <th>Status</th>
+                    <th>Quick Adjust</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <td class="font-bold text-[#1e3a8a]">@p.Name</td>
+                    <td>@p.Category</td>
+                    <td><span class="px-2 py-0.5 rounded text-xs bg-slate-100 font-mono">@p.Unit</span></td>
+                    <td class="text-right text-slate-600">Rs. @p.PurchasePrice.ToString("N0")</td>
+                    <td class="text-right font-semibold">Rs. @p.SalePrice.ToString("N0")</td>
+                    <td class="text-right font-bold text-slate-900">@p.StockQuantity @p.Unit</td>
+                    <td>
+                        <span class="px-2 py-0.5 rounded text-xs font-semibold @(p.StockQuantity <= p.LowStockAlert ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800")">
+                            @(p.StockQuantity <= p.LowStockAlert ? "⚠️ Low Stock" : "✅ In Stock")
+                        </span>
+                    </td>
+                    <td>
+                        <form asp-action="AdjustStock" method="post" class="inline-flex gap-1 items-center">
+                            <input type="hidden" name="id" value="@p.Id" />
+                            <input class="input py-0.5 text-xs text-center" style="width:65px" type="number" step="0.01" name="quantity" placeholder="+/-" required />
+                            <button class="btn py-0.5 px-2 text-xs" type="submit">Go</button>
+                        </form>
+                    </td>
+                    <td class="space-x-2 text-xs">
+                        <a class="text-blue-700 hover:underline font-semibold" asp-action="Edit" asp-route-id="@p.Id">Edit</a>
+                        <form asp-action="Delete" asp-route-id="@p.Id" method="post" onsubmit="return confirm('Delete product @p.Name?');" class="inline">
+                            <button type="submit" class="text-red-600 hover:underline font-semibold">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="9" class="text-center py-6 text-slate-500">No inventory products found matching filter.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

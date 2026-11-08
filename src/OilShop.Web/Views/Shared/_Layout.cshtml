@@ -1,0 +1,91 @@
+@* Oil Shop Management Software — shared layout.
+   Navy sidebar + top bar (#1e3a8a / #172554), ROONJHA DEVELOPERS branding,
+   white content cards, Tailwind CSS via CDN. *@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Oil Shop Management Software</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body class="bg-slate-100 font-sans">
+<div class="flex min-h-screen">
+    <!-- Sidebar -->
+    <aside class="w-64 shrink-0 bg-[#172554] text-white flex flex-col">
+        <div class="flex items-center gap-2 px-4 py-4 border-b border-blue-900">
+            <div class="w-10 h-10 rounded-full bg-white text-[#1e3a8a] flex items-center justify-center font-black text-xl">R</div>
+            <div class="leading-tight">
+                <div class="font-bold tracking-wide">ROONJHA</div>
+                <div class="text-xs tracking-widest text-blue-300">DEVELOPERS</div>
+            </div>
+        </div>
+        <nav class="flex-1 py-3 text-sm">
+            <a class="nav-link" asp-controller="Dashboard" asp-action="Index">🏠 Dashboard</a>
+            <a class="nav-link" asp-controller="Sales" asp-action="Index">🧾 Sales Invoice</a>
+            <a class="nav-link" asp-controller="Purchases" asp-action="Index">📦 Purchase Invoice</a>
+            <a class="nav-link" asp-controller="Customers" asp-action="Index">👥 Customers</a>
+            <a class="nav-link" asp-controller="Suppliers" asp-action="Index">🏭 Suppliers</a>
+            <a class="nav-link" asp-controller="Products" asp-action="Index">🛢️ Inventory / Stock</a>
+            <a class="nav-link" asp-controller="CashBank" asp-action="Index">💵 Cash &amp; Bank</a>
+            <a class="nav-link" asp-controller="Expenses" asp-action="Index">🧾 Expenses</a>
+            <a class="nav-link" asp-controller="Returns" asp-action="Index">↩️ Returns</a>
+            <a class="nav-link" asp-controller="Advances" asp-action="Index">💰 Advance &amp; Loan</a>
+            <a class="nav-link" asp-controller="Staff" asp-action="Index">👨‍💼 Staff Management</a>
+            <a class="nav-link" asp-controller="Roles" asp-action="Index">🔐 Roles &amp; Permissions</a>
+            <a class="nav-link" asp-controller="Reports" asp-action="Index">📊 Reports Center</a>
+            <a class="nav-link" asp-controller="WhatsApp" asp-action="Index">💬 WhatsApp</a>
+            <a class="nav-link" asp-controller="Print" asp-action="Index">🖨️ Print Preview</a>
+            <a class="nav-link" asp-controller="Settings" asp-action="Index">⚙️ Settings</a>
+        </nav>
+        <div class="px-4 py-3 text-xs text-blue-300 border-t border-blue-900">
+            Oil Shop Management Software<br />Roonjha Developers
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <div class="flex-1 flex flex-col min-w-0">
+        <header class="bg-[#1e3a8a] text-white px-6 py-3 flex items-center justify-between shadow">
+            <h1 class="text-lg font-semibold">@ViewData["Title"]</h1>
+            <div class="flex items-center gap-4 text-sm">
+                <span class="hidden md:inline text-blue-200">Oil Shop Management</span>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <span class="bg-white text-[#1e3a8a] rounded-full px-3 py-1 font-semibold text-xs flex items-center gap-1">
+                        👤 @(User.FindFirst(System.Security.Claims.ClaimTypes.GivenName)?.Value ?? User.Identity.Name) 
+                        <span class="text-slate-500 font-normal">(@(User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value ?? "Staff"))</span>
+                    </span>
+                    <form asp-controller="Account" asp-action="Logout" method="post" class="inline">
+                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white rounded px-3 py-1 text-xs font-semibold shadow">
+                            🚪 Logout
+                        </button>
+                    </form>
+                }
+                else
+                {
+                    <a asp-controller="Account" asp-action="Login" class="bg-white hover:bg-slate-100 text-[#1e3a8a] rounded px-3 py-1 text-xs font-bold shadow">
+                        🔑 Login
+                    </a>
+                }
+            </div>
+        </header>
+        <main class="flex-1 p-6">
+            @if (TempData["Message"] is string msg)
+            {
+                <div class="mb-4 rounded bg-green-100 border border-green-300 text-green-800 px-4 py-2">@msg</div>
+            }
+            @if (TempData["Error"] is string err)
+            {
+                <div class="mb-4 rounded bg-red-100 border border-red-300 text-red-800 px-4 py-2">@err</div>
+            }
+            @RenderBody()
+        </main>
+        <footer class="text-center text-xs text-slate-500 py-3">
+            Roonjha Developers — Your Ideas. Our Code. Better Tomorrow.
+        </footer>
+    </div>
+</div>
+@RenderSection("Scripts", required: false)
+</body>
+</html>

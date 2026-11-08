@@ -1,0 +1,77 @@
+@model List<Customer>
+@{
+    ViewData["Title"] = "Customers Ledger";
+}
+<div class="space-y-4">
+    <div class="card">
+        <div class="flex justify-between items-center mb-3">
+            <div>
+                <h2 class="font-bold text-lg text-slate-800">Customer Accounts &amp; Ledgers</h2>
+                <p class="text-xs text-slate-500">Manage customers, track outstanding balances, view accounts, and perform edits</p>
+            </div>
+            <a class="btn btn-green text-sm" asp-action="Create">+ Add Customer</a>
+        </div>
+
+        <!-- Filter Bar -->
+        <div class="bg-slate-50 p-3 rounded border mb-4">
+            <form method="get" class="grid md:grid-cols-4 gap-3 items-end">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Search Customer</label>
+                    <input class="input w-full text-sm" name="search" value="@ViewBag.Search" placeholder="Name, phone, NTN, address..." />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Created From</label>
+                    <input class="input w-full text-sm" type="date" name="fromDate" value="@ViewBag.FromDate" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Created To</label>
+                    <input class="input w-full text-sm" type="date" name="toDate" value="@ViewBag.ToDate" />
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="btn w-full text-sm">🔍 Filter</button>
+                    <a asp-action="Index" class="btn text-sm">Reset</a>
+                </div>
+            </form>
+        </div>
+
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Customer Name</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>NTN</th>
+                    <th class="text-right">Balance Due</th>
+                    <th class="text-right">Advance Paid</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var c in Model)
+            {
+                <tr>
+                    <td class="font-bold text-[#1e3a8a]">
+                        <a asp-action="Details" asp-route-id="@c.Id" class="hover:underline">@c.Name</a>
+                    </td>
+                    <td>@c.Phone</td>
+                    <td class="text-xs text-slate-600">@c.Address</td>
+                    <td class="font-mono text-xs">@c.NTN</td>
+                    <td class="text-right font-bold text-green-700">Rs. @c.BalanceDue.ToString("N0")</td>
+                    <td class="text-right text-slate-600">Rs. @c.Advance.ToString("N0")</td>
+                    <td class="space-x-2 text-xs">
+                        <a class="text-blue-700 hover:underline font-semibold" asp-action="Details" asp-route-id="@c.Id">Ledger</a>
+                        <a class="text-slate-700 hover:underline font-semibold" asp-action="Edit" asp-route-id="@c.Id">Edit</a>
+                        <form asp-action="Delete" asp-route-id="@c.Id" method="post" onsubmit="return confirm('Delete customer @c.Name?');" class="inline">
+                            <button type="submit" class="text-red-600 hover:underline font-semibold">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+            @if (!Model.Any())
+            {
+                <tr><td colspan="7" class="text-center py-6 text-slate-500">No customers found matching filter.</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

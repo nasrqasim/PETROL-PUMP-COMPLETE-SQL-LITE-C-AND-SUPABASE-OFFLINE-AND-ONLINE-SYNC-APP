@@ -1,0 +1,21 @@
+@model Return
+@{
+    ViewData["Title"] = $"Return Slip {Model.ReturnNumber}";
+}
+<div class="card max-w-xl mx-auto">
+    <div class="font-black text-xl text-[#1e3a8a]">ROONJHA DEVELOPERS — Oil Shop</div>
+    <h2 class="font-bold text-lg mt-2">Return Slip — @Model.ReturnNumber</h2>
+    <p>Date: @Model.Date.ToString("dd-MMM-yyyy")</p>
+    <p>Type: @Model.Type</p>
+    <p>Customer / Supplier: @(Model.Customer?.Name ?? Model.Supplier?.Name)</p>
+    <p>Original Invoice: @Model.OriginalInvoiceNumber</p>
+    <p>Product: @Model.ProductName</p>
+    <p>Returned Quantity: @Model.ReturnedQuantity</p>
+    <p>Reason: @Model.Reason</p>
+    <p class="text-xl font-bold mt-2">Refund Amount: Rs. @Model.RefundAmount.ToString("N0")</p>
+    <p>Status: @Model.Status</p>
+    <div class="mt-4 flex gap-2 no-print">
+        <button class="btn" onclick="window.print()">🖨️ Print Return Slip</button>
+        <a class="btn" asp-action="Index">Back to Returns</a>
+    </div>
+</div>

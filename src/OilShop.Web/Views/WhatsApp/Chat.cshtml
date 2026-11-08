@@ -1,0 +1,35 @@
+@model Customer
+@{
+    ViewData["Title"] = $"WhatsApp — {Model.Name}";
+    var invoices = (List<SalesInvoice>)ViewBag.Invoices;
+    var payments = (List<Payment>)ViewBag.Payments;
+}
+<div class="grid md:grid-cols-2 gap-4">
+    <div class="card">
+        <h2 class="font-bold text-lg mb-2">@Model.Name — WhatsApp Web Integration</h2>
+        <p>Phone: @Model.Phone</p>
+        <p>Balance Due: <strong class="text-red-600">Rs. @Model.BalanceDue.ToString("N0")</strong></p>
+        <p>Advance: <strong class="text-green-600">Rs. @Model.Advance.ToString("N0")</strong></p>
+        <div class="mt-4 flex flex-wrap gap-2">
+            <a class="btn btn-green" target="_blank" href="@ViewBag.Link">💬 Send Balance Report via WhatsApp</a>
+            <a class="btn" asp-controller="Print" asp-action="Index" asp-route-customerId="@Model.Id">Share Statement</a>
+        </div>
+        <p class="text-xs text-slate-500 mt-3">Opens wa.me with a prefilled balance message. Tap Send in WhatsApp to deliver it.</p>
+    </div>
+    <div class="card">
+        <h2 class="font-bold text-lg mb-2">Account Statement</h2>
+        <table class="tbl">
+            <thead><tr><th>Date</th><th>Invoice</th><th class="text-right">Amount</th></tr></thead>
+            <tbody>
+            @foreach (var i in invoices)
+            {
+                <tr><td>@i.Date.ToString("dd-MMM-yyyy")</td><td>@i.InvoiceNumber</td><td class="text-right">Rs. @i.GrandTotal.ToString("N0")</td></tr>
+            }
+            @foreach (var p in payments)
+            {
+                <tr><td>@p.Date.ToString("dd-MMM-yyyy")</td><td>@p.VoucherNumber (Payment)</td><td class="text-right text-green-600">- Rs. @p.Amount.ToString("N0")</td></tr>
+            }
+            </tbody>
+        </table>
+    </div>
+</div>

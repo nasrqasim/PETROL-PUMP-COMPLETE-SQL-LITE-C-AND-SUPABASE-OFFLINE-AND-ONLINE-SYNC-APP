@@ -1,0 +1,66 @@
+@model List<Role>
+@{
+    ViewData["Title"] = "Roles & Permissions";
+    var modules = (string[])ViewBag.Modules;
+}
+<div class="card mb-4">
+    <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-lg">Role-Based Access Control</h2>
+    </div>
+    <p class="text-sm text-slate-600 mb-3">Staff can only process sales transactions and issue receipts. No access to financial reports or system settings. Owner has complete control over all modules including reports and settings.</p>
+    @foreach (var role in Model)
+    {
+        <div class="border rounded p-3 mb-4">
+            <div class="flex justify-between items-center mb-2">
+                <div class="font-bold">@role.Name Role <span class="text-sm font-normal text-slate-500">— @role.Description</span></div>
+                @if (role.Name == "Owner") { <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-bold">Full Access</span> }
+            </div>
+            <form asp-action="SavePermissions" method="post">
+                <input type="hidden" name="roleId" value="@role.Id" />
+                <table class="tbl">
+                    <thead><tr><th>Module</th><th>Sales Access</th><th>Inventory Access</th><th>Accounts Access</th><th>Settings Access</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td>All Modules</td>
+                            @foreach (var m in new[] { "Sales", "Inventory", "Accounts", "Settings" })
+                            {
+                                var perm = role.Permissions.FirstOrDefault(p => p.Module == m);
+                                <td>
+                                    <label class="inline-flex items-center gap-1">
+                                        <input type="checkbox" name="allowed[@m]" value="true" @(perm?.Allowed == true ? "checked" : null) @(role.Name == "Owner" ? "disabled" : null) />
+                                        @(perm?.Allowed == true ? "✅ Allowed" : "❌ Denied")
+                                    </label>
+                                </td>
+                            }
+                        </tr>
+                    </tbody>
+                </table>
+                <details class="mt-2 text-sm">
+                    <summary class="cursor-pointer text-blue-700">Other modules</summary>
+                    <div class="flex flex-wrap gap-3 mt-2">
+                    @foreach (var m in modules.Where(x => x is not ("Sales" or "Inventory" or "Accounts" or "Settings")))
+                    {
+                        var perm = role.Permissions.FirstOrDefault(p => p.Module == m);
+                        <label class="inline-flex items-center gap-1">
+                            <input type="checkbox" name="allowed[@m]" value="true" @(perm?.Allowed == true ? "checked" : null) @(role.Name == "Owner" ? "disabled" : null) />
+                            @m: @(perm?.Allowed == true ? "Allowed" : "Denied")
+                        </label>
+                    }
+                    </div>
+                </details>
+                @if (role.Name != "Owner")
+                {
+                    <button class="btn mt-3" type="submit">Save Changes</button>
+                }
+            </form>
+        </div>
+    }
+</div>
+<div class="card">
+    <h3 class="font-bold mb-2">Add New Role</h3>
+    <form asp-action="AddRole" method="post" class="flex flex-wrap gap-2">
+        <input class="input max-w-xs" name="name" placeholder="Role name" required />
+        <input class="input max-w-md" name="description" placeholder="Description" />
+        <button class="btn" type="submit">Add New Role</button>
+    </form>
+</div>

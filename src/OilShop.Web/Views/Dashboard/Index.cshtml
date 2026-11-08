@@ -1,0 +1,130 @@
+@model List<SalesInvoice>
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="flex flex-col md:flex-row md:items-center justify-between mb-6 pb-2 border-b border-slate-200 gap-2">
+    <div>
+        <h2 class="text-2xl font-bold text-[#1e3a8a]">Today's Activity &amp; Overview</h2>
+        <p class="text-xs text-slate-500">Real-time financial status, inventory tracking, and recent transactions</p>
+    </div>
+    <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200">
+        <span class="text-lg">🕒</span>
+        <div class="text-xs text-slate-500">
+            <div>Live System Time</div>
+            <div id="liveClock" class="font-bold text-sm text-[#1e3a8a] font-mono">--</div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <div class="card border-l-4 border-green-600">
+        <div class="text-sm text-slate-500">Today's Revenue</div>
+        <div class="text-2xl font-bold text-green-600">Rs. @(((decimal)ViewBag.Revenue).ToString("N0"))</div>
+    </div>
+    <div class="card border-l-4 border-red-600">
+        <div class="text-sm text-slate-500">Today's Expenses</div>
+        <div class="text-2xl font-bold text-red-600">Rs. @(((decimal)ViewBag.Expenses).ToString("N0"))</div>
+    </div>
+    <div class="card border-l-4 border-blue-800">
+        <div class="text-sm text-slate-500">Today's Net Profit</div>
+        <div class="text-2xl font-bold text-[#1e3a8a]">Rs. @(((decimal)ViewBag.NetProfit).ToString("N0"))</div>
+    </div>
+    <a asp-controller="CashBank" asp-action="CashHistory" class="card border-l-4 border-amber-500 hover:shadow-lg transition cursor-pointer group">
+        <div class="flex justify-between items-start">
+            <div class="text-sm text-slate-500 group-hover:text-amber-700">Cash in Hand ↗</div>
+            <span class="text-xs bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-medium">History</span>
+        </div>
+        <div class="text-2xl font-bold text-slate-800">Rs. @(((decimal)ViewBag.Cash).ToString("N0"))</div>
+    </a>
+    <a asp-controller="CashBank" asp-action="BankHistory" class="card border-l-4 border-blue-600 hover:shadow-lg transition cursor-pointer group">
+        <div class="flex justify-between items-start">
+            <div class="text-sm text-slate-500 group-hover:text-blue-700">Bank Balance ↗</div>
+            <span class="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-medium">History</span>
+        </div>
+        <div class="text-2xl font-bold text-slate-800">Rs. @(((decimal)ViewBag.Bank).ToString("N0"))</div>
+    </a>
+    <div class="card">
+        <div class="text-sm text-slate-500">Customer Receivables</div>
+        <div class="text-xl font-bold text-green-600">Rs. @(((decimal)ViewBag.Receivables).ToString("N0"))</div>
+    </div>
+    <div class="card">
+        <div class="text-sm text-slate-500">Supplier Payables</div>
+        <div class="text-xl font-bold text-red-600">Rs. @(((decimal)ViewBag.Payables).ToString("N0"))</div>
+    </div>
+    <div class="card">
+        <div class="text-sm text-slate-500">Low Stock Items</div>
+        <div class="text-xl font-bold text-amber-600">@(((List<Product>)ViewBag.LowStock).Count)</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="flex justify-between items-center mb-3">
+        <div>
+            <h2 class="font-bold text-lg">Recent Sales Invoices</h2>
+            <p class="text-xs text-slate-500">Latest billing and customer purchase records</p>
+        </div>
+        <div class="flex gap-2">
+            <a class="btn text-xs" asp-controller="Sales" asp-action="Create">+ New Sale Invoice</a>
+            <a class="btn btn-green text-xs" asp-controller="Purchases" asp-action="Create">+ New Purchase Invoice</a>
+        </div>
+    </div>
+    <table class="tbl">
+        <thead>
+            <tr>
+                <th>Invoice No.</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Mode</th>
+                <th class="text-right">Grand Total</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var i in Model)
+        {
+            <tr>
+                <td class="font-semibold font-mono text-[#1e3a8a]">@i.InvoiceNumber</td>
+                <td>@i.Date.ToString("dd-MMM-yyyy")</td>
+                <td>@(i.Customer?.Name ?? "Walk-in Customer")</td>
+                <td>
+                    <span class="px-2 py-0.5 rounded text-xs font-semibold @(i.PaymentMode == PaymentMode.Credit ? "bg-amber-100 text-amber-800" : (i.PaymentMode == PaymentMode.Cash ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"))">
+                        @i.PaymentMode
+                    </span>
+                </td>
+                <td class="text-right font-bold">Rs. @i.GrandTotal.ToString("N0")</td>
+                <td><a class="text-blue-700 underline font-medium hover:text-blue-900" asp-controller="Sales" asp-action="Print" asp-route-id="@i.Id">Print</a></td>
+            </tr>
+        }
+        @if (!Model.Any())
+        {
+            <tr><td colspan="6" class="text-center py-4 text-slate-500">No recent sales invoices recorded yet.</td></tr>
+        }
+        </tbody>
+    </table>
+    <div class="mt-4 flex gap-2">
+        <a class="btn" asp-controller="Sales" asp-action="Create">+ New Sale Invoice</a>
+        <a class="btn btn-green" asp-controller="Purchases" asp-action="Create">+ New Purchase Invoice</a>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+    function updateClock() {
+        const now = new Date();
+        const options = { 
+            weekday: 'short', 
+            year: 'numeric', 
+            month: 'short', 
+            day: '2-digit', 
+            hour: '2-digit', 
+            minute: '2-digit', 
+            second: '2-digit', 
+            hour12: true 
+        };
+        document.getElementById('liveClock').textContent = now.toLocaleDateString('en-GB', options);
+    }
+    updateClock();
+    setInterval(updateClock, 1000);
+</script>
+}

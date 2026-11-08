@@ -1,0 +1,28 @@
+@model List<Customer>
+@{
+    ViewData["Title"] = "WhatsApp Contacts";
+}
+<div class="card">
+    <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-lg">Customer Contacts — WhatsApp Integration</h2>
+        <span class="text-sm text-slate-500">Shop: @ViewBag.ShopName</span>
+    </div>
+    <table class="tbl">
+        <thead><tr><th>Customer Directory</th><th>Phone Number</th><th class="text-right">Balance Due</th><th>Last Transaction</th><th>Action</th><th></th></tr></thead>
+        <tbody>
+        @foreach (var c in Model)
+        {
+            <tr>
+                <td>@c.Name</td><td>@c.Phone</td>
+                <td class="text-right font-semibold @(c.BalanceDue > 0 ? "text-red-600" : "")">Rs. @c.BalanceDue.ToString("N0")</td>
+                <td>@c.UpdatedAt.ToString("dd-MMM-yyyy")</td>
+                <td>
+                    <a class="btn btn-green" target="_blank"
+                       href="@OilShop.Core.Services.WhatsAppService.BalanceLink(c.Phone, (string)ViewBag.ShopName, c.Name, c.BalanceDue)">💬 WhatsApp</a>
+                </td>
+                <td><a class="text-blue-700 underline" asp-action="Chat" asp-route-id="@c.Id">Send Message</a></td>
+            </tr>
+        }
+        </tbody>
+    </table>
+</div>
