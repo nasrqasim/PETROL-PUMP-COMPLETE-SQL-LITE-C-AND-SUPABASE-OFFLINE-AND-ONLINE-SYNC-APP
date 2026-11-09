@@ -1,0 +1,148 @@
+@model List<OilShop.Core.Models.RoznamchaEntry>
+@{
+    ViewData["Title"] = "Din Ka Khulasa (Daily Summary)";
+    var selectedDate = ViewBag.SelectedDate as string ?? DateTime.Today.ToString("yyyy-MM-dd");
+
+    var totalTrips = Model.Count;
+    var totalVehicles = Model.Select(r => r.GariNo).Distinct().Count();
+    var totalKiraya = Model.Sum(r => r.Kiraya);
+    var totalKharcha = Model.Sum(r => r.Kharcha);
+    var totalAdvance = Model.Sum(r => r.Advance);
+    var totalDiesel = Model.Sum(r => r.DieselLiter);
+    var totalBachat = totalKiraya - totalKharcha - totalAdvance;
+}
+
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="card flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <span>📊</span> Din Ka Khulasa — Daily Financial Summary &amp; Overview
+            </h2>
+            <p class="text-sm text-slate-500">Daily financial snapshot showing operating vehicles, trips, freight, expenses, advances, and net Bachat.</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a asp-action="DinKaKhulasa" asp-route-date="@DateTime.Today.ToString("yyyy-MM-dd")" class="btn btn-green text-xs flex items-center gap-1 shadow">
+                📅 Aaj Ka Total (Today's Total)
+            </a>
+            <button onclick="window.print()" class="btn text-xs">🖨️ Print Summary</button>
+        </div>
+    </div>
+
+    <!-- Date Bar -->
+    <div class="card">
+        <form method="get" class="flex flex-wrap items-center gap-4 text-xs">
+            <div class="flex items-center gap-2">
+                <label class="font-bold text-slate-700">Select Date (تاریخ منتخب کریں):</label>
+                <input type="date" name="date" value="@selectedDate" class="input py-1 px-3 text-xs font-semibold" />
+                <button type="submit" class="btn text-xs py-1 px-3">Load Date</button>
+            </div>
+            <div class="ml-auto text-xs text-slate-500 font-medium">
+                Active Vehicles: <strong class="text-slate-800">@totalVehicles</strong> | Trips: <strong class="text-slate-800">@totalTrips</strong>
+            </div>
+        </form>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div class="card">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Vehicles</span>
+            <div class="mt-2 flex items-baseline justify-between">
+                <span class="text-2xl font-black text-slate-900">@totalVehicles</span>
+                <span class="text-xs text-slate-400 font-medium">@totalTrips Trips</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">Operating on this date</p>
+        </div>
+
+        <div class="card">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Kiraya (Freight)</span>
+            <div class="mt-2">
+                <span class="text-2xl font-black text-green-700">Rs. @totalKiraya.ToString("N0")</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">Total transportation revenue</p>
+        </div>
+
+        <div class="card">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Kharcha (Expenses)</span>
+            <div class="mt-2">
+                <span class="text-2xl font-black text-red-600">Rs. @totalKharcha.ToString("N0")</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">Trip expenses &amp; vehicle costs</p>
+        </div>
+
+        <div class="card">
+            <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Advance (Peshgi)</span>
+            <div class="mt-2">
+                <span class="text-2xl font-black text-amber-600">Rs. @totalAdvance.ToString("N0")</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">Advances paid to drivers</p>
+        </div>
+
+        <div class="card bg-[#1e3a8a] text-white">
+            <span class="text-xs font-bold uppercase tracking-wider text-amber-300">Total Bachat (Net Total)</span>
+            <div class="mt-2">
+                <span class="text-2xl font-extrabold text-white">Rs. @totalBachat.ToString("N0")</span>
+            </div>
+            <p class="text-[10px] text-blue-200 mt-1 font-mono">Kiraya - Kharcha - Advance</p>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="card overflow-x-auto p-0">
+        <div class="px-5 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center text-xs">
+            <span class="font-bold text-slate-800">Detailed Records — @selectedDate</span>
+            <span class="text-slate-500">Total records: @Model.Count</span>
+        </div>
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Gari No (گاڑی نمبر)</th>
+                    <th>Driver (ڈرائیور)</th>
+                    <th>Maal</th>
+                    <th class="text-right">Diesel</th>
+                    <th class="text-right">Kiraya (کرایہ)</th>
+                    <th class="text-right">Kharcha (خرچہ)</th>
+                    <th class="text-right">Advance (پیشگی)</th>
+                    <th class="text-right">Baqaya / Bachat</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="8" class="text-center py-6 text-slate-400">No entries found for date @selectedDate.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var r in Model)
+                    {
+                        <tr>
+                            <td><span class="bg-slate-100 font-bold px-2 py-0.5 rounded border border-slate-200">@r.GariNo</span></td>
+                            <td class="font-semibold">@r.DriverName</td>
+                            <td class="text-slate-600">@(string.IsNullOrEmpty(r.Maal) ? "—" : r.Maal)</td>
+                            <td class="text-right font-mono">@(r.DieselLiter > 0 ? $"{r.DieselLiter} L" : "—")</td>
+                            <td class="text-right font-semibold text-green-700">Rs. @r.Kiraya.ToString("N0")</td>
+                            <td class="text-right font-semibold text-red-600">Rs. @r.Kharcha.ToString("N0")</td>
+                            <td class="text-right font-semibold text-amber-600">Rs. @r.Advance.ToString("N0")</td>
+                            <td class="text-right font-bold @(r.Baqaya >= 0 ? "text-slate-900" : "text-red-600")">Rs. @r.Baqaya.ToString("N0")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+            @if (Model.Count > 0)
+            {
+                <tfoot>
+                    <tr class="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
+                        <td colspan="3" class="py-3 px-3">Grand Total (@totalVehicles Vehicles, @totalTrips Trips)</td>
+                        <td class="text-right py-3 px-3 font-mono">@totalDiesel.ToString("N0") L</td>
+                        <td class="text-right py-3 px-3 text-green-800">Rs. @totalKiraya.ToString("N0")</td>
+                        <td class="text-right py-3 px-3 text-red-800">Rs. @totalKharcha.ToString("N0")</td>
+                        <td class="text-right py-3 px-3 text-amber-800">Rs. @totalAdvance.ToString("N0")</td>
+                        <td class="text-right py-3 px-3 font-extrabold text-[#1e3a8a]">Rs. @totalBachat.ToString("N0")</td>
+                    </tr>
+                </tfoot>
+            }
+        </table>
+    </div>
+</div>

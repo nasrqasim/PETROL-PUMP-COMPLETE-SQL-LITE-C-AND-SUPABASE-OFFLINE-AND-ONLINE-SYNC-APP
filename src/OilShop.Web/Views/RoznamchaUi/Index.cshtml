@@ -1,0 +1,265 @@
+@model List<OilShop.Core.Models.RoznamchaEntry>
+@{
+    ViewData["Title"] = "Aaj Ki Entry (Daily Roznamcha)";
+    var gariyan = ViewBag.Gariyan as List<OilShop.Core.Models.Gari> ?? new();
+}
+
+<div class="space-y-6">
+    <!-- Top Action Card -->
+    <div class="card flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <span>🚚</span> Aaj Ki Entry — Muslim Construction Roznamcha
+            </h2>
+            <p class="text-sm text-slate-500">Record daily trips, freight charges (Kiraya), vehicle expenses (Kharcha), and driver advances (Peshgi).</p>
+        </div>
+        <div class="flex items-center gap-2">
+            <a href="http://localhost:3000" target="_blank" class="btn text-xs bg-slate-800 hover:bg-slate-700 flex items-center gap-1.5 shadow">
+                ⚡ Open Next.js App &rarr;
+            </a>
+        </div>
+    </div>
+
+    <!-- Entry Form Card -->
+    <div class="card overflow-hidden">
+        <div class="bg-[#1e3a8a] text-white px-5 py-3 rounded-t -m-4 mb-4 flex justify-between items-center">
+            <h3 class="font-bold text-sm flex items-center gap-2" id="formHeading">
+                <span>➕</span> Nayi Entry (New Daily Entry)
+            </h3>
+            <button type="button" onclick="resetForm()" class="text-xs bg-blue-900 hover:bg-blue-800 px-2.5 py-1 rounded text-white hidden" id="cancelEditBtn">
+                Cancel Edit
+            </button>
+        </div>
+
+        <form asp-action="Save" method="post" id="entryForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" id="entryId" value="" />
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Tareekh (Date) <span class="text-red-500">*</span></label>
+                    <input type="date" name="date" id="formDate" value="@DateTime.Today.ToString("yyyy-MM-dd")" required class="input" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Gari Number (Vehicle) <span class="text-red-500">*</span></label>
+                    <div class="flex gap-1.5">
+                        <select id="vehicleSelect" onchange="handleVehicleChange(this)" class="input" required>
+                            <option value="">-- Select Gari --</option>
+                            @foreach (var g in gariyan)
+                            {
+                                <option value="@g.GariNo" data-driver="@g.DriverName">@g.GariNo (@g.Malik)</option>
+                            }
+                        </select>
+                        <input type="text" name="gariNo" id="gariNoInput" placeholder="Or Type" class="input w-28" required />
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Driver (Driver Name) <span class="text-red-500">*</span></label>
+                    <input type="text" name="driverName" id="driverInput" placeholder="e.g. Iqbal" required class="input" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Maal (Material / Goods)</label>
+                    <input type="text" name="maal" id="maalInput" placeholder="e.g. 60 Ton Tarkol" class="input" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Diesel (Liters)</label>
+                    <input type="number" step="0.01" min="0" name="dieselLiter" id="dieselInput" placeholder="100" class="input" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Kiraya (Freight) <span class="text-xs text-slate-400">(Rs.)</span></label>
+                    <input type="number" min="0" name="kiraya" id="kirayaInput" oninput="calculateBaqaya()" placeholder="35000" class="input font-semibold text-green-700" required />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Kharcha (Expenses) <span class="text-xs text-slate-400">(Rs.)</span></label>
+                    <input type="number" min="0" name="kharcha" id="kharchaInput" oninput="calculateBaqaya()" placeholder="5000" class="input font-semibold text-red-700" required />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Advance / Peshgi <span class="text-xs text-slate-400">(Rs.)</span></label>
+                    <input type="number" min="0" name="advance" id="advanceInput" oninput="calculateBaqaya()" placeholder="10000" class="input font-semibold text-amber-700" required />
+                </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <div class="flex items-center space-x-3 bg-slate-50 px-4 py-2 rounded-lg border border-slate-200 text-xs">
+                    <span class="font-semibold text-slate-600">Calculated Baqaya:</span>
+                    <span class="text-base font-bold text-[#1e3a8a]" id="liveBaqaya">Rs. 0</span>
+                    <span class="text-[10px] text-slate-400 font-mono">(Kiraya - Kharcha - Advance)</span>
+                </div>
+
+                <div class="flex gap-2">
+                    <button type="button" onclick="resetForm()" class="btn bg-slate-500 hover:bg-slate-600 text-xs">Reset</button>
+                    <button type="submit" class="btn btn-green text-xs shadow" id="submitBtn">Save Daily Entry (محفوظ کریں)</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Filters Bar -->
+    <div class="card">
+        <form method="get" class="flex flex-wrap gap-3 items-center justify-between text-xs">
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center gap-1.5">
+                    <span class="font-semibold text-slate-500">Date:</span>
+                    <input type="date" name="date" value="@ViewBag.FilterDate" class="input py-1 px-2 text-xs" />
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <span class="font-semibold text-slate-500">Vehicle:</span>
+                    <select name="gariNo" class="input py-1 px-2 text-xs">
+                        <option value="">All Vehicles</option>
+                        @foreach (var g in gariyan)
+                        {
+                            <option value="@g.GariNo" selected="@(ViewBag.FilterGari == g.GariNo)">@g.GariNo</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <span class="font-semibold text-slate-500">Driver:</span>
+                    <input type="text" name="driverName" value="@ViewBag.FilterDriver" placeholder="Search driver" class="input py-1 px-2 text-xs w-28" />
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                    <input type="text" name="search" value="@ViewBag.Search" placeholder="Search keyword..." class="input py-1 px-2 text-xs w-36" />
+                </div>
+
+                <button type="submit" class="btn text-xs py-1 px-3 shadow">Filter</button>
+                <a asp-action="Index" class="text-red-600 font-semibold hover:underline">Clear</a>
+            </div>
+
+            <div class="text-slate-500">
+                Total Records: <strong>@Model.Count</strong>
+            </div>
+        </form>
+    </div>
+
+    <!-- Table -->
+    <div class="card overflow-x-auto p-0">
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Vehicle (گاڑی نمبر)</th>
+                    <th>Driver (ڈرائیور)</th>
+                    <th>Maal (Material)</th>
+                    <th class="text-right">Diesel</th>
+                    <th class="text-right">Kiraya (کرایہ)</th>
+                    <th class="text-right">Kharcha (خرچہ)</th>
+                    <th class="text-right">Advance (پیشگی)</th>
+                    <th class="text-right">Baqaya (بقایا)</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="10" class="text-center py-6 text-slate-400">No Roznamcha records found matching criteria.</td>
+                    </tr>
+                }
+                else
+                {
+                    @foreach (var r in Model)
+                    {
+                        <tr>
+                            <td class="font-medium">@r.Date.ToString("dd-MM-yyyy")</td>
+                            <td><span class="bg-slate-100 font-bold px-2 py-0.5 rounded border border-slate-200">@r.GariNo</span></td>
+                            <td class="font-semibold">@r.DriverName</td>
+                            <td class="text-slate-600">@(string.IsNullOrEmpty(r.Maal) ? "—" : r.Maal)</td>
+                            <td class="text-right font-mono">@(r.DieselLiter > 0 ? $"{r.DieselLiter} L" : "—")</td>
+                            <td class="text-right font-semibold text-green-700">Rs. @r.Kiraya.ToString("N0")</td>
+                            <td class="text-right font-semibold text-red-600">Rs. @r.Kharcha.ToString("N0")</td>
+                            <td class="text-right font-semibold text-amber-600">Rs. @r.Advance.ToString("N0")</td>
+                            <td class="text-right font-bold @(r.Baqaya >= 0 ? "text-slate-900" : "text-red-600")">
+                                Rs. @r.Baqaya.ToString("N0")
+                            </td>
+                            <td class="text-center">
+                                <div class="flex justify-center items-center gap-2">
+                                    <button type="button"
+                                            onclick="editRecord(@r.Id, '@r.Date.ToString("yyyy-MM-dd")', '@r.GariNo', '@r.DriverName', '@r.Maal', @r.DieselLiter, @r.Kiraya, @r.Kharcha, @r.Advance)"
+                                            class="text-blue-600 hover:underline text-xs font-semibold">
+                                        Edit
+                                    </button>
+                                    <form asp-action="Delete" asp-route-id="@r.Id" method="post" onsubmit="return confirm('Are you sure you want to delete Roznamcha entry #@r.Id?');" class="inline">
+                                        @Html.AntiForgeryToken()
+                                        <button type="submit" class="text-red-600 hover:underline text-xs font-semibold">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function handleVehicleChange(select) {
+        var gariNo = select.value;
+        document.getElementById('gariNoInput').value = gariNo;
+        var driver = select.options[select.selectedIndex].getAttribute('data-driver');
+        if (driver) {
+            document.getElementById('driverInput').value = driver;
+        }
+    }
+
+    function calculateBaqaya() {
+        var kiraya = parseFloat(document.getElementById('kirayaInput').value) || 0;
+        var kharcha = parseFloat(document.getElementById('kharchaInput').value) || 0;
+        var advance = parseFloat(document.getElementById('advanceInput').value) || 0;
+        var baqaya = kiraya - kharcha - advance;
+        var display = document.getElementById('liveBaqaya');
+        display.innerText = 'Rs. ' + baqaya.toLocaleString();
+        if (baqaya >= 0) {
+            display.className = 'text-base font-bold text-green-700';
+        } else {
+            display.className = 'text-base font-bold text-red-600';
+        }
+    }
+
+    function editRecord(id, date, gariNo, driverName, maal, diesel, kiraya, kharcha, advance) {
+        document.getElementById('entryId').value = id;
+        document.getElementById('formDate').value = date;
+        document.getElementById('gariNoInput').value = gariNo;
+        document.getElementById('driverInput').value = driverName;
+        document.getElementById('maalInput').value = maal || '';
+        document.getElementById('dieselInput').value = diesel || '';
+        document.getElementById('kirayaInput').value = kiraya || '';
+        document.getElementById('kharchaInput').value = kharcha || '';
+        document.getElementById('advanceInput').value = advance || '';
+
+        document.getElementById('formHeading').innerHTML = '<span>✏️</span> Edit Roznamcha Entry #' + id;
+        document.getElementById('submitBtn').innerText = 'Update Entry';
+        document.getElementById('cancelEditBtn').classList.remove('hidden');
+
+        calculateBaqaya();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+        document.getElementById('entryId').value = '';
+        document.getElementById('gariNoInput').value = '';
+        document.getElementById('driverInput').value = '';
+        document.getElementById('maalInput').value = '';
+        document.getElementById('dieselInput').value = '';
+        document.getElementById('kirayaInput').value = '';
+        document.getElementById('kharchaInput').value = '';
+        document.getElementById('advanceInput').value = '';
+        document.getElementById('vehicleSelect').value = '';
+
+        document.getElementById('formHeading').innerHTML = '<span>➕</span> Nayi Entry (New Daily Entry)';
+        document.getElementById('submitBtn').innerText = 'Save Daily Entry (محفوظ کریں)';
+        document.getElementById('cancelEditBtn').classList.add('hidden');
+        calculateBaqaya();
+    }
+</script>

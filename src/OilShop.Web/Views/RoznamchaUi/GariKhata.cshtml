@@ -1,0 +1,151 @@
+@model List<OilShop.Core.Models.RoznamchaEntry>
+@{
+    ViewData["Title"] = "Gari Wise Khata (Vehicle Ledger)";
+    var gariyan = ViewBag.Gariyan as List<OilShop.Core.Models.Gari> ?? new();
+    var selectedGari = ViewBag.SelectedGari as string ?? "537";
+    var vehicle = ViewBag.Vehicle as OilShop.Core.Models.Gari;
+
+    var totalTrips = Model.Count;
+    var totalKiraya = Model.Sum(r => r.Kiraya);
+    var totalKharcha = Model.Sum(r => r.Kharcha);
+    var totalAdvance = Model.Sum(r => r.Advance);
+    var totalDiesel = Model.Sum(r => r.DieselLiter);
+    var baqaya = totalKiraya - totalKharcha - totalAdvance;
+}
+
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="card flex justify-between items-center">
+        <div>
+            <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <span>🚛</span> Gari Wise Khata — Vehicle Financial Ledger
+            </h2>
+            <p class="text-sm text-slate-500">Complete vehicle ledger, trip log, expenses, and running balance.</p>
+        </div>
+        <button onclick="window.print()" class="btn text-xs">🖨️ Print Ledger</button>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="card">
+        <form method="get" class="flex flex-wrap items-center gap-4 text-xs">
+            <div class="flex items-center gap-2">
+                <label class="font-bold text-slate-700">Select Gari:</label>
+                <select name="gariNo" onchange="this.form.submit()" class="input py-1 px-3 text-xs font-semibold">
+                    @foreach (var g in gariyan)
+                    {
+                        <option value="@g.GariNo" selected="@(selectedGari == g.GariNo)">
+                            Gari #@g.GariNo — @g.DriverName (@g.Malik)
+                        </option>
+                    }
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <span class="text-slate-500">From:</span>
+                <input type="date" name="startDate" value="@ViewBag.StartDate" class="input py-1 px-2 text-xs" />
+                <span class="text-slate-500">To:</span>
+                <input type="date" name="endDate" value="@ViewBag.EndDate" class="input py-1 px-2 text-xs" />
+                <button type="submit" class="btn text-xs py-1 px-3">Filter</button>
+                <a asp-action="GariKhata" class="text-red-600 font-semibold hover:underline">Clear</a>
+            </div>
+
+            @if (vehicle != null)
+            {
+                <div class="ml-auto text-xs text-slate-500">
+                    Ownership: <span class="font-bold px-2 py-0.5 rounded @(vehicle.Malik == "Apni" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800")">
+                        @(vehicle.Malik == "Apni" ? "Apni (Own)" : "Kiraye Wali (Rented)")
+                    </span>
+                    @if (!string.IsNullOrEmpty(vehicle.Phone))
+                    {
+                        <span class="ml-2 font-mono">📞 @vehicle.Phone</span>
+                    }
+                </div>
+            }
+        </form>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div class="card">
+            <p class="text-[11px] uppercase tracking-wider font-semibold text-slate-500">Total Trips</p>
+            <p class="text-xl font-bold text-slate-900 mt-1">@totalTrips</p>
+        </div>
+
+        <div class="card">
+            <p class="text-[11px] uppercase tracking-wider font-semibold text-slate-500">Total Kiraya</p>
+            <p class="text-xl font-bold text-green-700 mt-1">Rs. @totalKiraya.ToString("N0")</p>
+        </div>
+
+        <div class="card">
+            <p class="text-[11px] uppercase tracking-wider font-semibold text-slate-500">Total Kharcha</p>
+            <p class="text-xl font-bold text-red-600 mt-1">Rs. @totalKharcha.ToString("N0")</p>
+        </div>
+
+        <div class="card">
+            <p class="text-[11px] uppercase tracking-wider font-semibold text-slate-500">Total Advance</p>
+            <p class="text-xl font-bold text-amber-600 mt-1">Rs. @totalAdvance.ToString("N0")</p>
+        </div>
+
+        <div class="card">
+            <p class="text-[11px] uppercase tracking-wider font-semibold text-slate-500">Diesel (Liters)</p>
+            <p class="text-xl font-bold text-blue-700 mt-1">@totalDiesel.ToString("N0") L</p>
+        </div>
+
+        <div class="card bg-[#1e3a8a] text-white">
+            <p class="text-[11px] uppercase tracking-wider font-semibold text-amber-300">Baqaya (Balance)</p>
+            <p class="text-xl font-extrabold text-white mt-1">Rs. @baqaya.ToString("N0")</p>
+            <p class="text-[9px] text-blue-200 mt-0.5">Kiraya - Kharcha - Advance</p>
+        </div>
+    </div>
+
+    <!-- Ledger Table -->
+    <div class="card overflow-x-auto p-0">
+        <div class="px-5 py-3 border-b border-slate-200 bg-slate-50 flex justify-between items-center text-xs">
+            <span class="font-bold text-slate-800">Transaction History — Gari #@selectedGari</span>
+            <span class="text-slate-500">Driver: <strong>@(vehicle?.DriverName ?? "—")</strong></span>
+        </div>
+        <table class="tbl">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Driver</th>
+                    <th>Maal</th>
+                    <th class="text-right">Diesel</th>
+                    <th class="text-right">Kiraya (کرایہ)</th>
+                    <th class="text-right">Kharcha (خرچہ)</th>
+                    <th class="text-right">Advance (پیشگی)</th>
+                    <th class="text-right">Entry Net</th>
+                    <th class="text-right">Running Baqaya</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Count == 0)
+                {
+                    <tr>
+                        <td colspan="9" class="text-center py-6 text-slate-400">No records found for vehicle #@selectedGari.</td>
+                    </tr>
+                }
+                else
+                {
+                    decimal running = 0;
+                    @foreach (var r in Model)
+                    {
+                        var entryNet = r.Kiraya - r.Kharcha - r.Advance;
+                        running += entryNet;
+                        <tr>
+                            <td class="font-medium">@r.Date.ToString("dd-MM-yyyy")</td>
+                            <td class="font-semibold">@r.DriverName</td>
+                            <td class="text-slate-600">@(string.IsNullOrEmpty(r.Maal) ? "—" : r.Maal)</td>
+                            <td class="text-right font-mono">@(r.DieselLiter > 0 ? $"{r.DieselLiter} L" : "—")</td>
+                            <td class="text-right font-semibold text-green-700">Rs. @r.Kiraya.ToString("N0")</td>
+                            <td class="text-right font-semibold text-red-600">Rs. @r.Kharcha.ToString("N0")</td>
+                            <td class="text-right font-semibold text-amber-600">Rs. @r.Advance.ToString("N0")</td>
+                            <td class="text-right font-medium @(entryNet >= 0 ? "text-slate-800" : "text-red-600")">Rs. @entryNet.ToString("N0")</td>
+                            <td class="text-right font-bold @(running >= 0 ? "text-slate-900" : "text-red-600")">Rs. @running.ToString("N0")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
