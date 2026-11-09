@@ -26,6 +26,8 @@ public class OilShopDbContext : DbContext
     public DbSet<Advance> Advances => Set<Advance>();
     public DbSet<Loan> Loans => Set<Loan>();
     public DbSet<AppUser> AppUsers => Set<AppUser>();
+    public DbSet<Gari> Gariyan => Set<Gari>();
+    public DbSet<RoznamchaEntry> Roznamcha => Set<RoznamchaEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -68,6 +70,7 @@ public class OilShopDbContext : DbContext
         modelBuilder.Entity<PurchaseInvoice>().HasIndex(i => i.InvoiceNumber).IsUnique();
         modelBuilder.Entity<Return>().HasIndex(r => r.ReturnNumber).IsUnique();
         modelBuilder.Entity<StaffMember>().HasIndex(s => s.EmployeeId).IsUnique();
+        modelBuilder.Entity<Gari>().HasIndex(g => g.GariNo).IsUnique();
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

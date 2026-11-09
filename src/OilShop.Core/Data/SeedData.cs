@@ -49,6 +49,79 @@ public static class SeedData
         }
         catch { }
 
+        // Create Gariyan table for Muslim Construction - Roznamcha
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS ""Gariyan"" (
+                ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_Gariyan"" PRIMARY KEY AUTOINCREMENT,
+                ""GariNo"" TEXT NOT NULL UNIQUE,
+                ""DriverName"" TEXT,
+                ""Malik"" TEXT NOT NULL DEFAULT 'Apni',
+                ""Phone"" TEXT,
+                ""CreatedAt"" TEXT NOT NULL,
+                ""UpdatedAt"" TEXT NOT NULL,
+                ""IsDirty"" INTEGER NOT NULL DEFAULT 0,
+                ""IsDeleted"" INTEGER NOT NULL DEFAULT 0
+            );");
+
+        // Create Roznamcha table for Muslim Construction - Roznamcha
+        await db.Database.ExecuteSqlRawAsync(@"
+            CREATE TABLE IF NOT EXISTS ""Roznamcha"" (
+                ""Id"" INTEGER NOT NULL CONSTRAINT ""PK_Roznamcha"" PRIMARY KEY AUTOINCREMENT,
+                ""Date"" TEXT NOT NULL,
+                ""GariNo"" TEXT NOT NULL,
+                ""DriverName"" TEXT NOT NULL,
+                ""Maal"" TEXT,
+                ""DieselLiter"" DECIMAL(18,2) NOT NULL DEFAULT 0,
+                ""Kiraya"" DECIMAL(18,2) NOT NULL DEFAULT 0,
+                ""Kharcha"" DECIMAL(18,2) NOT NULL DEFAULT 0,
+                ""Advance"" DECIMAL(18,2) NOT NULL DEFAULT 0,
+                ""CreatedAt"" TEXT NOT NULL,
+                ""UpdatedAt"" TEXT NOT NULL,
+                ""IsDirty"" INTEGER NOT NULL DEFAULT 0,
+                ""IsDeleted"" INTEGER NOT NULL DEFAULT 0
+            );");
+
+        // Seed initial Gariyan if empty
+        if (!await db.Gariyan.AnyAsync())
+        {
+            db.Gariyan.AddRange(
+                new Gari { GariNo = "537", DriverName = "Iqbal", Malik = "Apni", Phone = "0300-1234537" },
+                new Gari { GariNo = "786", DriverName = "Rashid", Malik = "Kiraye Wali", Phone = "0301-7654321" },
+                new Gari { GariNo = "1122", DriverName = "Tariq", Malik = "Apni", Phone = "0302-9988776" }
+            );
+            await db.SaveChangesAsync();
+        }
+
+        // Seed initial Roznamcha entry if empty
+        if (!await db.Roznamcha.AnyAsync())
+        {
+            db.Roznamcha.AddRange(
+                new RoznamchaEntry
+                {
+                    Date = new DateTime(2026, 11, 8),
+                    GariNo = "537",
+                    DriverName = "Iqbal",
+                    Maal = "60 Ton Tarkol",
+                    DieselLiter = 100m,
+                    Kiraya = 35000m,
+                    Kharcha = 5000m,
+                    Advance = 10000m
+                },
+                new RoznamchaEntry
+                {
+                    Date = new DateTime(2026, 11, 8),
+                    GariNo = "786",
+                    DriverName = "Rashid",
+                    Maal = "40 Ton Bajri",
+                    DieselLiter = 80m,
+                    Kiraya = 28000m,
+                    Kharcha = 4000m,
+                    Advance = 5000m
+                }
+            );
+            await db.SaveChangesAsync();
+        }
+
         // Ensure default users exist even if database was already partially seeded
         if (!await db.AppUsers.AnyAsync())
         {

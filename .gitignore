@@ -8,3 +8,8 @@ obj/
 *.exe
 *.zip
 uploads/
+
+node_modules/
+.next/
+.env.local
+.pnpm-store/
