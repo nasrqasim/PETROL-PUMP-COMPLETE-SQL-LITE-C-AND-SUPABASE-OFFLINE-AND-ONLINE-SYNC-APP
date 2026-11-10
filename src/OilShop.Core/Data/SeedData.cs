@@ -49,6 +49,13 @@ public static class SeedData
         }
         catch { }
 
+        // Schema evolution: StaffId, GariNo, DriverName on Payment, Gariyan, Roznamcha
+        try { await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Payments"" ADD COLUMN ""GariNo"" TEXT;"); } catch { }
+        try { await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Payments"" ADD COLUMN ""DriverName"" TEXT;"); } catch { }
+        try { await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Payments"" ADD COLUMN ""StaffId"" INTEGER;"); } catch { }
+        try { await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Gariyan"" ADD COLUMN ""StaffId"" INTEGER;"); } catch { }
+        try { await db.Database.ExecuteSqlRawAsync(@"ALTER TABLE ""Roznamcha"" ADD COLUMN ""StaffId"" INTEGER;"); } catch { }
+
         // Create Gariyan table for Muslim Construction - Roznamcha
         await db.Database.ExecuteSqlRawAsync(@"
             CREATE TABLE IF NOT EXISTS ""Gariyan"" (

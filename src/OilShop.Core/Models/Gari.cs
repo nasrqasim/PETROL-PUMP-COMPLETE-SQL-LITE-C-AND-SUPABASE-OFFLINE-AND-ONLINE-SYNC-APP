@@ -13,6 +13,9 @@ public class Gari : SyncEntity
     [MaxLength(100)]
     public string DriverName { get; set; } = string.Empty;
 
+    public int? StaffId { get; set; }
+    public StaffMember? Staff { get; set; }
+
     /// <summary>
     /// Ownership: "Apni" (Own) or "Kiraye Wali" (Rented)
     /// </summary>

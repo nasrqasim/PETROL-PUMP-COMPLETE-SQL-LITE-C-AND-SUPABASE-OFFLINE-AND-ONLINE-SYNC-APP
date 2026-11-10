@@ -24,6 +24,36 @@ public class CashBankController : Controller
         ViewBag.Bank = await _invoices.BankBalanceAsync();
         ViewBag.Customers = await _db.Customers.OrderBy(c => c.Name).ToListAsync();
         ViewBag.Suppliers = await _db.Suppliers.OrderBy(s => s.Name).ToListAsync();
+        ViewBag.StaffList = await _db.Staff.Where(s => !s.IsDeleted && s.IsActive).OrderBy(s => s.Name).ToListAsync();
+
+        // Calculate balances for each registered vehicle from Roznamcha records
+        var vehicles = await _db.Gariyan.Where(g => !g.IsDeleted).OrderBy(g => g.GariNo).ToListAsync();
+        var allRoznamcha = await _db.Roznamcha.Where(r => !r.IsDeleted).ToListAsync();
+
+        var vehicleListWithBalance = vehicles.Select(g =>
+        {
+            var entries = allRoznamcha.Where(r => r.GariNo == g.GariNo).ToList();
+            var totalKiraya = entries.Sum(r => r.Kiraya);
+            var totalKharcha = entries.Sum(r => r.Kharcha);
+            var totalAdvance = entries.Sum(r => r.Advance);
+            var baqaya = totalKiraya - totalKharcha - totalAdvance;
+            return new
+            {
+                g.Id,
+                g.GariNo,
+                g.DriverName,
+                g.Malik,
+                g.Phone,
+                g.StaffId,
+                TotalTrips = entries.Count,
+                TotalKiraya = totalKiraya,
+                TotalKharcha = totalKharcha,
+                TotalAdvance = totalAdvance,
+                Baqaya = baqaya
+            };
+        }).ToList();
+
+        ViewBag.VehicleBalances = vehicleListWithBalance;
     }
 
     public async Task<IActionResult> Index(string? search = null, DateTime? fromDate = null, DateTime? toDate = null)
@@ -33,6 +63,7 @@ public class CashBankController : Controller
         var query = _db.Payments
             .Include(p => p.Customer)
             .Include(p => p.Supplier)
+            .Include(p => p.Staff)
             .AsQueryable();
 
         if (fromDate.HasValue)
@@ -47,6 +78,9 @@ public class CashBankController : Controller
                 p.VoucherNumber.ToLower().Contains(q) ||
                 (p.Customer != null && p.Customer.Name.ToLower().Contains(q)) ||
                 (p.Supplier != null && p.Supplier.Name.ToLower().Contains(q)) ||
+                (p.Staff != null && p.Staff.Name.ToLower().Contains(q)) ||
+                (p.GariNo != null && p.GariNo.ToLower().Contains(q)) ||
+                (p.DriverName != null && p.DriverName.ToLower().Contains(q)) ||
                 (p.Remarks != null && p.Remarks.ToLower().Contains(q)) ||
                 (p.BankAccount != null && p.BankAccount.ToLower().Contains(q)));
         }
@@ -83,6 +117,7 @@ public class CashBankController : Controller
         var vouchers = await _db.Payments
             .Include(p => p.Customer)
             .Include(p => p.Supplier)
+            .Include(p => p.Staff)
             .Where(p => p.Type == VoucherType.CashReceipt || p.Type == VoucherType.CashPayment)
             .ToListAsync();
 
@@ -128,7 +163,13 @@ public class CashBankController : Controller
         foreach (var v in vouchers)
         {
             var isReceipt = v.Type == VoucherType.CashReceipt;
-            var party = v.PartyType == PartyType.Customer ? v.Customer?.Name : (v.PartyType == PartyType.Supplier ? v.Supplier?.Name : v.PartyType.ToString());
+            string party;
+            if (v.PartyType == PartyType.Customer) party = v.Customer?.Name ?? "Customer";
+            else if (v.PartyType == PartyType.Supplier) party = v.Supplier?.Name ?? "Supplier";
+            else if (v.PartyType == PartyType.Vehicle) party = $"Gari #{v.GariNo} ({v.DriverName ?? "Driver"})";
+            else if (v.PartyType == PartyType.Staff) party = $"Staff: {v.Staff?.Name ?? "Staff"}";
+            else party = v.PartyType.ToString();
+
             list.Add(new CashBankHistoryItem
             {
                 Date = v.Date,
@@ -211,6 +252,7 @@ public class CashBankController : Controller
         var vouchers = await _db.Payments
             .Include(p => p.Customer)
             .Include(p => p.Supplier)
+            .Include(p => p.Staff)
             .Where(p => p.Type == VoucherType.BankReceipt || p.Type == VoucherType.BankPayment)
             .ToListAsync();
 
@@ -256,7 +298,13 @@ public class CashBankController : Controller
         foreach (var v in vouchers)
         {
             var isReceipt = v.Type == VoucherType.BankReceipt;
-            var party = v.PartyType == PartyType.Customer ? v.Customer?.Name : (v.PartyType == PartyType.Supplier ? v.Supplier?.Name : v.PartyType.ToString());
+            string party;
+            if (v.PartyType == PartyType.Customer) party = v.Customer?.Name ?? "Customer";
+            else if (v.PartyType == PartyType.Supplier) party = v.Supplier?.Name ?? "Supplier";
+            else if (v.PartyType == PartyType.Vehicle) party = $"Gari #{v.GariNo} ({v.DriverName ?? "Driver"})";
+            else if (v.PartyType == PartyType.Staff) party = $"Staff: {v.Staff?.Name ?? "Staff"}";
+            else party = v.PartyType.ToString();
+
             list.Add(new CashBankHistoryItem
             {
                 Date = v.Date,
@@ -344,7 +392,18 @@ public class CashBankController : Controller
     }
 
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> ProcessVoucher(VoucherType type, PartyType partyType, int? customerId, int? supplierId, decimal amount, string? bankAccount, string? remarks, DateTime? date)
+    public async Task<IActionResult> ProcessVoucher(
+        VoucherType type,
+        PartyType partyType,
+        int? customerId,
+        int? supplierId,
+        int? staffId,
+        string? gariNo,
+        string? driverName,
+        decimal amount,
+        string? bankAccount,
+        string? remarks,
+        DateTime? date)
     {
         if (amount <= 0)
         {
@@ -370,6 +429,9 @@ public class CashBankController : Controller
             PartyType = partyType,
             CustomerId = partyType == PartyType.Customer ? customerId : null,
             SupplierId = partyType == PartyType.Supplier ? supplierId : null,
+            StaffId = (partyType == PartyType.Staff || partyType == PartyType.Vehicle) ? staffId : null,
+            GariNo = partyType == PartyType.Vehicle ? gariNo?.Trim() : null,
+            DriverName = partyType == PartyType.Vehicle ? driverName?.Trim() : null,
             BankAccount = bankAccount,
             Amount = amount,
             Remarks = remarks
@@ -444,6 +506,34 @@ public class CashBankController : Controller
                 }
             }
         }
+        else if (partyType == PartyType.Vehicle && !string.IsNullOrWhiteSpace(gariNo))
+        {
+            // Settle vehicle account by posting an adjusting Roznamcha entry
+            var cleanGari = gariNo.Trim();
+            var vehicle = await _db.Gariyan.FirstOrDefaultAsync(g => g.GariNo == cleanGari && !g.IsDeleted);
+            var actualDriver = !string.IsNullOrWhiteSpace(driverName) 
+                ? driverName.Trim() 
+                : (vehicle?.DriverName ?? "Driver");
+
+            var roznamchaEntry = new RoznamchaEntry
+            {
+                Date = voucherDate,
+                GariNo = cleanGari,
+                DriverName = actualDriver,
+                StaffId = staffId,
+                Maal = $"Payment Settlement ({payment.VoucherNumber})",
+                DieselLiter = 0,
+                // If we pay cash/bank to the vehicle/driver:
+                // If it's a payment to clear remaining earnings/Kiraya, recording it as Advance or Kharcha reduces Baqaya to 0.
+                Kiraya = (type == VoucherType.CashReceipt || type == VoucherType.BankReceipt) ? amount : 0,
+                Kharcha = 0,
+                Advance = (type == VoucherType.CashPayment || type == VoucherType.BankPayment) ? amount : 0,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _db.Roznamcha.Add(roznamchaEntry);
+        }
 
         _db.Payments.Add(payment);
         await _db.SaveChangesAsync();
@@ -491,6 +581,18 @@ public class CashBankController : Controller
                     // Reversing receipt: decrease BalanceDue
                     supplier.BalanceDue = Math.Max(0, supplier.BalanceDue - payment.Amount);
                 }
+            }
+        }
+        else if (payment.PartyType == PartyType.Vehicle && !string.IsNullOrWhiteSpace(payment.GariNo))
+        {
+            // Reverse vehicle settlement entry in Roznamcha
+            var matchingEntry = await _db.Roznamcha
+                .FirstOrDefaultAsync(r => r.GariNo == payment.GariNo && r.Maal != null && r.Maal.Contains(payment.VoucherNumber) && !r.IsDeleted);
+            if (matchingEntry != null)
+            {
+                matchingEntry.IsDeleted = true;
+                matchingEntry.UpdatedAt = DateTime.UtcNow;
+                matchingEntry.IsDirty = true;
             }
         }
 

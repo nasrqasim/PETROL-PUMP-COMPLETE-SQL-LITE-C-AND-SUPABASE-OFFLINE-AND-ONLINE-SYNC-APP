@@ -2,12 +2,14 @@
     ViewData["Title"] = "Bank Payment";
     var customers = (List<OilShop.Core.Models.Customer>)ViewBag.Customers;
     var suppliers = (List<OilShop.Core.Models.Supplier>)ViewBag.Suppliers;
+    var staffList = (List<OilShop.Core.Models.StaffMember>)ViewBag.StaffList;
+    var vehicles = ViewBag.VehicleBalances as IEnumerable<dynamic> ?? Enumerable.Empty<dynamic>();
 }
 <div class="max-w-2xl mx-auto card border-t-4 border-blue-600">
     <div class="flex items-center justify-between mb-4 border-b pb-3">
         <div>
             <h2 class="text-xl font-bold text-blue-800">🏦 New Bank Payment Voucher</h2>
-            <p class="text-xs text-slate-500">Pay out via bank account / cheque / online transfer to vendors or customers</p>
+            <p class="text-xs text-slate-500">Pay out via bank account / cheque / transfer to vendors or clear vehicle payments to 0</p>
         </div>
         <span class="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-bold rounded-full">Bank Outflow</span>
     </div>
@@ -21,26 +23,91 @@
                 <input class="input w-full" type="date" name="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
             </div>
             <div>
-                <label class="block text-sm font-medium mb-1">Party Type</label>
+                <label class="block text-sm font-medium mb-1">Party / Account Type</label>
                 <select class="input w-full" id="partyTypeSelect" name="partyType" onchange="togglePartySelect()">
                     <option value="Supplier">Supplier / Vendor</option>
+                    <option value="Vehicle">🚛 Vehicle Settle / Clear Payment (Baqaya to 0)</option>
+                    <option value="Staff">👨‍💼 Staff Member (Salary / Loan / Advance)</option>
                     <option value="Customer">Customer</option>
-                    <option value="Other">Other</option>
+                    <option value="Other">Other Expense</option>
                 </select>
             </div>
         </div>
 
+        <!-- Supplier Group -->
         <div id="supplierGroup">
-            <label class="block text-sm font-medium mb-1">Select Supplier / Vendor</label>
-            <select class="input w-full" name="supplierId">
+            <div class="flex justify-between items-center mb-1">
+                <label class="block text-sm font-medium">Select Supplier / Vendor</label>
+                <button type="button" onclick="clearSupplierDue()" class="text-xs text-blue-600 hover:underline font-semibold">⚡ Clear Full Due Amount</button>
+            </div>
+            <select class="input w-full" name="supplierId" id="supplierSelect" onchange="handleSupplierChange()">
                 <option value="">-- Choose Vendor --</option>
                 @foreach (var s in suppliers)
                 {
-                    <option value="@s.Id">@s.Name (Payable: Rs. @s.BalanceDue.ToString("N0") | Advance: Rs. @s.Advance.ToString("N0"))</option>
+                    <option value="@s.Id" data-due="@s.BalanceDue">@s.Name (Payable: Rs. @s.BalanceDue.ToString("N0") | Advance: Rs. @s.Advance.ToString("N0"))</option>
                 }
             </select>
         </div>
 
+        <!-- Vehicle Settlement Group -->
+        <div id="vehicleGroup" style="display:none;" class="p-4 bg-blue-50 rounded-lg border border-blue-200 space-y-3">
+            <div class="flex justify-between items-center">
+                <label class="block text-sm font-bold text-blue-900">Select Vehicle to Clear Payment</label>
+                <button type="button" onclick="clearVehicleBalanceToZero()" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold shadow">
+                    🎯 Set Amount to Make Baqaya = 0
+                </button>
+            </div>
+
+            <select class="input w-full bg-white font-semibold" name="gariNo" id="vehicleSelect" onchange="handleVehicleChange()">
+                <option value="">-- Choose Vehicle --</option>
+                @foreach (var v in vehicles)
+                {
+                    <option value="@v.GariNo"
+                            data-baqaya="@v.Baqaya"
+                            data-driver="@v.DriverName"
+                            data-staffid="@(v.StaffId ?? "")"
+                            data-malik="@v.Malik">
+                        Gari #@v.GariNo — Driver: @v.DriverName (@v.Malik) | Baqaya (Remaining): Rs. @(((decimal)v.Baqaya).ToString("N0"))
+                    </option>
+                }
+            </select>
+
+            <div class="grid grid-cols-2 gap-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Related Driver Name</label>
+                    <input type="text" name="driverName" id="vehicleDriverInput" class="input w-full bg-white" placeholder="Driver Name" />
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-700 mb-1">Link Driver as Staff Member</label>
+                    <select class="input w-full bg-white" name="staffId" id="vehicleStaffSelect">
+                        <option value="">-- Optional: Link Staff --</option>
+                        @foreach (var st in staffList)
+                        {
+                            <option value="@st.Id">@st.Name (@st.Designation)</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="text-xs bg-white p-2.5 rounded border border-blue-300 text-slate-700 flex justify-between items-center">
+                <span>Current Vehicle Remaining Baqaya:</span>
+                <strong class="text-sm font-bold text-red-600" id="currentVehicleBaqayaText">Rs. 0</strong>
+            </div>
+        </div>
+
+        <!-- Staff Group -->
+        <div id="staffGroup" style="display:none;">
+            <label class="block text-sm font-medium mb-1">Select Staff Member</label>
+            <select class="input w-full" name="staffId" id="staffOnlySelect">
+                <option value="">-- Choose Staff Member --</option>
+                @foreach (var st in staffList)
+                {
+                    <option value="@st.Id">@st.Name (@st.Designation - Salary: Rs. @st.Salary.ToString("N0"))</option>
+                }
+            </select>
+        </div>
+
+        <!-- Customer Group -->
         <div id="customerGroup" style="display:none;">
             <label class="block text-sm font-medium mb-1">Select Customer</label>
             <select class="input w-full" name="customerId">
@@ -58,14 +125,17 @@
                 <input class="input w-full" type="text" name="bankAccount" placeholder="e.g. HBL / MCB / Cheque 1248" required />
             </div>
             <div>
-                <label class="block text-sm font-medium mb-1">Payment Amount (Rs.)</label>
-                <input class="input w-full font-bold text-lg text-blue-700" type="number" step="0.01" min="1" name="amount" placeholder="0.00" required />
+                <div class="flex justify-between items-center mb-1">
+                    <label class="block text-sm font-medium">Payment Amount (Rs.)</label>
+                    <span class="text-xs text-slate-500" id="settlementNote"></span>
+                </div>
+                <input class="input w-full font-bold text-lg text-blue-700" type="number" step="0.01" min="0.01" name="amount" id="amountInput" placeholder="0.00" required />
             </div>
         </div>
 
         <div>
             <label class="block text-sm font-medium mb-1">Remarks / Note</label>
-            <input class="input w-full" type="text" name="remarks" placeholder="e.g. Online bank transfer to vendor" />
+            <input class="input w-full" type="text" name="remarks" id="remarksInput" placeholder="e.g. Online bank transfer to vendor / clear vehicle payment" />
         </div>
 
         <div class="flex gap-2 pt-2">
@@ -80,7 +150,78 @@
 function togglePartySelect() {
     var type = document.getElementById('partyTypeSelect').value;
     document.getElementById('supplierGroup').style.display = type === 'Supplier' ? 'block' : 'none';
+    document.getElementById('vehicleGroup').style.display = type === 'Vehicle' ? 'block' : 'none';
+    document.getElementById('staffGroup').style.display = type === 'Staff' ? 'block' : 'none';
     document.getElementById('customerGroup').style.display = type === 'Customer' ? 'block' : 'none';
+}
+
+function handleSupplierChange() {
+    var select = document.getElementById('supplierSelect');
+    var opt = select.options[select.selectedIndex];
+    var due = opt ? parseFloat(opt.getAttribute('data-due') || '0') : 0;
+    if (due > 0) {
+        document.getElementById('settlementNote').innerText = 'Vendor Payable Due: Rs. ' + due.toLocaleString();
+    } else {
+        document.getElementById('settlementNote').innerText = '';
+    }
+}
+
+function clearSupplierDue() {
+    var select = document.getElementById('supplierSelect');
+    var opt = select.options[select.selectedIndex];
+    if (opt && opt.value) {
+        var due = parseFloat(opt.getAttribute('data-due') || '0');
+        if (due > 0) {
+            document.getElementById('amountInput').value = due;
+            document.getElementById('remarksInput').value = 'Full payment settlement of vendor ' + opt.text.split('(')[0].trim();
+        }
+    }
+}
+
+function handleVehicleChange() {
+    var select = document.getElementById('vehicleSelect');
+    var opt = select.options[select.selectedIndex];
+    if (opt && opt.value) {
+        var baqaya = parseFloat(opt.getAttribute('data-baqaya') || '0');
+        var driver = opt.getAttribute('data-driver') || '';
+        var staffId = opt.getAttribute('data-staffid') || '';
+
+        document.getElementById('vehicleDriverInput').value = driver;
+        document.getElementById('currentVehicleBaqayaText').innerText = 'Rs. ' + baqaya.toLocaleString();
+        document.getElementById('settlementNote').innerText = 'Vehicle Baqaya to clear: Rs. ' + baqaya.toLocaleString();
+
+        var staffSelect = document.getElementById('vehicleStaffSelect');
+        if (staffId) {
+            staffSelect.value = staffId;
+        } else {
+            for (var i = 0; i < staffSelect.options.length; i++) {
+                if (staffSelect.options[i].text.toLowerCase().includes(driver.toLowerCase())) {
+                    staffSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+    } else {
+        document.getElementById('currentVehicleBaqayaText').innerText = 'Rs. 0';
+        document.getElementById('settlementNote').innerText = '';
+    }
+}
+
+function clearVehicleBalanceToZero() {
+    var select = document.getElementById('vehicleSelect');
+    var opt = select.options[select.selectedIndex];
+    if (opt && opt.value) {
+        var baqaya = parseFloat(opt.getAttribute('data-baqaya') || '0');
+        var driver = opt.getAttribute('data-driver') || '';
+        if (baqaya > 0) {
+            document.getElementById('amountInput').value = baqaya;
+            document.getElementById('remarksInput').value = 'Clear full vehicle payment of #' + opt.value + ' (Driver: ' + driver + ') to 0';
+        } else {
+            alert('Vehicle #' + opt.value + ' currently has no remaining balance due (Baqaya is already Rs. ' + baqaya.toLocaleString() + ').');
+        }
+    } else {
+        alert('Please select a vehicle first.');
+    }
 }
 </script>
 }

@@ -1,7 +1,7 @@
 namespace OilShop.Core.Models;
 
 public enum VoucherType { CashReceipt, CashPayment, BankReceipt, BankPayment }
-public enum PartyType { Customer, Supplier, Staff, Expense, Other }
+public enum PartyType { Customer, Supplier, Staff, Vehicle, Expense, Other }
 
 /// <summary>Cash &amp; Bank voucher. A receipt increases cash/bank, a payment decreases it.
 /// Golden rule: cash, bank and khata ledgers are kept separate — a credit
@@ -18,6 +18,8 @@ public class Payment : SyncEntity
     public Supplier? Supplier { get; set; }
     public int? StaffId { get; set; }
     public StaffMember? Staff { get; set; }
+    public string? GariNo { get; set; }
+    public string? DriverName { get; set; }
     public string? BankAccount { get; set; }
     public decimal Amount { get; set; }
     public string? Remarks { get; set; }

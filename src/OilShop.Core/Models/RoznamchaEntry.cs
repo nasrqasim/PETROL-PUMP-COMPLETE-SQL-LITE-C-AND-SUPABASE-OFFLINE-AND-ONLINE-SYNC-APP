@@ -17,6 +17,9 @@ public class RoznamchaEntry : SyncEntity
     [MaxLength(100)]
     public string DriverName { get; set; } = string.Empty;
 
+    public int? StaffId { get; set; }
+    public StaffMember? Staff { get; set; }
+
     [MaxLength(200)]
     public string Maal { get; set; } = string.Empty;
 

@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "Aaj Ki Entry (Daily Roznamcha)";
     var gariyan = ViewBag.Gariyan as List<OilShop.Core.Models.Gari> ?? new();
+    var staffList = ViewBag.StaffList as List<OilShop.Core.Models.StaffMember> ?? new();
 }
 
 <div class="space-y-6">
@@ -14,6 +15,9 @@
             <p class="text-sm text-slate-500">Record daily trips, freight charges (Kiraya), vehicle expenses (Kharcha), and driver advances (Peshgi).</p>
         </div>
         <div class="flex items-center gap-2">
+            <a asp-controller="CashBank" asp-action="CashPayment" class="btn btn-red text-xs flex items-center gap-1 shadow">
+                💸 Settle / Clear Vehicle Payment (Baqaya to 0) &rarr;
+            </a>
             <a href="http://localhost:3000" target="_blank" class="btn text-xs bg-slate-800 hover:bg-slate-700 flex items-center gap-1.5 shadow">
                 ⚡ Open Next.js App &rarr;
             </a>
@@ -48,7 +52,7 @@
                             <option value="">-- Select Gari --</option>
                             @foreach (var g in gariyan)
                             {
-                                <option value="@g.GariNo" data-driver="@g.DriverName">@g.GariNo (@g.Malik)</option>
+                                <option value="@g.GariNo" data-driver="@g.DriverName" data-staffid="@(g.StaffId ?? 0)">@g.GariNo (@g.Malik)</option>
                             }
                         </select>
                         <input type="text" name="gariNo" id="gariNoInput" placeholder="Or Type" class="input w-28" required />
@@ -58,6 +62,17 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">Driver (Driver Name) <span class="text-red-500">*</span></label>
                     <input type="text" name="driverName" id="driverInput" placeholder="e.g. Iqbal" required class="input" />
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Link Driver as Staff</label>
+                    <select name="staffId" id="staffSelect" class="input">
+                        <option value="">-- Optional: Link Staff --</option>
+                        @foreach (var st in staffList)
+                        {
+                            <option value="@st.Id">@st.Name (@st.Designation)</option>
+                        }
+                    </select>
                 </div>
 
                 <div>
@@ -148,6 +163,7 @@
                     <th>Date</th>
                     <th>Vehicle (گاڑی نمبر)</th>
                     <th>Driver (ڈرائیور)</th>
+                    <th>Staff Link</th>
                     <th>Maal (Material)</th>
                     <th class="text-right">Diesel</th>
                     <th class="text-right">Kiraya (کرایہ)</th>
@@ -161,7 +177,7 @@
                 @if (Model.Count == 0)
                 {
                     <tr>
-                        <td colspan="10" class="text-center py-6 text-slate-400">No Roznamcha records found matching criteria.</td>
+                        <td colspan="11" class="text-center py-6 text-slate-400">No Roznamcha records found matching criteria.</td>
                     </tr>
                 }
                 else
@@ -172,6 +188,18 @@
                             <td class="font-medium">@r.Date.ToString("dd-MM-yyyy")</td>
                             <td><span class="bg-slate-100 font-bold px-2 py-0.5 rounded border border-slate-200">@r.GariNo</span></td>
                             <td class="font-semibold">@r.DriverName</td>
+                            <td>
+                                @if (r.Staff != null)
+                                {
+                                    <span class="bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded text-[11px]">
+                                        👨‍💼 @r.Staff.Name
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="text-slate-400 text-xs">—</span>
+                                }
+                            </td>
                             <td class="text-slate-600">@(string.IsNullOrEmpty(r.Maal) ? "—" : r.Maal)</td>
                             <td class="text-right font-mono">@(r.DieselLiter > 0 ? $"{r.DieselLiter} L" : "—")</td>
                             <td class="text-right font-semibold text-green-700">Rs. @r.Kiraya.ToString("N0")</td>
@@ -183,7 +211,7 @@
                             <td class="text-center">
                                 <div class="flex justify-center items-center gap-2">
                                     <button type="button"
-                                            onclick="editRecord(@r.Id, '@r.Date.ToString("yyyy-MM-dd")', '@r.GariNo', '@r.DriverName', '@r.Maal', @r.DieselLiter, @r.Kiraya, @r.Kharcha, @r.Advance)"
+                                            onclick="editRecord(@r.Id, '@r.Date.ToString("yyyy-MM-dd")', '@r.GariNo', '@r.DriverName', @(r.StaffId ?? 0), '@r.Maal', @r.DieselLiter, @r.Kiraya, @r.Kharcha, @r.Advance)"
                                             class="text-blue-600 hover:underline text-xs font-semibold">
                                         Edit
                                     </button>
@@ -207,9 +235,18 @@
     function handleVehicleChange(select) {
         var gariNo = select.value;
         document.getElementById('gariNoInput').value = gariNo;
-        var driver = select.options[select.selectedIndex].getAttribute('data-driver');
+        var opt = select.options[select.selectedIndex];
+        var driver = opt ? opt.getAttribute('data-driver') : '';
+        var staffId = opt ? opt.getAttribute('data-staffid') : '';
+
         if (driver) {
             document.getElementById('driverInput').value = driver;
+        }
+        var staffSelect = document.getElementById('staffSelect');
+        if (staffId && parseInt(staffId) > 0) {
+            staffSelect.value = staffId;
+        } else {
+            staffSelect.value = '';
         }
     }
 
@@ -227,11 +264,12 @@
         }
     }
 
-    function editRecord(id, date, gariNo, driverName, maal, diesel, kiraya, kharcha, advance) {
+    function editRecord(id, date, gariNo, driverName, staffId, maal, diesel, kiraya, kharcha, advance) {
         document.getElementById('entryId').value = id;
         document.getElementById('formDate').value = date;
         document.getElementById('gariNoInput').value = gariNo;
         document.getElementById('driverInput').value = driverName;
+        document.getElementById('staffSelect').value = (staffId > 0) ? staffId : '';
         document.getElementById('maalInput').value = maal || '';
         document.getElementById('dieselInput').value = diesel || '';
         document.getElementById('kirayaInput').value = kiraya || '';
@@ -250,6 +288,7 @@
         document.getElementById('entryId').value = '';
         document.getElementById('gariNoInput').value = '';
         document.getElementById('driverInput').value = '';
+        document.getElementById('staffSelect').value = '';
         document.getElementById('maalInput').value = '';
         document.getElementById('dieselInput').value = '';
         document.getElementById('kirayaInput').value = '';

@@ -85,7 +85,12 @@
         @foreach (var p in Model)
         {
             var isReceipt = p.Type.ToString().Contains("Receipt");
-            var partyName = p.PartyType == PartyType.Customer ? p.Customer?.Name : (p.PartyType == PartyType.Supplier ? p.Supplier?.Name : p.PartyType.ToString());
+            string partyName;
+            if (p.PartyType == PartyType.Customer) partyName = p.Customer?.Name ?? "Customer";
+            else if (p.PartyType == PartyType.Supplier) partyName = p.Supplier?.Name ?? "Supplier";
+            else if (p.PartyType == PartyType.Vehicle) partyName = $"Gari #{p.GariNo} ({p.DriverName ?? "Driver"})";
+            else if (p.PartyType == PartyType.Staff) partyName = $"Staff: {p.Staff?.Name ?? "Staff"}";
+            else partyName = p.PartyType.ToString();
             <tr>
                 <td class="font-mono font-medium text-blue-800">@p.VoucherNumber</td>
                 <td>@p.Date.ToString("dd-MMM-yyyy")</td>

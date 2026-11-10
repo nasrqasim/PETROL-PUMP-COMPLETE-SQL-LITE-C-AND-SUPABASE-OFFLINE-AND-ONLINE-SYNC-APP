@@ -71,6 +71,18 @@ public class OilShopDbContext : DbContext
         modelBuilder.Entity<Return>().HasIndex(r => r.ReturnNumber).IsUnique();
         modelBuilder.Entity<StaffMember>().HasIndex(s => s.EmployeeId).IsUnique();
         modelBuilder.Entity<Gari>().HasIndex(g => g.GariNo).IsUnique();
+
+        modelBuilder.Entity<Gari>()
+            .HasOne(g => g.Staff).WithMany()
+            .HasForeignKey(g => g.StaffId).OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<RoznamchaEntry>()
+            .HasOne(r => r.Staff).WithMany()
+            .HasForeignKey(r => r.StaffId).OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<Payment>()
+            .HasOne(p => p.Staff).WithMany()
+            .HasForeignKey(p => p.StaffId).OnDelete(DeleteBehavior.SetNull);
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

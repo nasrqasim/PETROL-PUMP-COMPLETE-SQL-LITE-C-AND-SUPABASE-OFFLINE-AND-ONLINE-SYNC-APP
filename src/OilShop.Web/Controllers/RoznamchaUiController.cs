@@ -17,9 +17,10 @@ public class RoznamchaUiController : Controller
     // GET: /RoznamchaUi or /RoznamchaUi/AajKiEntry
     public async Task<IActionResult> Index(string? date, string? gariNo, string? driverName, string? search)
     {
-        ViewBag.Gariyan = await _db.Gariyan.Where(g => !g.IsDeleted).OrderBy(g => g.GariNo).ToListAsync();
+        ViewBag.Gariyan = await _db.Gariyan.Include(g => g.Staff).Where(g => !g.IsDeleted).OrderBy(g => g.GariNo).ToListAsync();
+        ViewBag.StaffList = await _db.Staff.Where(s => !s.IsDeleted && s.IsActive).OrderBy(s => s.Name).ToListAsync();
 
-        var query = _db.Roznamcha.Where(r => !r.IsDeleted).AsQueryable();
+        var query = _db.Roznamcha.Include(r => r.Staff).Where(r => !r.IsDeleted).AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(date) && DateTime.TryParse(date, out var parsedDate))
         {
@@ -57,7 +58,7 @@ public class RoznamchaUiController : Controller
     // POST: /RoznamchaUi/Save
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Save(int? id, DateTime date, string gariNo, string driverName, string? maal, decimal dieselLiter, decimal kiraya, decimal kharcha, decimal advance)
+    public async Task<IActionResult> Save(int? id, DateTime date, string gariNo, string driverName, int? staffId, string? maal, decimal dieselLiter, decimal kiraya, decimal kharcha, decimal advance)
     {
         if (string.IsNullOrWhiteSpace(gariNo) || string.IsNullOrWhiteSpace(driverName))
         {
@@ -79,6 +80,7 @@ public class RoznamchaUiController : Controller
             existing.Date = date;
             existing.GariNo = gariNo.Trim();
             existing.DriverName = driverName.Trim();
+            existing.StaffId = staffId;
             existing.Maal = maal?.Trim() ?? string.Empty;
             existing.DieselLiter = dieselLiter;
             existing.Kiraya = kiraya;
@@ -96,6 +98,7 @@ public class RoznamchaUiController : Controller
                 Date = date,
                 GariNo = gariNo.Trim(),
                 DriverName = driverName.Trim(),
+                StaffId = staffId,
                 Maal = maal?.Trim() ?? string.Empty,
                 DieselLiter = dieselLiter,
                 Kiraya = kiraya,
@@ -212,19 +215,27 @@ public class RoznamchaUiController : Controller
     // GET: /RoznamchaUi/Gariyan
     public async Task<IActionResult> Gariyan()
     {
-        var list = await _db.Gariyan.Where(g => !g.IsDeleted).OrderBy(g => g.GariNo).ToListAsync();
+        ViewBag.StaffList = await _db.Staff.Where(s => !s.IsDeleted && s.IsActive).OrderBy(s => s.Name).ToListAsync();
+        var list = await _db.Gariyan.Include(g => g.Staff).Where(g => !g.IsDeleted).OrderBy(g => g.GariNo).ToListAsync();
         return View(list);
     }
 
     // POST: /RoznamchaUi/SaveGari
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> SaveGari(int? id, string gariNo, string? driverName, string malik, string? phone)
+    public async Task<IActionResult> SaveGari(int? id, string gariNo, string? driverName, int? staffId, string malik, string? phone)
     {
         if (string.IsNullOrWhiteSpace(gariNo))
         {
             TempData["Error"] = "Vehicle number is required.";
             return RedirectToAction(nameof(Gariyan));
+        }
+
+        // If staffId is provided, auto-link DriverName from staff name
+        if (staffId.HasValue && string.IsNullOrWhiteSpace(driverName))
+        {
+            var st = await _db.Staff.FindAsync(staffId.Value);
+            if (st != null) driverName = st.Name;
         }
 
         if (id.HasValue && id.Value > 0)
@@ -241,6 +252,7 @@ public class RoznamchaUiController : Controller
 
             g.GariNo = gariNo.Trim();
             g.DriverName = driverName?.Trim() ?? string.Empty;
+            g.StaffId = staffId;
             g.Malik = string.IsNullOrWhiteSpace(malik) ? "Apni" : malik.Trim();
             g.Phone = phone?.Trim() ?? string.Empty;
             g.UpdatedAt = DateTime.UtcNow;
@@ -260,6 +272,7 @@ public class RoznamchaUiController : Controller
             {
                 GariNo = gariNo.Trim(),
                 DriverName = driverName?.Trim() ?? string.Empty,
+                StaffId = staffId,
                 Malik = string.IsNullOrWhiteSpace(malik) ? "Apni" : malik.Trim(),
                 Phone = phone?.Trim() ?? string.Empty,
                 CreatedAt = DateTime.UtcNow,
