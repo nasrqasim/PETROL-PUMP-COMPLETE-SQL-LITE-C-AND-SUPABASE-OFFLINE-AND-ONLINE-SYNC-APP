@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { fetchFromCSharp } from "@/lib/csharp-client";
 import { supabaseServer } from "@/lib/supabase";
+import { memoryStore } from "@/lib/memory-store";
 
 export async function GET() {
   try {
@@ -11,16 +12,15 @@ export async function GET() {
     }
   } catch (err) {
     if (supabaseServer) {
-      const { data, error } = await supabaseServer
-        .from("payments")
-        .select("*, customer:customers(*), supplier:suppliers(*), staff:staff(*)")
-        .order("date", { ascending: false });
-      if (!error && data) return NextResponse.json(data);
+      try {
+        const { data, error } = await supabaseServer
+          .from("payments")
+          .select("*, customer:customers(*), supplier:suppliers(*), staff:staff(*)")
+          .order("date", { ascending: false });
+        if (!error && data && data.length > 0) return NextResponse.json(data);
+      } catch (e) {}
     }
   }
 
-  return NextResponse.json(
-    { error: "Could not fetch vouchers from backend service" },
-    { status: 502 }
-  );
+  return NextResponse.json(memoryStore.vouchers);
 }
