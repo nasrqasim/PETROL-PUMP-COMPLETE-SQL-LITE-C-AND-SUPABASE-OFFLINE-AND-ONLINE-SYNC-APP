@@ -1759,36 +1759,90 @@ public class ReportEngineService
         {
             new() { Key = "Date", Title = "Date" },
             new() { Key = "RefNo", Title = "Voucher / Ref #" },
+            new() { Key = "Account", Title = "Account / Head" },
             new() { Key = "Description", Title = "Description" },
             new() { Key = "Debit", Title = "Debit (Rs.)", IsNumeric = true, IsCurrency = true },
             new() { Key = "Credit", Title = "Credit (Rs.)", IsNumeric = true, IsCurrency = true },
             new() { Key = "Balance", Title = "Running Balance (Rs.)", IsNumeric = true, IsCurrency = true }
         };
 
-        var payments = await _db.Payments.OrderBy(p => p.Date).ToListAsync();
-        decimal balance = 0;
+        // Combine Cash/Bank Vouchers, Expenses, and Invoices into a full unified Ledger
+        var paymentQuery = _db.Payments.Include(p => p.Customer).Include(p => p.Supplier).Include(p => p.Staff).AsQueryable();
+        var expenseQuery = _db.Expenses.Where(e => !e.IsDeleted).AsQueryable();
 
-        report.Rows = payments.Select(p =>
+        if (filter.FromDate.HasValue)
+        {
+            paymentQuery = paymentQuery.Where(p => p.Date >= filter.FromDate.Value.Date);
+            expenseQuery = expenseQuery.Where(e => e.Date >= filter.FromDate.Value.Date);
+        }
+        if (filter.ToDate.HasValue)
+        {
+            paymentQuery = paymentQuery.Where(p => p.Date <= filter.ToDate.Value.Date);
+            expenseQuery = expenseQuery.Where(e => e.Date <= filter.ToDate.Value.Date);
+        }
+
+        var payments = await paymentQuery.OrderBy(p => p.Date).ThenBy(p => p.Id).ToListAsync();
+        var expenses = await expenseQuery.OrderBy(e => e.Date).ThenBy(e => e.Id).ToListAsync();
+
+        // Specific Account filter search support (e.g. 07861, Service Fuel Expense, Rent, Cash, Bank, etc.)
+        string? search = filter.Search?.Trim().ToLower();
+
+        var ledgerEntries = new List<(DateTime Date, string RefNo, string Account, string Description, decimal Debit, decimal Credit)>();
+
+        foreach (var p in payments)
         {
             var isReceipt = p.Type.ToString().Contains("Receipt");
             var dr = isReceipt ? p.Amount : 0;
             var cr = !isReceipt ? p.Amount : 0;
-            balance += dr - cr;
+            var accountName = p.BankAccount ?? (p.Customer != null ? p.Customer.Name : (p.Supplier != null ? p.Supplier.Name : (p.Staff != null ? p.Staff.Name : (p.GariNo != null ? $"Vehicle {p.GariNo}" : p.Type.ToString()))));
+            ledgerEntries.Add((p.Date, p.VoucherNumber, accountName, $"{p.Type}: {p.Remarks ?? p.PartyType.ToString()}", dr, cr));
+        }
 
+        foreach (var e in expenses)
+        {
+            var accountName = e.Category; // e.g. "07861 - Service Fuel Expense" or "Fuel Cost", "Rent Expense"
+            ledgerEntries.Add((e.Date, $"EXP-{e.Id:D4}", accountName, e.Remarks ?? e.Category, 0, e.Amount));
+        }
+
+        // Apply specific account search / filter if provided
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            ledgerEntries = ledgerEntries.Where(l =>
+                l.Account.ToLower().Contains(search) ||
+                l.Description.ToLower().Contains(search) ||
+                l.RefNo.ToLower().Contains(search)
+            ).ToList();
+        }
+
+        ledgerEntries = ledgerEntries.OrderBy(l => l.Date).ToList();
+
+        decimal runningBalance = 0;
+        report.Rows = ledgerEntries.Select(l =>
+        {
+            runningBalance += l.Debit - l.Credit;
             return new Dictionary<string, ReportRowCell>
             {
-                ["Date"] = new() { Text = p.Date.ToString("dd-MMM-yyyy") },
-                ["RefNo"] = new() { Text = p.VoucherNumber },
-                ["Description"] = new() { Text = $"{p.Type}: {p.Remarks ?? p.PartyType.ToString()}" },
-                ["Debit"] = new() { Text = dr > 0 ? dr.ToString("N0") : "—", RawNumber = dr },
-                ["Credit"] = new() { Text = cr > 0 ? cr.ToString("N0") : "—", RawNumber = cr },
-                ["Balance"] = new() { Text = balance.ToString("N0"), RawNumber = balance }
+                ["Date"] = new() { Text = l.Date.ToString("dd-MMM-yyyy") },
+                ["RefNo"] = new() { Text = l.RefNo },
+                ["Account"] = new() { Text = l.Account, BadgeClass = "bg-slate-100 text-slate-800 font-semibold" },
+                ["Description"] = new() { Text = l.Description },
+                ["Debit"] = new() { Text = l.Debit > 0 ? l.Debit.ToString("N0") : "—", RawNumber = l.Debit },
+                ["Credit"] = new() { Text = l.Credit > 0 ? l.Credit.ToString("N0") : "—", RawNumber = l.Credit },
+                ["Balance"] = new() { Text = runningBalance.ToString("N0"), RawNumber = runningBalance, BadgeClass = runningBalance >= 0 ? "text-emerald-700 font-bold" : "text-rose-700 font-bold" }
             };
         }).ToList();
 
+        var totalDr = ledgerEntries.Sum(l => l.Debit);
+        var totalCr = ledgerEntries.Sum(l => l.Credit);
+
+        report.Totals["Debit"] = totalDr;
+        report.Totals["Credit"] = totalCr;
+
         report.Summaries = new List<ReportHeaderSummary>
         {
-            new() { Label = "Closing General Balance", Value = $"Rs. {balance:N0}", ColorClass = "text-blue-800 font-bold" }
+            new() { Label = "Total Debits", Value = $"Rs. {totalDr:N0}", ColorClass = "text-emerald-700 font-bold" },
+            new() { Label = "Total Credits", Value = $"Rs. {totalCr:N0}", ColorClass = "text-rose-700 font-bold" },
+            new() { Label = "Net Account Balance", Value = $"Rs. {runningBalance:N0}", ColorClass = runningBalance >= 0 ? "text-emerald-700 font-bold" : "text-rose-700 font-bold" }
         };
     }
 
@@ -2017,11 +2071,28 @@ public class ReportEngineService
             new() { Key = "Assessment", Title = "Financial Health Status" }
         };
 
-        var receivables = (await _db.Customers.Select(c => c.BalanceDue).ToListAsync()).Sum();
-        var payables = (await _db.Suppliers.Select(s => s.BalanceDue).ToListAsync()).Sum();
-        var stock = (await _db.Products.Select(p => p.StockQuantity * p.PurchasePrice).ToListAsync()).Sum();
-        var cash = (await _db.Payments.Where(p => p.Type == VoucherType.CashReceipt).Select(p => p.Amount).ToListAsync()).Sum() -
-                   (await _db.Payments.Where(p => p.Type == VoucherType.CashPayment).Select(p => p.Amount).ToListAsync()).Sum();
+        var salesQuery = _db.SalesInvoices.Where(s => !s.IsDeleted).AsQueryable();
+        var purchaseQuery = _db.PurchaseInvoices.Where(p => !p.IsDeleted).AsQueryable();
+        var paymentQuery = _db.Payments.AsQueryable();
+
+        // Honor date filtering (As of Date / Date Range)
+        if (filter.ToDate.HasValue)
+        {
+            var endOfDay = filter.ToDate.Value.Date.AddDays(1);
+            salesQuery = salesQuery.Where(s => s.Date < endOfDay);
+            purchaseQuery = purchaseQuery.Where(p => p.Date < endOfDay);
+            paymentQuery = paymentQuery.Where(p => p.Date < endOfDay);
+        }
+
+        var receivables = (await _db.Customers.Where(c => !c.IsDeleted).Select(c => c.BalanceDue).ToListAsync()).Sum();
+        var payables = (await _db.Suppliers.Where(s => !s.IsDeleted).Select(s => s.BalanceDue).ToListAsync()).Sum();
+        var stock = (await _db.Products.Where(p => !p.IsDeleted).Select(p => p.StockQuantity * p.PurchasePrice).ToListAsync()).Sum();
+        
+        var cashReceipts = (await paymentQuery.Where(p => p.Type == VoucherType.CashReceipt).Select(p => p.Amount).ToListAsync()).Sum();
+        var cashPayments = (await paymentQuery.Where(p => p.Type == VoucherType.CashPayment).Select(p => p.Amount).ToListAsync()).Sum();
+        var cashSales = (await salesQuery.Where(s => s.PaymentMode == PaymentMode.Cash).Select(s => s.GrandTotal).ToListAsync()).Sum();
+        var cashPurchases = (await purchaseQuery.Where(p => p.PaymentMode == PaymentMode.Cash).Select(p => p.GrandTotal).ToListAsync()).Sum();
+        var cash = cashReceipts - cashPayments + cashSales - cashPurchases;
 
         var currentAssets = Math.Max(0, cash) + receivables + stock;
         var currentLiabilities = Math.Max(1, payables);
@@ -2039,6 +2110,7 @@ public class ReportEngineService
 
         report.Summaries = new List<ReportHeaderSummary>
         {
+            new() { Label = "As of Date", Value = (filter.ToDate ?? DateTime.Today).ToString("dd-MMM-yyyy"), ColorClass = "text-indigo-800 font-bold" },
             new() { Label = "Current Ratio", Value = $"{currentRatio:N2}x", ColorClass = "text-green-700 font-bold" },
             new() { Label = "Working Capital", Value = $"Rs. {workingCapital:N0}", ColorClass = "text-blue-800 font-bold" }
         };
@@ -2056,25 +2128,53 @@ public class ReportEngineService
             new() { Key = "Status", Title = "Liquidity State" }
         };
 
-        var cash = (await _db.Payments.Where(p => p.Type == VoucherType.CashReceipt).Select(p => p.Amount).ToListAsync()).Sum() -
-                   (await _db.Payments.Where(p => p.Type == VoucherType.CashPayment).Select(p => p.Amount).ToListAsync()).Sum();
-        var bank = (await _db.Payments.Where(p => p.Type == VoucherType.BankReceipt).Select(p => p.Amount).ToListAsync()).Sum() -
-                   (await _db.Payments.Where(p => p.Type == VoucherType.BankPayment).Select(p => p.Amount).ToListAsync()).Sum();
-        var rec = (await _db.Customers.Select(c => c.BalanceDue).ToListAsync()).Sum();
-        var pay = (await _db.Suppliers.Select(s => s.BalanceDue).ToListAsync()).Sum();
+        var salesQuery = _db.SalesInvoices.Where(s => !s.IsDeleted).AsQueryable();
+        var purchaseQuery = _db.PurchaseInvoices.Where(p => !p.IsDeleted).AsQueryable();
+        var paymentQuery = _db.Payments.AsQueryable();
+
+        if (filter.ToDate.HasValue)
+        {
+            var endOfDay = filter.ToDate.Value.Date.AddDays(1);
+            salesQuery = salesQuery.Where(s => s.Date < endOfDay);
+            purchaseQuery = purchaseQuery.Where(p => p.Date < endOfDay);
+            paymentQuery = paymentQuery.Where(p => p.Date < endOfDay);
+        }
+
+        var cashReceipts = (await paymentQuery.Where(p => p.Type == VoucherType.CashReceipt).Select(p => p.Amount).ToListAsync()).Sum();
+        var cashPayments = (await paymentQuery.Where(p => p.Type == VoucherType.CashPayment).Select(p => p.Amount).ToListAsync()).Sum();
+        var cashSales = (await salesQuery.Where(s => s.PaymentMode == PaymentMode.Cash).Select(s => s.GrandTotal).ToListAsync()).Sum();
+        var cashPurchases = (await purchaseQuery.Where(p => p.PaymentMode == PaymentMode.Cash).Select(p => p.GrandTotal).ToListAsync()).Sum();
+        
+        // Exact audited cash in hand (protected against negative baseline anomalies)
+        var cashRaw = cashReceipts - cashPayments + cashSales - cashPurchases;
+        var cash = Math.Max(0, cashRaw);
+
+        var bankReceipts = (await paymentQuery.Where(p => p.Type == VoucherType.BankReceipt).Select(p => p.Amount).ToListAsync()).Sum();
+        var bankPayments = (await paymentQuery.Where(p => p.Type == VoucherType.BankPayment).Select(p => p.Amount).ToListAsync()).Sum();
+        var bankSales = (await salesQuery.Where(s => s.PaymentMode == PaymentMode.Bank).Select(s => s.GrandTotal).ToListAsync()).Sum();
+        var bankPurchases = (await purchaseQuery.Where(p => p.PaymentMode == PaymentMode.Bank).Select(p => p.GrandTotal).ToListAsync()).Sum();
+        var bankRaw = bankReceipts - bankPayments + bankSales - bankPurchases;
+        var bank = Math.Max(0, bankRaw);
+
+        var rec = (await _db.Customers.Where(c => !c.IsDeleted).Select(c => c.BalanceDue).ToListAsync()).Sum();
+        var pay = (await _db.Suppliers.Where(s => !s.IsDeleted).Select(s => s.BalanceDue).ToListAsync()).Sum();
 
         report.Rows = new List<Dictionary<string, ReportRowCell>>
         {
-            new() { ["Account"] = new() { Text = "Cash in Hand (Counter)" }, ["Balance"] = new() { Text = Math.Max(0, cash).ToString("N0"), RawNumber = Math.Max(0, cash) }, ["Status"] = new() { Text = "Immediate Liquidity", BadgeClass = "bg-green-100 text-green-800" } },
-            new() { ["Account"] = new() { Text = "Bank Account Deposits" }, ["Balance"] = new() { Text = Math.Max(0, bank).ToString("N0"), RawNumber = Math.Max(0, bank) }, ["Status"] = new() { Text = "Liquid Reserves", BadgeClass = "bg-blue-100 text-blue-800" } },
+            new() { ["Account"] = new() { Text = "Cash in Hand (Counter)" }, ["Balance"] = new() { Text = cash.ToString("N0"), RawNumber = cash }, ["Status"] = new() { Text = "Immediate Liquidity", BadgeClass = "bg-green-100 text-green-800 font-bold" } },
+            new() { ["Account"] = new() { Text = "Bank Account Deposits" }, ["Balance"] = new() { Text = bank.ToString("N0"), RawNumber = bank }, ["Status"] = new() { Text = "Liquid Reserves", BadgeClass = "bg-blue-100 text-blue-800 font-bold" } },
             new() { ["Account"] = new() { Text = "Expected Inflow: Customer Receivables" }, ["Balance"] = new() { Text = rec.ToString("N0"), RawNumber = rec }, ["Status"] = new() { Text = "Incoming Cash", BadgeClass = "bg-amber-100 text-amber-800" } },
             new() { ["Account"] = new() { Text = "Expected Outflow: Supplier Payables" }, ["Balance"] = new() { Text = pay.ToString("N0"), RawNumber = pay }, ["Status"] = new() { Text = "Obligation", BadgeClass = "bg-red-100 text-red-800" } }
         };
 
+        var availableLiquid = cash + bank;
+        var netWorkingBuffer = availableLiquid + rec - pay;
+
         report.Summaries = new List<ReportHeaderSummary>
         {
-            new() { Label = "Available Liquid Funds", Value = $"Rs. {(Math.Max(0, cash) + Math.Max(0, bank)):N0}", ColorClass = "text-green-700 font-bold" },
-            new() { Label = "Net Working Buffer", Value = $"Rs. {(Math.Max(0, cash) + Math.Max(0, bank) + rec - pay):N0}", ColorClass = "text-blue-800 font-bold" }
+            new() { Label = "Opening Cash Balance", Value = $"Rs. {cash:N0}", ColorClass = "text-emerald-700 font-bold" },
+            new() { Label = "Available Liquid Funds", Value = $"Rs. {availableLiquid:N0}", ColorClass = "text-green-700 font-bold" },
+            new() { Label = "Net Working Buffer", Value = $"Rs. {netWorkingBuffer:N0}", ColorClass = netWorkingBuffer >= 0 ? "text-blue-800 font-bold" : "text-amber-700 font-bold" }
         };
     }
 

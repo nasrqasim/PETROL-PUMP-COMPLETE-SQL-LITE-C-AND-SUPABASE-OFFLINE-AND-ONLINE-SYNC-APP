@@ -5,64 +5,286 @@
     var products = (List<Product>)ViewBag.Products;
     var staff = (List<StaffMember>)ViewBag.Staff;
 }
-<div class="card">
-    <h2 class="font-bold text-lg mb-3">New Sales Invoice</h2>
-    <form asp-action="Create" method="post" id="invoiceForm">
-        <div class="grid md:grid-cols-3 gap-3 mb-4">
-            <div><label class="text-sm">Customer Name</label>
-                <select class="input" asp-for="CustomerId" required>
-                    @foreach (var c in customers) { <option value="@c.Id">@c.Name</option> }
-                </select></div>
-            <div><label class="text-sm">Date</label><input class="input" asp-for="Date" type="date" required /></div>
-            <div><label class="text-sm">Payment Mode</label>
-                <select class="input" asp-for="PaymentMode">
-                    <option>Cash</option><option>Bank</option><option>Credit</option>
-                </select></div>
-            <div><label class="text-sm">Sold By (Staff)</label>
-                <select class="input" asp-for="StaffId">
-                    @foreach (var s in staff) { <option value="@s.Id">@s.Name (@s.EmployeeId)</option> }
-                </select></div>
-            <div><label class="text-sm">Discount Rs.</label><input class="input" asp-for="Discount" type="number" step="0.01" min="0" value="0" /></div>
-            <div><label class="text-sm">Tax Rs.</label><input class="input" asp-for="Tax" type="number" step="0.01" min="0" value="0" /></div>
+
+<div class="card max-w-5xl mx-auto shadow-md">
+    <div class="flex justify-between items-center mb-4 pb-2 border-b">
+        <div>
+            <h2 class="font-black text-xl text-slate-800">New Sales Invoice (سیل بل)</h2>
+            <p class="text-xs text-slate-500">Fast POS billing, retail/wholesale sale, customer ledger, and payment selection</p>
         </div>
-        <h3 class="font-bold mb-2">Product List</h3>
-        <table class="tbl" id="linesTable">
-            <thead><tr><th>Product</th><th>Quantity</th><th>Unit Price</th><th>Tax</th><th></th></tr></thead>
-            <tbody>
-            @for (int i = 0; i < Model.Lines.Count; i++)
-            {
-                <tr>
-                    <td><select class="input" name="Lines[@i].ProductId">
-                        @foreach (var p in products) { <option value="@p.Id">@p.Name — Rs. @p.SalePrice</option> }
-                    </select></td>
-                    <td><input class="input" type="number" step="0.01" min="0" name="Lines[@i].Quantity" value="1" /></td>
-                    <td><input class="input" type="number" step="0.01" min="0" name="Lines[@i].UnitPrice" placeholder="Rs." /></td>
-                    <td><input class="input" type="number" step="0.01" min="0" name="Lines[@i].Tax" value="0" /></td>
-                    <td><button type="button" class="btn btn-red" onclick="this.closest('tr').remove()">Remove</button></td>
-                </tr>
-            }
-            </tbody>
-        </table>
-        <button type="button" class="btn mt-2" onclick="addLine()">+ Add Product Line</button>
-        <div class="mt-4 flex gap-2">
-            <button class="btn btn-green" type="submit">Save Invoice</button>
+        <a class="btn text-xs" asp-action="Index">← Back to Sales</a>
+    </div>
+
+    <form asp-action="Create" method="post" id="invoiceForm" class="space-y-4">
+        <!-- Top Metadata Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Customer *</label>
+                <select class="input w-full text-sm" asp-for="CustomerId" required>
+                    @foreach (var c in customers)
+                    {
+                        <option value="@c.Id">@c.Name (Due: Rs. @c.BalanceDue.ToString("N0"))</option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Date *</label>
+                <input class="input w-full text-sm" asp-for="Date" type="date" value="@DateTime.Today.ToString("yyyy-MM-dd")" required />
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Sold By (Staff)</label>
+                <select class="input w-full text-sm" asp-for="StaffId">
+                    <option value="">-- Direct Counter Sale --</option>
+                    @foreach (var s in staff)
+                    {
+                        <option value="@s.Id">@s.Name (@s.Designation)</option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Payment Method *</label>
+                <select class="input w-full text-sm" asp-for="PaymentMode" id="paymentModeSelect" onchange="toggleAccountFields()">
+                    <option value="Cash">Cash (کیش ان ہینڈ)</option>
+                    <option value="Bank">Bank / Digital Account (بینک اکاؤنٹ)</option>
+                    <option value="Credit">Credit / Khata (ادھار کھاتہ)</option>
+                </select>
+            </div>
+
+            <!-- Dynamic Bank / Digital Medium Selector -->
+            <div id="bankAccountBox" class="md:col-span-4" style="display:none;">
+                <div class="p-3 bg-blue-50 border border-blue-200 rounded-lg flex flex-col md:flex-row items-center gap-3">
+                    <label class="text-xs font-bold text-blue-900 whitespace-nowrap">🏦 Select Receiving Bank / Digital Wallet:</label>
+                    <div class="flex-1 w-full flex gap-2">
+                        <select class="input text-xs" onchange="setQuickBank(this.value)">
+                            <option value="">-- Quick Popular Accounts --</option>
+                            <option value="Meezan Bank (Main A/C)">Meezan Bank (Main A/C)</option>
+                            <option value="Bank Al-Habib (Current)">Bank Al-Habib (Current)</option>
+                            <option value="EasyPaisa Wallet">EasyPaisa Wallet</option>
+                            <option value="JazzCash Wallet">JazzCash Wallet</option>
+                            <option value="Habib Bank Limited (HBL)">Habib Bank Limited (HBL)</option>
+                            <option value="United Bank Limited (UBL)">United Bank Limited (UBL)</option>
+                        </select>
+                        <input class="input flex-1 text-xs border-blue-400" name="Remarks" id="accountMediumInput" 
+                               placeholder="Or type bank title, IBAN or wallet account..." />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Line Items -->
+        <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+            <div class="p-3 bg-slate-100 border-b flex justify-between items-center">
+                <h3 class="font-bold text-sm text-slate-800 uppercase tracking-wide">🛒 Sold Products &amp; Quantities</h3>
+                <button type="button" class="btn btn-green text-xs font-bold py-1 px-3" onclick="addLine()">+ Add Product Line</button>
+            </div>
+
+            <table class="tbl text-sm w-full" id="linesTable">
+                <thead class="bg-slate-50 text-slate-700 text-xs font-bold uppercase border-b">
+                    <tr>
+                        <th style="width: 40%;">Product / Lubricant / Fuel</th>
+                        <th style="width: 15%;" class="text-right">Quantity</th>
+                        <th style="width: 20%;" class="text-right">Unit Price (Rs.)</th>
+                        <th style="width: 20%;" class="text-right">Line Total (Rs.)</th>
+                        <th style="width: 5%;" class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="linesTableBody" class="divide-y divide-slate-100">
+                    <tr class="item-row">
+                        <td>
+                            <select class="input w-full text-sm item-select" name="Lines[0].ProductId" onchange="productChanged(this)">
+                                <option value="">-- Choose Product --</option>
+                                @foreach (var p in products)
+                                {
+                                    <option value="@p.Id" data-price="@p.SalePrice">@p.Name — Rs. @p.SalePrice (Stock: @p.StockQuantity @p.Unit)</option>
+                                }
+                            </select>
+                        </td>
+                        <td>
+                            <input class="input w-full text-sm text-right item-qty" type="number" step="0.01" min="0.01" 
+                                   name="Lines[0].Quantity" value="1" oninput="recalculate()" required />
+                        </td>
+                        <td>
+                            <input class="input w-full text-sm text-right item-cost" type="number" step="0.01" min="0" 
+                                   name="Lines[0].UnitPrice" placeholder="0.00" oninput="recalculate()" required />
+                        </td>
+                        <td class="text-right font-black text-slate-800 line-total py-3 pr-4">
+                            Rs. 0
+                        </td>
+                        <td class="text-center">
+                            <button type="button" class="text-rose-500 hover:text-rose-700 font-bold text-lg" onclick="removeRow(this)">✕</button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Bottom Summary & Discount Panel -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Invoice Remarks / Customer Reference</label>
+                <textarea class="input w-full text-xs" rows="3" placeholder="Enter vehicle number, driver name, or customer remarks..."></textarea>
+            </div>
+
+            <!-- Calculation Box -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2.5">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-600 font-semibold">Sub Total (مجموعہ رقم):</span>
+                    <span class="font-bold text-slate-800" id="subTotalDisplay">Rs. 0</span>
+                </div>
+
+                <!-- Bottom Discount Row with Active Quick Click & Input -->
+                <div class="flex justify-between items-center gap-2 pt-1 border-t border-slate-200">
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="focusDiscount()" class="p-1.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs font-bold transition flex items-center gap-1" title="Click to apply Discount">
+                            🏷️ <span class="underline">Discount (ڈسکاؤنٹ)</span>
+                        </button>
+                        <span class="text-[11px] text-slate-400">Click icon to set</span>
+                    </div>
+                    <div class="w-36">
+                        <div class="relative">
+                            <span class="absolute left-2.5 top-2 text-xs font-bold text-slate-400">Rs.</span>
+                            <input class="input w-full text-sm text-right pl-8 font-black text-rose-600 border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500" 
+                                   asp-for="Discount" id="discountInput" type="number" step="0.01" min="0" value="0" oninput="recalculate()" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tax Row -->
+                <div class="flex justify-between items-center gap-2">
+                    <span class="text-xs font-semibold text-slate-600">Tax / GST (ٹیکس):</span>
+                    <div class="w-36">
+                        <div class="relative">
+                            <span class="absolute left-2.5 top-2 text-xs font-bold text-slate-400">Rs.</span>
+                            <input class="input w-full text-sm text-right pl-8 font-semibold text-slate-700" 
+                                   asp-for="Tax" id="taxInput" type="number" step="0.01" min="0" value="0" oninput="recalculate()" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Grand Total -->
+                <div class="flex justify-between items-center pt-2 border-t-2 border-slate-300">
+                    <span class="text-base font-black text-slate-900">Grand Total (صافی رقم):</span>
+                    <span class="text-xl font-black text-emerald-600" id="grandTotalDisplay">Rs. 0</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit & Actions -->
+        <div class="flex justify-end gap-3 pt-3 border-t">
             <a class="btn" asp-action="Index">Cancel</a>
+            <button class="btn btn-green px-8 py-2.5 text-sm font-black shadow-md flex items-center gap-2" type="submit">
+                💾 Save &amp; Print Sales Invoice
+            </button>
         </div>
     </form>
 </div>
+
 @section Scripts {
 <script>
-let lineIndex = @Model.Lines.Count;
-function addLine() {
-    const tbody = document.querySelector('#linesTable tbody');
-    const row = document.createElement('tr');
-    row.innerHTML = `<td><select class="input" name="Lines[${lineIndex}].ProductId">@foreach (var p in products) { <option value="@p.Id">@p.Name — Rs. @p.SalePrice</option> }</select></td>
-    <td><input class="input" type="number" step="0.01" min="0" name="Lines[${lineIndex}].Quantity" value="1" /></td>
-    <td><input class="input" type="number" step="0.01" min="0" name="Lines[${lineIndex}].UnitPrice" placeholder="Rs." /></td>
-    <td><input class="input" type="number" step="0.01" min="0" name="Lines[${lineIndex}].Tax" value="0" /></td>
-    <td><button type="button" class="btn btn-red" onclick="this.closest('tr').remove()">Remove</button></td>`;
-    tbody.appendChild(row);
-    lineIndex++;
+let lineIndex = 1;
+
+function toggleAccountFields() {
+    const mode = document.getElementById("paymentModeSelect").value;
+    const box = document.getElementById("bankAccountBox");
+    if (mode === "Bank") {
+        box.style.display = "block";
+    } else {
+        box.style.display = "none";
+    }
 }
+
+function setQuickBank(val) {
+    if (val) {
+        document.getElementById("accountMediumInput").value = val;
+    }
+}
+
+function focusDiscount() {
+    const input = document.getElementById("discountInput");
+    input.focus();
+    input.select();
+}
+
+function productChanged(selectElem) {
+    const row = selectElem.closest("tr");
+    const opt = selectElem.options[selectElem.selectedIndex];
+    const price = opt.getAttribute("data-price") || 0;
+    const costInput = row.querySelector(".item-cost");
+    if (price && (!costInput.value || parseFloat(costInput.value) === 0)) {
+        costInput.value = parseFloat(price).toFixed(2);
+    }
+    recalculate();
+}
+
+function addLine() {
+    const tbody = document.getElementById("linesTableBody");
+    const tr = document.createElement("tr");
+    tr.className = "item-row";
+    tr.innerHTML = `
+        <td>
+            <select class="input w-full text-sm item-select" name="Lines[${lineIndex}].ProductId" onchange="productChanged(this)">
+                <option value="">-- Choose Product --</option>
+                @foreach (var p in products)
+                {
+                    <option value="@p.Id" data-price="@p.SalePrice">@p.Name — Rs. @p.SalePrice (Stock: @p.StockQuantity @p.Unit)</option>
+                }
+            </select>
+        </td>
+        <td>
+            <input class="input w-full text-sm text-right item-qty" type="number" step="0.01" min="0.01" 
+                   name="Lines[${lineIndex}].Quantity" value="1" oninput="recalculate()" required />
+        </td>
+        <td>
+            <input class="input w-full text-sm text-right item-cost" type="number" step="0.01" min="0" 
+                   name="Lines[${lineIndex}].UnitPrice" placeholder="0.00" oninput="recalculate()" required />
+        </td>
+        <td class="text-right font-black text-slate-800 line-total py-3 pr-4">
+            Rs. 0
+        </td>
+        <td class="text-center">
+            <button type="button" class="text-rose-500 hover:text-rose-700 font-bold text-lg" onclick="removeRow(this)">✕</button>
+        </td>
+    `;
+    tbody.appendChild(tr);
+    lineIndex++;
+    recalculate();
+}
+
+function removeRow(btn) {
+    const rows = document.querySelectorAll(".item-row");
+    if (rows.length > 1) {
+        btn.closest("tr").remove();
+        recalculate();
+    } else {
+        alert("Invoice must have at least one product line.");
+    }
+}
+
+function recalculate() {
+    let subtotal = 0;
+    document.querySelectorAll(".item-row").forEach(row => {
+        const qty = parseFloat(row.querySelector(".item-qty")?.value) || 0;
+        const cost = parseFloat(row.querySelector(".item-cost")?.value) || 0;
+        const total = qty * cost;
+        subtotal += total;
+        const display = row.querySelector(".line-total");
+        if (display) display.innerText = "Rs. " + total.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    });
+
+    const discount = parseFloat(document.getElementById("discountInput")?.value) || 0;
+    const tax = parseFloat(document.getElementById("taxInput")?.value) || 0;
+    const grandTotal = Math.max(0, subtotal - discount + tax);
+
+    document.getElementById("subTotalDisplay").innerText = "Rs. " + subtotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    document.getElementById("grandTotalDisplay").innerText = "Rs. " + grandTotal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    toggleAccountFields();
+    recalculate();
+});
 </script>
 }

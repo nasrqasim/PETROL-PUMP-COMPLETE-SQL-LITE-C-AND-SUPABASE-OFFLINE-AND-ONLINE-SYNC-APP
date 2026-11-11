@@ -28,7 +28,11 @@ builder.Services.AddScoped<AdvanceLoanService>();
 builder.Services.AddScoped<SupabaseSyncService>();
 builder.Services.AddScoped<OilShop.Web.Services.ReportEngineService>();
 
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 
 var app = builder.Build();
 

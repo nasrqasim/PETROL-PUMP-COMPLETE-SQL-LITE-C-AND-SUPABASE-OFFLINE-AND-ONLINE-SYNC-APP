@@ -37,13 +37,19 @@
         </div>
         <div class="text-2xl font-bold text-slate-800">Rs. @(((decimal)ViewBag.Cash).ToString("N0"))</div>
     </a>
-    <a asp-controller="CashBank" asp-action="BankHistory" class="card border-l-4 border-blue-600 hover:shadow-lg transition cursor-pointer group">
+    <div class="card border-l-4 border-blue-600 hover:shadow-lg transition group">
         <div class="flex justify-between items-start">
-            <div class="text-sm text-slate-500 group-hover:text-blue-700">Bank Balance ↗</div>
-            <span class="text-xs bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded font-medium">History</span>
+            <div class="text-sm text-slate-500 group-hover:text-blue-700 font-semibold">Total Bank Balance 🏦</div>
+            <a asp-controller="CashBank" asp-action="BankHistory" class="text-xs bg-blue-100 text-blue-800 hover:bg-blue-200 px-2 py-0.5 rounded font-bold">Breakdown &amp; History ↗</a>
         </div>
-        <div class="text-2xl font-bold text-slate-800">Rs. @(((decimal)ViewBag.Bank).ToString("N0"))</div>
-    </a>
+        <div class="text-2xl font-black text-slate-800 my-1">Rs. @(((decimal)ViewBag.Bank).ToString("N0"))</div>
+        <div class="text-[11px] text-slate-500 pt-1 border-t border-slate-100 flex flex-wrap gap-2">
+            <span class="text-blue-900 font-semibold">Meezan</span> •
+            <span class="text-emerald-900 font-semibold">Bank Al-Habib</span> •
+            <span class="text-purple-900 font-semibold">EasyPaisa</span> •
+            <span class="text-amber-900 font-semibold">JazzCash</span>
+        </div>
+    </div>
     <div class="card">
         <div class="text-sm text-slate-500">Customer Receivables</div>
         <div class="text-xl font-bold text-green-600">Rs. @(((decimal)ViewBag.Receivables).ToString("N0"))</div>
