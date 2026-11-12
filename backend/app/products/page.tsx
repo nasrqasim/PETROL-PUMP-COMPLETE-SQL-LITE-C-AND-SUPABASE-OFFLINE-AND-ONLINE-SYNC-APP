@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Package, Plus, Search, AlertCircle, CheckCircle, X } from "lucide-react";
+import { Package, Plus, Search, AlertCircle, CheckCircle, X, Trash2 } from "lucide-react";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -69,6 +69,20 @@ export default function ProductsPage() {
     }
   };
 
+  const handleDelete = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete product "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setMsg(`Product "${name}" deleted.`);
+        loadProducts();
+        setTimeout(() => setMsg(""), 3500);
+      }
+    } catch (err: any) {
+      alert("Error deleting: " + err.message);
+    }
+  };
+
   const filtered = products.filter(
     (p) =>
       p.Name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -131,6 +145,7 @@ export default function ProductsPage() {
                   <th className="py-3 px-4 text-right">Purchase Price</th>
                   <th className="py-3 px-4 text-center">Stock Quantity</th>
                   <th className="py-3 px-4 text-center">Status</th>
+                  <th className="py-3 px-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -164,6 +179,15 @@ export default function ProductsPage() {
                         ) : (
                           <span className="text-[11px] font-bold text-emerald-600">In Stock</span>
                         )}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <button
+                          onClick={() => handleDelete(p.Id, p.Name)}
+                          className="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 transition"
+                          title="Delete product"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </td>
                     </tr>
                   );

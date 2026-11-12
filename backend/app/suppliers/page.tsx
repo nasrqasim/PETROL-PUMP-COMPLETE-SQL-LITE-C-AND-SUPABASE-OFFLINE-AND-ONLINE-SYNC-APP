@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Building, Search, Phone, MapPin, Plus, CheckCircle, X } from "lucide-react";
+import { Building, Search, Phone, MapPin, Plus, CheckCircle, X, Trash2 } from "lucide-react";
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -57,6 +57,20 @@ export default function SuppliersPage() {
       alert("Error saving: " + err.message);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete supplier "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/suppliers/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setMsg(`Supplier "${name}" deleted successfully.`);
+        loadSuppliers();
+        setTimeout(() => setMsg(""), 3500);
+      }
+    } catch (err: any) {
+      alert("Error deleting: " + err.message);
     }
   };
 
@@ -120,6 +134,7 @@ export default function SuppliersPage() {
                   <th className="py-3 px-4">Address</th>
                   <th className="py-3 px-4 text-right">Balance Payable</th>
                   <th className="py-3 px-4 text-right">Advance Paid</th>
+                  <th className="py-3 px-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -149,6 +164,15 @@ export default function SuppliersPage() {
                     </td>
                     <td className="py-3 px-4 text-right font-black text-emerald-600">
                       Rs. {Number(s.Advance || 0).toLocaleString()}
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <button
+                        onClick={() => handleDelete(s.Id, s.Name)}
+                        className="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 transition"
+                        title="Delete supplier"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}

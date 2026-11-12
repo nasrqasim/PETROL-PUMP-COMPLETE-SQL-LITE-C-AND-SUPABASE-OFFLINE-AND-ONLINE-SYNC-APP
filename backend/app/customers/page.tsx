@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, Search, Phone, MapPin, UserPlus, CheckCircle, X } from "lucide-react";
+import { Users, Search, Phone, MapPin, UserPlus, CheckCircle, X, Trash2 } from "lucide-react";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -60,6 +60,20 @@ export default function CustomersPage() {
     }
   };
 
+  const handleDelete = async (id: number, name: string) => {
+    if (!confirm(`Are you sure you want to delete customer "${name}"?`)) return;
+    try {
+      const res = await fetch(`/api/customers/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        setMsg(`Customer "${name}" deleted successfully.`);
+        loadCustomers();
+        setTimeout(() => setMsg(""), 3500);
+      }
+    } catch (err: any) {
+      alert("Error deleting: " + err.message);
+    }
+  };
+
   const filtered = customers.filter(
     (c) =>
       c.Name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -68,7 +82,6 @@ export default function CustomersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Top Banner & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
@@ -106,7 +119,6 @@ export default function CustomersPage() {
         </div>
       )}
 
-      {/* Main Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-slate-500">Loading customers...</div>
@@ -122,6 +134,7 @@ export default function CustomersPage() {
                   <th className="py-3 px-4">Address</th>
                   <th className="py-3 px-4 text-right">Balance Due (Udhar)</th>
                   <th className="py-3 px-4 text-right">Advance Received</th>
+                  <th className="py-3 px-4 text-center">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -152,6 +165,15 @@ export default function CustomersPage() {
                     <td className="py-3 px-4 text-right font-black text-emerald-600">
                       Rs. {Number(c.Advance || 0).toLocaleString()}
                     </td>
+                    <td className="py-3 px-4 text-center">
+                      <button
+                        onClick={() => handleDelete(c.Id, c.Name)}
+                        className="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 transition"
+                        title="Delete customer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -160,7 +182,6 @@ export default function CustomersPage() {
         )}
       </div>
 
-      {/* Modal Add Customer Form */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">

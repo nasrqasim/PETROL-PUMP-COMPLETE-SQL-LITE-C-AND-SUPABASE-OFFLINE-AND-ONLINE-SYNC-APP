@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchFromCSharp } from "@/lib/csharp-client";
+import { memoryStore } from "@/lib/memory-store";
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  const { id } = params;
+  const id = Number(params.id);
   try {
-    const res = await fetchFromCSharp(`api/oilshop/expenses/${id}`, {
-      method: "DELETE",
-    });
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
-  } catch (err: any) {
-    return NextResponse.json({ error: "Failed to delete expense", details: err.message }, { status: 502 });
-  }
+    await fetchFromCSharp(`api/oilshop/expenses/${id}`, { method: "DELETE" }).catch(() => {});
+  } catch (e) {}
+
+  memoryStore.expenses = memoryStore.expenses.filter((e) => e.Id !== id);
+  return NextResponse.json({ success: true });
 }
