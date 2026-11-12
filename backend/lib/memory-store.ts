@@ -1,6 +1,7 @@
 // In-Memory Cloud Store for Vercel Serverless environment
-// Keeps all Customer, Supplier, Product, Sales, Purchases, Expenses, Staff, and Vouchers
-// functional and fully editable even when deployed on Vercel without local SQLite bridge.
+// Keeps all Customer, Supplier, Product, Sales, Purchases, Expenses, Staff, Vouchers,
+// Gariyan, and Roznamcha entries fully functional and editable even when deployed
+// on Vercel without local SQLite bridge.
 
 export interface CustomerData {
   Id: number;
@@ -49,8 +50,8 @@ export interface SalesInvoiceData {
   InvoiceNumber: string;
   Date: string;
   CustomerId?: number;
-  Customer?: any;
-  PaymentMode: number | string;
+  Customer?: { Name: string };
+  PaymentMode?: string;
   SubTotal: number;
   Discount: number;
   Tax: number;
@@ -65,11 +66,13 @@ export interface PurchaseInvoiceData {
   InvoiceNumber: string;
   Date: string;
   SupplierId?: number;
-  Supplier?: any;
-  PaymentMode: number | string;
+  Supplier?: { Name: string };
+  PaymentMode?: string;
   SubTotal: number;
-  Discount: number;
-  Tax: number;
+  DiscountAmount?: number;
+  Discount?: number;
+  TaxAmount?: number;
+  Tax?: number;
   GrandTotal: number;
   PaidAmount: number;
   Remarks?: string;
@@ -80,7 +83,7 @@ export interface ExpenseData {
   Id: number;
   Date: string;
   Category: string;
-  PaymentMode: number | string;
+  PaymentMode: string;
   Amount: number;
   Remarks?: string;
 }
@@ -88,11 +91,11 @@ export interface ExpenseData {
 export interface StaffData {
   Id: number;
   Name: string;
-  Designation?: string;
-  Department?: string;
-  ContactNumber?: string;
+  Designation: string;
+  Department: string;
+  ContactNumber: string;
   Address?: string;
-  Cnic?: string;
+  Cnic: string;
   Salary: number;
   IsActive: boolean;
 }
@@ -103,19 +106,39 @@ export interface VoucherData {
   Date: string;
   PaymentType: string;
   PartyType: string;
-  CustomerId?: number;
-  Customer?: any;
-  SupplierId?: number;
-  Supplier?: any;
-  StaffId?: number;
-  Staff?: any;
+  Customer?: { Name: string };
+  Supplier?: { Name: string };
   GariNo?: string;
   DriverName?: string;
   Amount: number;
   Remarks?: string;
 }
 
-// Global persistent in-memory singleton across hot lambdas
+export interface GariData {
+  id: number;
+  gariNo: string;
+  driverName: string;
+  malik: string;
+  phone: string;
+  modelYear?: string;
+  capacity?: string;
+  status?: string;
+}
+
+export interface RoznamchaItemData {
+  id: number;
+  date: string;
+  displayDate: string;
+  gariNo: string;
+  driverName: string;
+  maal: string;
+  dieselLiter: number;
+  kiraya: number;
+  kharcha: number;
+  advance: number;
+  baqaya: number;
+}
+
 declare global {
   var __memoryStore: {
     customers: CustomerData[];
@@ -126,6 +149,8 @@ declare global {
     expenses: ExpenseData[];
     staff: StaffData[];
     vouchers: VoucherData[];
+    gariyan: GariData[];
+    roznamcha: RoznamchaItemData[];
   } | undefined;
 }
 
@@ -154,7 +179,7 @@ if (!global.__memoryStore) {
       { Id: 2, InvoiceNumber: "SI-004588", Date: new Date().toISOString(), CustomerId: 1, Customer: { Name: "Ahmed Khan Traders" }, PaymentMode: "Cash", SubTotal: 5000, Discount: 0, Tax: 0, GrandTotal: 5000, PaidAmount: 5000, Remarks: "" },
     ],
     purchases: [
-      { Id: 1, InvoiceNumber: "PI-007892", Date: new Date().toISOString(), SupplierId: 1, Supplier: { Name: "Pakistan Oil Company" }, PaymentMode: "Credit", SubTotal: 117000, Discount: 139620, Tax: 80860, GrandTotal: 58240, PaidAmount: 0, Remarks: "" },
+      { Id: 1, InvoiceNumber: "PI-007892", Date: new Date().toISOString(), SupplierId: 1, Supplier: { Name: "Pakistan Oil Company" }, PaymentMode: "Credit", SubTotal: 117000, DiscountAmount: 139620, TaxAmount: 80860, GrandTotal: 58240, PaidAmount: 0, Remarks: "" },
     ],
     expenses: [
       { Id: 6, Date: new Date().toISOString(), Category: "Rent Expense", PaymentMode: "Cash", Amount: 6590, Remarks: "Shop rent" },
@@ -171,6 +196,15 @@ if (!global.__memoryStore) {
       { Id: 4, VoucherNumber: "CP-20261110200817", Date: new Date().toISOString(), PaymentType: "CashPayment", PartyType: "Vehicle", GariNo: "786", DriverName: "Rashid", Amount: 5000, Remarks: "Vehicle Baqaya Settlement" },
       { Id: 2, VoucherNumber: "BR-20261108183705", Date: new Date().toISOString(), PaymentType: "BankReceipt", PartyType: "Customer", Customer: { Name: "Ahmed Khan Traders" }, Amount: 20000, Remarks: "Meezan Bank Deposit" },
       { Id: 1, VoucherNumber: "CP-20261108182748", Date: new Date().toISOString(), PaymentType: "CashPayment", PartyType: "Customer", Customer: { Name: "Ahmed Khan Traders" }, Amount: 6000, Remarks: "Partial payment" },
+    ],
+    gariyan: [
+      { id: 1, gariNo: "786", driverName: "Rashid Driver", malik: "Haji Najeeb", phone: "03152914836", modelYear: "2024", capacity: "15 Ton", status: "Active" },
+      { id: 2, gariNo: "LES-992", driverName: "Iqbal Driver", malik: "Windr Oil Traders", phone: "03001234567", modelYear: "2022", capacity: "20 Ton", status: "Active" },
+      { id: 3, gariNo: "TK-404", driverName: "Farooq", malik: "Nasr Qasim Transport", phone: "03108444612", modelYear: "2023", capacity: "10 Ton", status: "Active" },
+    ],
+    roznamcha: [
+      { id: 1, date: new Date().toISOString().split("T")[0], displayDate: new Date().toLocaleDateString("en-GB"), gariNo: "786", driverName: "Rashid Driver", maal: "High Speed Diesel", dieselLiter: 120, kiraya: 45000, kharcha: 8000, advance: 15000, baqaya: 22000 },
+      { id: 2, date: new Date().toISOString().split("T")[0], displayDate: new Date().toLocaleDateString("en-GB"), gariNo: "LES-992", driverName: "Iqbal Driver", maal: "Super Petrol", dieselLiter: 90, kiraya: 38000, kharcha: 6000, advance: 12000, baqaya: 20000 },
     ],
   };
 }

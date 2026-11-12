@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { fetchFromCSharp } from "@/lib/csharp-client";
+import { memoryStore } from "@/lib/memory-store";
 
 export async function GET(req: NextRequest, { params }: { params: { driverName: string } }) {
+  const driverDecoded = decodeURIComponent(params.driverName);
   try {
     const { searchParams } = new URL(req.url);
     const startDate = searchParams.get("startDate") || "";
@@ -17,12 +19,32 @@ export async function GET(req: NextRequest, { params }: { params: { driverName: 
       : `api/roznamchareports/driver/${encodeURIComponent(params.driverName)}`;
 
     const res = await fetchFromCSharp(endpoint);
-    const data = await res.json().catch(() => ({}));
-    return NextResponse.json(data, { status: res.status });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return NextResponse.json(data);
+    }
   } catch (error: any) {
-    return NextResponse.json(
-      { error: "Failed to generate driver ledger report", details: error.message },
-      { status: 502 }
-    );
+    // Fallback to memoryStore
   }
+
+  const driverEntries = memoryStore.roznamcha.filter((r) =>
+    r.driverName.toLowerCase().includes(driverDecoded.toLowerCase())
+  );
+
+  const totalKiraya = driverEntries.reduce((acc, r) => acc + (r.kiraya || 0), 0);
+  const totalKharcha = driverEntries.reduce((acc, r) => acc + (r.kharcha || 0), 0);
+  const totalAdvance = driverEntries.reduce((acc, r) => acc + (r.advance || 0), 0);
+  const totalDieselLiter = driverEntries.reduce((acc, r) => acc + (r.dieselLiter || 0), 0);
+  const totalBaqaya = totalKiraya - totalKharcha - totalAdvance;
+
+  return NextResponse.json({
+    driverName: driverDecoded,
+    totalTrips: driverEntries.length,
+    totalKiraya,
+    totalKharcha,
+    totalAdvance,
+    totalBaqaya,
+    totalDieselLiter,
+    entries: driverEntries,
+  });
 }
