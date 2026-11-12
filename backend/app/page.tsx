@@ -14,6 +14,11 @@ import {
   User,
   Printer,
   X,
+  FileText,
+  Fuel,
+  ArrowUpRight,
+  ArrowDownRight,
+  Wallet,
 } from "lucide-react";
 
 interface RoznamchaItem {
@@ -82,7 +87,7 @@ export default function AajKiEntryPage() {
       setGariyan(Array.isArray(gariData) ? gariData : []);
       setEntries(Array.isArray(rozData) ? rozData : []);
     } catch (err: any) {
-      setError(err.message || "Failed to load data.");
+      setError(err?.message || "Failed to load data.");
     } finally {
       setLoading(false);
     }
@@ -137,7 +142,7 @@ export default function AajKiEntryPage() {
       setTimeout(() => setSuccess(null), 3000);
       loadData();
     } catch (err: any) {
-      setError(err.message);
+      setError(err?.message || "Failed to delete.");
     }
   };
 
@@ -220,7 +225,7 @@ export default function AajKiEntryPage() {
       setReceiptItem(currentItem);
       setShowReceiptModal(true);
     } catch (err: any) {
-      setError(err.message);
+      setError(err?.message || "An error occurred.");
     } finally {
       setSaving(false);
     }
@@ -248,55 +253,87 @@ export default function AajKiEntryPage() {
   const liveAdvance = Number(advance) || 0;
   const liveBaqaya = liveKiraya - liveKharcha - liveAdvance;
 
+  // Aggregate totals
+  const totalKirayaSummary = filteredEntries.reduce((sum, e) => sum + (e.kiraya || 0), 0);
+  const totalBaqayaSummary = filteredEntries.reduce((sum, e) => sum + (e.baqaya || 0), 0);
+
   return (
-    <div className="space-y-6">
-      {/* Title & Banner */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-amber-500" />
-            Aaj Ki Entry — Daily Roznamcha Entry
-          </h2>
-          <p className="text-sm text-slate-500">
-            Record daily vehicle trips, transportation freight (Kiraya), expenses (Kharcha), advances (Peshgi), and instant thermal receipt printing.
-          </p>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Title & Banner - Mobile Optimized */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-4 sm:p-5 rounded-2xl border border-slate-700/80 shadow-md">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-400/30">
+                <Calendar className="w-5 h-5" />
+              </span>
+              <h2 className="text-lg sm:text-xl font-black tracking-tight text-white">
+                Aaj Ki Entry — Daily Roznamcha
+              </h2>
+            </div>
+            <p className="text-xs text-slate-300 mt-1">
+              گاڑی و ڈرائیور روانگی، کرایہ، خرچہ، ڈیزل اور بقایا حساب کتاب
+            </p>
+          </div>
+          <button
+            onClick={loadData}
+            className="self-end sm:self-auto flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-600 transition"
+          >
+            <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+            <span>Refresh Data</span>
+          </button>
         </div>
-        <button
-          onClick={loadData}
-          className="flex items-center space-x-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>Refresh Data</span>
-        </button>
+
+        {/* Quick KPI Bar for Mobile */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t border-slate-700/60 text-xs">
+          <div className="bg-slate-800/60 p-2 rounded-xl border border-slate-700/50">
+            <span className="text-[10px] text-slate-400 uppercase font-semibold">Trips Recorded</span>
+            <div className="text-sm font-bold text-slate-100">{filteredEntries.length} Trips</div>
+          </div>
+          <div className="bg-slate-800/60 p-2 rounded-xl border border-slate-700/50">
+            <span className="text-[10px] text-slate-400 uppercase font-semibold">Total Kiraya</span>
+            <div className="text-sm font-bold text-emerald-400">Rs. {totalKirayaSummary.toLocaleString()}</div>
+          </div>
+          <div className="bg-slate-800/60 p-2 rounded-xl border border-slate-700/50">
+            <span className="text-[10px] text-slate-400 uppercase font-semibold">Total Baqaya</span>
+            <div className="text-sm font-bold text-amber-400">Rs. {totalBaqayaSummary.toLocaleString()}</div>
+          </div>
+          <div className="bg-slate-800/60 p-2 rounded-xl border border-slate-700/50">
+            <span className="text-[10px] text-slate-400 uppercase font-semibold">Thermal Printing</span>
+            <div className="text-sm font-bold text-sky-400 flex items-center gap-1">
+              <Printer className="w-3.5 h-3.5" /> 80mm Active
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Alerts */}
       {error && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-4 rounded-xl flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 sm:p-4 rounded-xl flex items-start gap-2.5 text-xs">
+          <AlertCircle className="w-4 h-4 text-rose-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-sm">Notice</p>
-            <p className="text-xs">{error}</p>
+            <p className="font-bold">Notice</p>
+            <p>{error}</p>
           </div>
         </div>
       )}
 
       {success && (
-        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-4 rounded-xl flex items-start gap-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0 mt-0.5" />
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 p-3 sm:p-4 rounded-xl flex items-start gap-2.5 text-xs">
+          <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-sm">Success</p>
-            <p className="text-xs">{success}</p>
+            <p className="font-bold">Success</p>
+            <p>{success}</p>
           </div>
         </div>
       )}
 
-      {/* Entry Form Card */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-        <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200">
+      {/* Entry Form Card - Clean Mobile First Form */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-4 sm:p-6">
+        <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
           <h3 className="font-bold text-slate-900 text-sm flex items-center space-x-2">
             <PlusCircle className="w-4 h-4 text-amber-500" />
-            <span>{editingId ? `Edit Entry #${editingId}` : "Nayi Entry Shamil Karein (نئی انٹری شامل کریں)"}</span>
+            <span>{editingId ? `Edit Entry #${editingId}` : "Nayi Entry Shamil Karein (نئی انٹری درج کریں)"}</span>
           </h3>
           {editingId && (
             <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-700">
@@ -305,11 +342,11 @@ export default function AajKiEntryPage() {
           )}
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             {/* 1. Date */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Date (تاریخ) <span className="text-rose-500">*</span>
               </label>
               <input
@@ -317,13 +354,13 @@ export default function AajKiEntryPage() {
                 required
                 value={formDate}
                 onChange={(e) => setFormDate(e.target.value)}
-                className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-slate-50/50"
               />
             </div>
 
             {/* 2. Gari No */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Gari No (گاڑی نمبر) <span className="text-rose-500">*</span>
               </label>
               <div className="flex gap-1.5">
@@ -333,16 +370,16 @@ export default function AajKiEntryPage() {
                   placeholder="e.g. 786 or LES-992"
                   value={gariNo}
                   onChange={(e) => setGariNo(e.target.value)}
-                  className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                  className="w-full text-sm font-semibold border border-slate-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-amber-500 focus:outline-none uppercase"
                 />
                 {gariyan.length > 0 && (
                   <select
                     value=""
                     onChange={(e) => handleVehicleSelect(e.target.value)}
-                    className="border border-slate-300 rounded-lg px-2 text-xs bg-slate-50 text-slate-600 hover:bg-slate-100"
+                    className="border border-slate-300 rounded-xl px-2 text-xs bg-slate-100 text-slate-700 hover:bg-slate-200 cursor-pointer"
                     title="Select registered vehicle"
                   >
-                    <option value="">Select</option>
+                    <option value="">Choose</option>
                     {gariyan.map((g) => (
                       <option key={g.id} value={g.gariNo}>
                         {g.gariNo}
@@ -355,7 +392,7 @@ export default function AajKiEntryPage() {
 
             {/* 3. Driver Name */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Driver Name (ڈرائیور) <span className="text-rose-500">*</span>
               </label>
               <input
@@ -364,28 +401,29 @@ export default function AajKiEntryPage() {
                 placeholder="Driver Name"
                 value={driverName}
                 onChange={(e) => setDriverName(e.target.value)}
-                className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
             </div>
 
             {/* 4. Maal / Material */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
                 Maal (مال / Material)
               </label>
               <input
                 type="text"
-                placeholder="e.g. Diesel, Engine Oil, Sand"
+                placeholder="e.g. High Speed Diesel, Oil"
                 value={maal}
                 onChange={(e) => setMaal(e.target.value)}
-                className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
             </div>
 
             {/* 5. Diesel Liter */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Diesel (Liters) <span className="text-xs text-slate-400">(ڈیزل لیٹر)</span>
+              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <span>Diesel Fuel (Ltr)</span>
+                <Fuel className="w-3.5 h-3.5 text-slate-400" />
               </label>
               <input
                 type="number"
@@ -394,14 +432,15 @@ export default function AajKiEntryPage() {
                 placeholder="e.g. 100"
                 value={dieselLiter}
                 onChange={(e) => setDieselLiter(e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
             </div>
 
             {/* 6. Kiraya / Freight */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Kiraya (Freight / Transport) <span className="text-xs text-slate-400">(Rs.)</span>
+              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <span>Kiraya (کرایہ)</span>
+                <span className="text-emerald-600 font-bold">Rs.</span>
               </label>
               <input
                 type="number"
@@ -409,14 +448,15 @@ export default function AajKiEntryPage() {
                 placeholder="e.g. 35000"
                 value={kiraya}
                 onChange={(e) => setKiraya(e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:outline-none font-semibold text-emerald-700"
+                className="w-full text-sm border border-emerald-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold text-emerald-800 bg-emerald-50/20"
               />
             </div>
 
             {/* 7. Kharcha / Expenses */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Kharcha (Expenses) <span className="text-xs text-slate-400">(Rs.)</span>
+              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <span>Kharcha (خرچہ)</span>
+                <span className="text-rose-600 font-bold">Rs.</span>
               </label>
               <input
                 type="number"
@@ -424,14 +464,15 @@ export default function AajKiEntryPage() {
                 placeholder="e.g. 5000"
                 value={kharcha}
                 onChange={(e) => setKharcha(e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:outline-none font-semibold text-rose-700"
+                className="w-full text-sm border border-rose-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-rose-500 focus:outline-none font-bold text-rose-800 bg-rose-50/20"
               />
             </div>
 
             {/* 8. Advance / Peshgi */}
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Advance / Peshgi (Advance) <span className="text-xs text-slate-400">(Rs.)</span>
+              <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
+                <span>Advance / Peshgi</span>
+                <span className="text-amber-600 font-bold">Rs.</span>
               </label>
               <input
                 type="number"
@@ -439,33 +480,32 @@ export default function AajKiEntryPage() {
                 placeholder="e.g. 10000"
                 value={advance}
                 onChange={(e) => setAdvance(e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:outline-none font-semibold text-amber-700"
+                className="w-full text-sm border border-amber-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-amber-500 focus:outline-none font-bold text-amber-800 bg-amber-50/20"
               />
             </div>
           </div>
 
-          {/* Live Baqaya Preview & Actions */}
-          <div className="mt-6 pt-4 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div className="flex items-center space-x-4 bg-slate-50 px-4 py-2 rounded-lg border border-slate-200">
-              <span className="text-xs font-semibold text-slate-600">Calculated Baqaya (Remaining):</span>
-              <span className={`text-base font-bold ${liveBaqaya >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+          {/* Live Baqaya Preview & Action Buttons */}
+          <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
+            <div className="flex items-center justify-between sm:justify-start space-x-3 bg-slate-100/80 px-4 py-2.5 rounded-xl border border-slate-200">
+              <span className="text-xs font-bold text-slate-700">Calculated Net Baqaya:</span>
+              <span className={`text-base font-black ${liveBaqaya >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
                 Rs. {liveBaqaya.toLocaleString()}
               </span>
-              <span className="text-[10px] text-slate-400 font-mono">(Kiraya - Kharcha - Advance)</span>
             </div>
 
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={resetForm}
-                className="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-semibold rounded-lg hover:bg-slate-50 transition"
+                className="flex-1 sm:flex-none px-4 py-2.5 border border-slate-300 text-slate-700 text-xs font-bold rounded-xl hover:bg-slate-100 transition"
               >
                 Reset
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="px-6 py-2 bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold text-xs rounded-lg shadow transition disabled:opacity-50"
+                className="flex-1 sm:flex-none px-6 py-2.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-sm transition disabled:opacity-50"
               >
                 {saving ? "Saving..." : editingId ? "Update Entry" : "Save Daily Entry (محفوظ کریں)"}
               </button>
@@ -475,77 +515,163 @@ export default function AajKiEntryPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-3 items-center justify-between">
-        <div className="flex flex-wrap items-center gap-3 flex-1">
+      <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col md:flex-row gap-2.5 justify-between">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-1">
           {/* Date Filter */}
-          <div className="flex items-center space-x-1.5">
-            <span className="text-xs font-semibold text-slate-500">Date:</span>
-            <input
-              type="date"
-              value={filterDate}
-              onChange={(e) => setFilterDate(e.target.value)}
-              className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
-            />
-          </div>
+          <input
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="text-xs border border-slate-300 rounded-xl px-2.5 py-2 focus:ring-2 focus:ring-amber-500"
+            title="Filter by date"
+          />
 
           {/* Vehicle Filter */}
-          <div className="flex items-center space-x-1.5">
-            <Truck className="w-3.5 h-3.5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Filter Gari No..."
-              value={filterGari}
-              onChange={(e) => setFilterGari(e.target.value)}
-              className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 w-32 focus:outline-none focus:ring-2 focus:ring-amber-500"
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Vehicle No..."
+            value={filterGari}
+            onChange={(e) => setFilterGari(e.target.value)}
+            className="text-xs border border-slate-300 rounded-xl px-2.5 py-2 focus:ring-2 focus:ring-amber-500"
+          />
 
           {/* Driver Filter */}
-          <div className="flex items-center space-x-1.5">
-            <User className="w-3.5 h-3.5 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Filter Driver..."
-              value={filterDriver}
-              onChange={(e) => setFilterDriver(e.target.value)}
-              className="text-xs border border-slate-300 rounded-lg px-2.5 py-1.5 w-32 focus:outline-none focus:ring-2 focus:ring-amber-500"
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Driver Name..."
+            value={filterDriver}
+            onChange={(e) => setFilterDriver(e.target.value)}
+            className="text-xs border border-slate-300 rounded-xl px-2.5 py-2 focus:ring-2 focus:ring-amber-500"
+          />
 
           {/* Search Query */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2" />
-            <input
-              type="text"
-              placeholder="Search in Roznamcha..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="text-xs pl-8 pr-3 py-1.5 border border-slate-300 rounded-lg w-44 focus:outline-none focus:ring-2 focus:ring-amber-500"
-            />
-          </div>
-
-          {(filterDate || filterGari || filterDriver || searchQuery) && (
-            <button
-              onClick={() => {
-                setFilterDate("");
-                setFilterGari("");
-                setFilterDriver("");
-                setSearchQuery("");
-              }}
-              className="text-xs text-rose-600 hover:text-rose-700 font-semibold underline ml-2"
-            >
-              Clear Filters
-            </button>
-          )}
+          <input
+            type="text"
+            placeholder="Search material..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="text-xs border border-slate-300 rounded-xl px-2.5 py-2 focus:ring-2 focus:ring-amber-500"
+          />
         </div>
 
-        <div className="text-xs text-slate-500">
-          Showing <span className="font-bold text-slate-800">{filteredEntries.length}</span> of {entries.length} entries
-        </div>
+        {(filterDate || filterGari || filterDriver || searchQuery) && (
+          <button
+            onClick={() => {
+              setFilterDate("");
+              setFilterGari("");
+              setFilterDriver("");
+              setSearchQuery("");
+            }}
+            className="self-end text-xs text-rose-600 hover:text-rose-700 font-bold underline px-2 py-1"
+          >
+            Clear Filters
+          </button>
+        )}
       </div>
 
-      {/* Entries Data Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      {/* Mobile Card Feed (Visible on Mobile / Small Screens) */}
+      <div className="block lg:hidden space-y-3">
+        {loading ? (
+          <div className="p-8 text-center text-xs text-slate-500 bg-white rounded-2xl border border-slate-200">
+            Loading Roznamcha records...
+          </div>
+        ) : filteredEntries.length === 0 ? (
+          <div className="p-8 text-center text-xs text-slate-400 bg-white rounded-2xl border border-slate-200">
+            No Roznamcha records found matching the criteria.
+          </div>
+        ) : (
+          filteredEntries.map((row) => (
+            <div
+              key={row.id}
+              className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-3"
+            >
+              <div className="flex justify-between items-start border-b border-slate-100 pb-2.5">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-black text-sm text-slate-900 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200">
+                      {row.gariNo}
+                    </span>
+                    <span className="font-bold text-xs text-slate-700">{row.driverName}</span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
+                    <Calendar className="w-3 h-3 text-slate-400" />
+                    <span>{row.displayDate || row.date}</span>
+                    {row.maal && <span>• {row.maal}</span>}
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 uppercase font-semibold block">Net Baqaya</span>
+                  <span
+                    className={`text-sm font-black ${
+                      row.baqaya >= 0 ? "text-slate-900" : "text-rose-600"
+                    }`}
+                  >
+                    Rs. {Number(row.baqaya || 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-3 gap-2 text-center text-xs py-1">
+                <div className="bg-emerald-50/60 p-2 rounded-xl border border-emerald-100">
+                  <span className="text-[10px] text-emerald-800 font-semibold block">Kiraya</span>
+                  <span className="font-bold text-emerald-700">Rs. {Number(row.kiraya || 0).toLocaleString()}</span>
+                </div>
+                <div className="bg-rose-50/60 p-2 rounded-xl border border-rose-100">
+                  <span className="text-[10px] text-rose-800 font-semibold block">Kharcha</span>
+                  <span className="font-bold text-rose-700">Rs. {Number(row.kharcha || 0).toLocaleString()}</span>
+                </div>
+                <div className="bg-amber-50/60 p-2 rounded-xl border border-amber-100">
+                  <span className="text-[10px] text-amber-800 font-semibold block">Advance</span>
+                  <span className="font-bold text-amber-700">Rs. {Number(row.advance || 0).toLocaleString()}</span>
+                </div>
+              </div>
+
+              {row.dieselLiter > 0 && (
+                <div className="text-[11px] text-slate-600 flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-lg">
+                  <Fuel className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Diesel Consumption: <strong>{row.dieselLiter} Liters</strong></span>
+                </div>
+              )}
+
+              {/* Actions Footer */}
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => handlePrintReceipt(row)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-800 bg-amber-400 hover:bg-amber-500 rounded-lg shadow-xs"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Thermal Receipt</span>
+                </button>
+
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleEdit(row)}
+                    className="p-1.5 text-blue-600 bg-blue-50 rounded-lg border border-blue-200"
+                    title="Edit"
+                  >
+                    <Edit2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(row.id)}
+                    className="p-1.5 text-rose-600 bg-rose-50 rounded-lg border border-rose-200"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Desktop Table View (Hidden on Mobile) */}
+      <div className="hidden lg:block bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
