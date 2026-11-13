@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextRequest, NextResponse } from "next/server";
 import { fetchFromCSharp } from "@/lib/csharp-client";
 import { memoryStore } from "@/lib/memory-store";

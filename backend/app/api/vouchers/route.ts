@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { NextResponse } from "next/server";
 import { fetchFromCSharp } from "@/lib/csharp-client";
 import { supabaseServer } from "@/lib/supabase";
