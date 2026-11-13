@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { BarChart3, Calendar, RefreshCw, Printer, ArrowRight } from "lucide-react";
+import { BarChart3, Calendar, RefreshCw, Printer } from "lucide-react";
 
 interface DailyRecord {
   id: number;
@@ -43,9 +43,30 @@ export default function DinKaKhulasaPage() {
       const res = await fetch(`/api/reports/daily?date=${encodeURIComponent(dateStr)}`);
       if (!res.ok) throw new Error("Failed to load daily summary from backend.");
       const data = await res.json();
-      setSummary(data);
+      
+      // Safe data normalization to prevent client crashes
+      const recordsList: DailyRecord[] = Array.isArray(data?.records)
+        ? data.records
+        : Array.isArray(data?.entries)
+        ? data.entries
+        : [];
+
+      const normalized: DailySummaryResponse = {
+        date: data?.date || dateStr,
+        displayDate: data?.displayDate || dateStr,
+        totalVehicles: Number(data?.totalVehicles ?? recordsList.length),
+        totalTrips: Number(data?.totalTrips ?? recordsList.length),
+        totalKiraya: Number(data?.totalKiraya ?? 0),
+        totalKharcha: Number(data?.totalKharcha ?? 0),
+        totalAdvance: Number(data?.totalAdvance ?? 0),
+        totalDiesel: Number(data?.totalDiesel ?? data?.totalDieselLiter ?? 0),
+        totalBachat: Number(data?.totalBachat ?? data?.totalBaqaya ?? 0),
+        records: recordsList,
+      };
+
+      setSummary(normalized);
     } catch (err: any) {
-      setError(err.message || "Failed to load summary");
+      setError(err?.message || "Failed to load summary");
     } finally {
       setLoading(false);
     }
@@ -60,33 +81,35 @@ export default function DinKaKhulasaPage() {
     setSelectedDate(today);
   };
 
+  const records = summary?.records || [];
+
   return (
     <div className="space-y-6">
       {/* Top Banner */}
-      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-rose-600" />
             Din Ka Khulasa — Daily Financial Summary & Overview
           </h2>
-          <p className="text-sm text-slate-500">
+          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
             Daily financial snapshot showing operating vehicles, trips, freight, expenses, advances, and net Bachat.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full md:w-auto">
           {/* Prominent Aaj Ka Total Button */}
           <button
             onClick={handleTodayClick}
-            className="flex items-center space-x-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-lg shadow transition"
+            className="flex-1 md:flex-none flex items-center justify-center space-x-1.5 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs rounded-xl shadow transition"
           >
             <Calendar className="w-4 h-4" />
-            <span>Aaj Ka Total (Today's Total)</span>
+            <span>Aaj Ka Total</span>
           </button>
 
           <button
             onClick={() => window.print()}
-            className="flex items-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition"
+            className="flex-1 md:flex-none flex items-center justify-center space-x-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print Summary</span>
@@ -95,90 +118,104 @@ export default function DinKaKhulasaPage() {
       </div>
 
       {/* Date Picker Bar */}
-      <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center justify-between">
+      <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center justify-between">
         <div className="flex items-center space-x-3">
-          <label className="text-xs font-bold text-slate-700">Select Date (تاریخ منتخب کریں):</label>
+          <label className="text-xs font-bold text-slate-700">Select Date (تاریخ):</label>
           <input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="text-sm font-semibold border border-slate-300 rounded-lg px-3 py-1.5 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="text-sm font-semibold border border-slate-300 rounded-xl px-3 py-1.5 bg-slate-50 text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
           <button
             onClick={() => loadSummary()}
-            className="text-xs bg-slate-800 hover:bg-slate-700 text-white font-semibold px-3 py-1.5 rounded-lg shadow-sm transition"
+            className="text-xs bg-slate-800 hover:bg-slate-700 text-white font-semibold px-3 py-1.5 rounded-xl shadow-sm transition"
           >
-            Load Date
+            Load
           </button>
         </div>
 
         {summary && (
           <div className="text-xs text-slate-500 font-medium">
-            Active Operating Vehicles: <strong className="text-slate-800">{summary.totalVehicles}</strong> | Trips:{" "}
+            Active Vehicles: <strong className="text-slate-800">{summary.totalVehicles}</strong> | Trips:{" "}
             <strong className="text-slate-800">{summary.totalTrips}</strong>
           </div>
         )}
       </div>
 
+      {error && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 p-3 rounded-xl text-xs">
+          {error}
+        </div>
+      )}
+
       {/* Prominent Breakdown Cards */}
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           {/* 1. Vehicles Operating */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Vehicles</span>
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Vehicles</span>
             <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-2xl font-black text-slate-900">{summary.totalVehicles}</span>
-              <span className="text-xs text-slate-400 font-medium">{summary.totalTrips} Trips</span>
+              <span className="text-xl sm:text-2xl font-black text-slate-900">{summary.totalVehicles}</span>
+              <span className="text-[11px] text-slate-400 font-medium">{summary.totalTrips} Trips</span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Vehicles operating on this date</p>
+            <p className="text-[10px] text-slate-400 mt-1">Vehicles operating</p>
           </div>
 
           {/* 2. Total Kiraya */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Kiraya (Freight)</span>
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Total Kiraya</span>
             <div className="mt-2">
-              <span className="text-2xl font-black text-emerald-700">Rs. {summary.totalKiraya.toLocaleString()}</span>
+              <span className="text-lg sm:text-2xl font-black text-emerald-700">
+                Rs. {Number(summary.totalKiraya || 0).toLocaleString()}
+              </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Total revenue / freight charges</p>
+            <p className="text-[10px] text-slate-400 mt-1">Total freight</p>
           </div>
 
           {/* 3. Total Kharcha */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Kharcha (Expenses)</span>
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Total Kharcha</span>
             <div className="mt-2">
-              <span className="text-2xl font-black text-rose-700">Rs. {summary.totalKharcha.toLocaleString()}</span>
+              <span className="text-lg sm:text-2xl font-black text-rose-700">
+                Rs. {Number(summary.totalKharcha || 0).toLocaleString()}
+              </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Trip expenses & vehicle costs</p>
+            <p className="text-[10px] text-slate-400 mt-1">Trip expenses</p>
           </div>
 
           {/* 4. Total Advance */}
-          <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Advance (Peshgi)</span>
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Total Advance</span>
             <div className="mt-2">
-              <span className="text-2xl font-black text-amber-700">Rs. {summary.totalAdvance.toLocaleString()}</span>
+              <span className="text-lg sm:text-2xl font-black text-amber-700">
+                Rs. {Number(summary.totalAdvance || 0).toLocaleString()}
+              </span>
             </div>
-            <p className="text-[11px] text-slate-400 mt-1">Advances paid to drivers</p>
+            <p className="text-[10px] text-slate-400 mt-1">Advances paid</p>
           </div>
 
           {/* 5. Total Bachat */}
-          <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-5 rounded-xl shadow-md border border-slate-700">
-            <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Total Bachat (Net Total)</span>
+          <div className="col-span-2 lg:col-span-1 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-md border border-slate-700">
+            <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-400">Total Bachat</span>
             <div className="mt-2">
-              <span className="text-2xl font-extrabold text-white">Rs. {summary.totalBachat.toLocaleString()}</span>
+              <span className="text-xl sm:text-2xl font-black text-white">
+                Rs. {Number(summary.totalBachat || 0).toLocaleString()}
+              </span>
             </div>
-            <p className="text-[10px] text-slate-300 mt-1 font-mono">Kiraya - Kharcha - Advance</p>
+            <p className="text-[9px] text-slate-300 mt-1 font-mono">Kiraya - Kharcha - Advance</p>
           </div>
         </div>
       )}
 
       {/* Daily Detailed Table */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
           <h3 className="font-bold text-sm text-slate-800">
             Detailed Records — {summary?.displayDate || selectedDate}
           </h3>
           <span className="text-xs text-slate-500">
-            Total records: {summary?.records.length || 0}
+            Total records: {records.length}
           </span>
         </div>
 
@@ -186,7 +223,7 @@ export default function DinKaKhulasaPage() {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-900 text-white uppercase text-[11px] tracking-wider font-semibold">
-                <th className="py-3 px-3">Gari No (گاڑی نمبر)</th>
+                <th className="py-3 px-3">Gari No (گاڑی)</th>
                 <th className="py-3 px-3">Driver (ڈرائیور)</th>
                 <th className="py-3 px-3">Maal (Material)</th>
                 <th className="py-3 px-3 text-right">Diesel</th>
@@ -196,21 +233,21 @@ export default function DinKaKhulasaPage() {
                 <th className="py-3 px-3 text-right">Baqaya / Bachat</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200">
+            <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-400">
                     Loading daily summary records...
                   </td>
                 </tr>
-              ) : !summary || summary.records.length === 0 ? (
+              ) : records.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-400">
                     No entries found for date {selectedDate}.
                   </td>
                 </tr>
               ) : (
-                summary.records.map((r) => (
+                records.map((r) => (
                   <tr key={r.id} className="hover:bg-slate-50 transition">
                     <td className="py-2.5 px-3">
                       <span className="inline-block bg-slate-100 text-slate-900 font-bold px-2 py-0.5 rounded border border-slate-200">
@@ -221,22 +258,22 @@ export default function DinKaKhulasaPage() {
                     <td className="py-2.5 px-3 text-slate-600">{r.maal || "—"}</td>
                     <td className="py-2.5 px-3 text-right font-mono">{r.dieselLiter > 0 ? `${r.dieselLiter} L` : "—"}</td>
                     <td className="py-2.5 px-3 text-right font-semibold text-emerald-700">
-                      Rs. {r.kiraya.toLocaleString()}
+                      Rs. {Number(r.kiraya || 0).toLocaleString()}
                     </td>
                     <td className="py-2.5 px-3 text-right font-semibold text-rose-700">
-                      Rs. {r.kharcha.toLocaleString()}
+                      Rs. {Number(r.kharcha || 0).toLocaleString()}
                     </td>
                     <td className="py-2.5 px-3 text-right font-semibold text-amber-700">
-                      Rs. {r.advance.toLocaleString()}
+                      Rs. {Number(r.advance || 0).toLocaleString()}
                     </td>
                     <td className={`py-2.5 px-3 text-right font-bold ${r.baqaya >= 0 ? "text-slate-900" : "text-rose-600"}`}>
-                      Rs. {r.baqaya.toLocaleString()}
+                      Rs. {Number(r.baqaya || 0).toLocaleString()}
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
-            {summary && summary.records.length > 0 && (
+            {summary && records.length > 0 && (
               <tfoot>
                 <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-300">
                   <td className="py-3 px-3" colSpan={3}>
@@ -244,16 +281,16 @@ export default function DinKaKhulasaPage() {
                   </td>
                   <td className="py-3 px-3 text-right font-mono">{summary.totalDiesel} L</td>
                   <td className="py-3 px-3 text-right text-emerald-800">
-                    Rs. {summary.totalKiraya.toLocaleString()}
+                    Rs. {Number(summary.totalKiraya || 0).toLocaleString()}
                   </td>
                   <td className="py-3 px-3 text-right text-rose-800">
-                    Rs. {summary.totalKharcha.toLocaleString()}
+                    Rs. {Number(summary.totalKharcha || 0).toLocaleString()}
                   </td>
                   <td className="py-3 px-3 text-right text-amber-800">
-                    Rs. {summary.totalAdvance.toLocaleString()}
+                    Rs. {Number(summary.totalAdvance || 0).toLocaleString()}
                   </td>
                   <td className="py-3 px-3 text-right font-extrabold text-slate-950">
-                    Rs. {summary.totalBachat.toLocaleString()}
+                    Rs. {Number(summary.totalBachat || 0).toLocaleString()}
                   </td>
                 </tr>
               </tfoot>
