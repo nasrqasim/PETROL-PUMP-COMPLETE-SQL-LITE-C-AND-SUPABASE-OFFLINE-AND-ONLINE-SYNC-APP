@@ -173,12 +173,12 @@ export default function CashBankPage() {
                         <Truck className="w-3.5 h-3.5" /> {v.GariNo} {v.DriverName ? `(${v.DriverName})` : ""}
                       </span>
                     ) : v.Customer ? (
-                      <span className="font-semibold text-slate-800">Customer: {v.Customer.Name}</span>
+                      <span className="font-semibold text-slate-800">Customer: {typeof v.Customer === 'object' ? v.Customer?.Name : v.Customer || "—"}</span>
                     ) : v.Supplier ? (
-                      <span className="font-semibold text-slate-800">Supplier: {v.Supplier.Name}</span>
+                      <span className="font-semibold text-slate-800">Supplier: {typeof v.Supplier === 'object' ? v.Supplier?.Name : v.Supplier || "—"}</span>
                     ) : v.Staff ? (
                       <span className="font-semibold text-purple-700 flex items-center gap-1">
-                        <User className="w-3.5 h-3.5" /> Staff: {v.Staff.Name}
+                        <User className="w-3.5 h-3.5" /> Staff: {typeof v.Staff === 'object' ? v.Staff?.Name : v.Staff || "—"}
                       </span>
                     ) : (
                       <span className="text-slate-500">General</span>

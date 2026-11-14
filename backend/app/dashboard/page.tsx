@@ -223,7 +223,7 @@ export default function DashboardPage() {
                   <tr key={s.Id} className="hover:bg-slate-50">
                     <td className="py-2.5 px-3 font-semibold text-slate-800">{s.InvoiceNumber}</td>
                     <td className="py-2.5 px-3 text-slate-600 text-xs">{s.Date}</td>
-                    <td className="py-2.5 px-3 text-slate-700">{s.Customer}</td>
+                    <td className="py-2.5 px-3 text-slate-700">{typeof s.Customer === 'object' ? s.Customer?.Name : s.Customer || "Walk-in"}</td>
                     <td className="py-2.5 px-3">
                       <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-700">
                         {s.Mode}
