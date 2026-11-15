@@ -152,7 +152,11 @@ export default function AajKiEntryPage() {
   };
 
   const executePrint = () => {
+    document.body.classList.add("printing-thermal");
     window.print();
+    setTimeout(() => {
+      document.body.classList.remove("printing-thermal");
+    }, 1000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -782,9 +786,9 @@ export default function AajKiEntryPage() {
               style={{ width: "80mm", margin: "0 auto" }}
             >
               <div className="text-center space-y-0.5 border-b border-dashed border-slate-400 pb-2">
-                <div className="text-base font-black tracking-wide">ROONJHA DEVELOPERS</div>
-                <div className="text-[10px] font-bold text-slate-700">OIL SHOP & TRANSPORT ROZNAMCHA</div>
-                <div className="text-[10px] text-slate-600">وینڈر، پٹرول پمپ و ٹرانسپورٹ کھاتہ</div>
+                <div className="text-base font-black tracking-wide">MUSLIM CONSTRUCTION</div>
+                <div className="text-[10px] font-bold text-slate-700">DAILY TRIP RECEIPT & ROZNAMCHA</div>
+                <div className="text-[10px] text-slate-600">مسلم کنسٹرکشن اینڈ ٹرانسپورٹ روزنامچہ</div>
                 <div className="text-[10px] text-slate-500">Receipt #{receiptItem.id} | {receiptItem.date}</div>
               </div>
 
@@ -831,8 +835,7 @@ export default function AajKiEntryPage() {
 
               {/* Developer Attribution Required by User */}
               <div className="text-center pt-3 border-t border-dashed border-slate-400 space-y-0.5 text-[9px] text-slate-600">
-                <p className="font-bold">Software by Roonjha Developer</p>
-                <p className="font-black text-[11px] text-slate-800 tracking-wider">📞 03152914836</p>
+                <p className="font-bold">Software By Roonjha Developers: 03152914836</p>
                 <p className="text-[8px] text-slate-400">Thank you for your business!</p>
               </div>
             </div>

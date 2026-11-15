@@ -37,24 +37,75 @@ body {
   @apply bg-slate-200 hover:bg-slate-300 text-slate-800 border border-slate-300;
 }
 
+/* Print Styles */
 @media print {
-  body * {
+  /* Hide non-printable elements */
+  .no-print,
+  header,
+  footer,
+  nav,
+  button,
+  .btn,
+  .pwa-prompt {
+    display: none !important;
+  }
+
+  /* Specific handling for 80mm thermal receipt */
+  body.printing-thermal * {
     visibility: hidden;
   }
-  #thermal-receipt-print-area, #thermal-receipt-print-area * {
+
+  body.printing-thermal #thermal-receipt-print-area,
+  body.printing-thermal #thermal-receipt-print-area * {
     visibility: visible;
   }
-  #thermal-receipt-print-area {
+
+  body.printing-thermal #thermal-receipt-print-area {
     position: absolute;
     left: 0;
     top: 0;
     width: 80mm !important;
     max-width: 80mm !important;
     margin: 0 auto;
-    padding: 0;
+    padding: 2mm;
     font-size: 11px !important;
+    color: #000 !important;
+    background: #fff !important;
   }
-  .no-print {
-    display: none !important;
+
+  /* Specific handling for standard A4 / full ledger & summary printing */
+  body:not(.printing-thermal) #print-area,
+  body:not(.printing-thermal) #print-area * {
+    visibility: visible;
+  }
+
+  body:not(.printing-thermal) {
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Clean table borders and contrast for printed documents */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+  }
+
+  th, td {
+    border: 1px solid #cbd5e1 !important;
+    padding: 6px 8px !important;
+    color: #000 !important;
+  }
+
+  thead th {
+    background-color: #f1f5f9 !important;
+    color: #0f172a !important;
+    font-weight: bold !important;
+  }
+
+  @page {
+    margin: 12mm;
+    size: auto;
   }
 }

@@ -20,6 +20,7 @@ import {
   X,
   PlusCircle,
   Download,
+  HardHat,
 } from "lucide-react";
 
 export function MobileNavHeader({ children }: { children: React.ReactNode }) {
@@ -57,19 +58,19 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, color: "text-sky-400" },
-    { href: "/products", label: "Products & Stock", icon: Package, color: "text-amber-400" },
-    { href: "/sales", label: "Sales & Invoices", icon: ShoppingCart, color: "text-emerald-400" },
-    { href: "/purchases", label: "Purchases", icon: Building, color: "text-blue-400" },
+    { href: "/", label: "Roznamcha (روزنامچہ)", icon: Calendar, color: "text-amber-400", highlight: true },
+    { href: "/din-ka-khulasa", label: "Din Ka Khulasa", icon: BarChart3, color: "text-rose-400" },
+    { href: "/gari-khata", label: "Gari Khata", icon: Truck, color: "text-blue-400" },
+    { href: "/driver-khata", label: "Driver Khata", icon: UserCheck, color: "text-emerald-400" },
+    { href: "/staff", label: "Staff & Labour Khata", icon: HardHat, color: "text-amber-400" },
     { href: "/customers", label: "Customers", icon: Users, color: "text-purple-400" },
     { href: "/suppliers", label: "Suppliers", icon: Building, color: "text-indigo-400" },
     { href: "/cash-bank", label: "Cash & Bank", icon: Receipt, color: "text-teal-400" },
-    { href: "/expenses", label: "Expenses", icon: Tag, color: "text-rose-400" },
-    { href: "/staff", label: "Staff", icon: UserCheck, color: "text-indigo-400" },
-    { href: "/", label: "Roznamcha (روزنامچہ)", icon: Calendar, color: "text-amber-400", highlight: true },
-    { href: "/gari-khata", label: "Gari Khata", icon: Truck, color: "text-blue-400" },
-    { href: "/driver-khata", label: "Driver Khata", icon: UserCheck, color: "text-emerald-400" },
-    { href: "/din-ka-khulasa", label: "Din Ka Khulasa", icon: BarChart3, color: "text-rose-400" },
-    { href: "/gariyan", label: "Gariyan", icon: Database, color: "text-slate-400" },
+    { href: "/sales", label: "Sales & Invoices", icon: ShoppingCart, color: "text-emerald-400" },
+    { href: "/purchases", label: "Purchases", icon: Building, color: "text-blue-400" },
+    { href: "/expenses", label: "Daily Expenses", icon: Tag, color: "text-rose-400" },
+    { href: "/products", label: "Material & Products", icon: Package, color: "text-amber-400" },
+    { href: "/gariyan", label: "Gariyan Master", icon: Database, color: "text-slate-400" },
   ];
 
   return (
@@ -88,14 +89,14 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
 
             <Link href="/dashboard" className="flex items-center space-x-2.5 group">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-amber-500 flex items-center justify-center font-black text-slate-900 text-lg sm:text-xl shadow group-hover:bg-amber-400 transition flex-shrink-0">
-                🛢️
+                🏗️
               </div>
               <div>
                 <h1 className="text-sm sm:text-base md:text-lg font-bold tracking-tight leading-tight">
-                  Oil Shop & Transport
+                  Muslim Construction
                 </h1>
                 <p className="text-[10px] sm:text-[11px] text-amber-400 font-medium truncate max-w-[190px] sm:max-w-none">
-                  آئل شاپ و ٹرانسپورٹ روزنامچہ
+                  مسلم کنسٹرکشن اینڈ ٹرانسپورٹ روزنامچہ
                 </p>
               </div>
             </Link>
@@ -118,12 +119,8 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
               className="flex items-center space-x-1 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-2.5 py-1.5 rounded-lg shadow transition"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline">Aaj Ki</span> Entry
+              <span className="hidden xs:inline">Roznamcha</span> Entry
             </Link>
-            <div className="hidden md:flex items-center space-x-2 text-xs bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-slate-300 font-mono">PWA Active</span>
-            </div>
           </div>
         </div>
 
@@ -195,8 +192,8 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="pt-2 border-t border-slate-700 text-center">
-              <p className="text-[10px] text-slate-400">
-                Software by Roonjha Developer: 03152914836
+              <p className="text-[11px] font-semibold text-amber-400">
+                Software by Roonjha Developers: 03152914836
               </p>
             </div>
           </div>
@@ -229,22 +226,23 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
           <span>Roznamcha</span>
         </Link>
         <Link
-          href="/sales"
+          href="/din-ka-khulasa"
           className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-medium transition ${
-            pathname === "/sales" ? "text-amber-400 font-bold" : "text-slate-400 hover:text-slate-200"
+            pathname === "/din-ka-khulasa" ? "text-amber-400 font-bold" : "text-slate-400 hover:text-slate-200"
           }`}
         >
-          <ShoppingCart className="w-5 h-5 mb-0.5" />
-          <span>Sales</span>
+          <BarChart3 className="w-5 h-5 mb-0.5" />
+          <span>Khulasa</span>
         </Link>
-        <button
-          type="button"
-          onClick={handleInstallApp}
-          className="flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-medium text-emerald-400 hover:text-emerald-300 transition"
+        <Link
+          href="/staff"
+          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-medium transition ${
+            pathname === "/staff" ? "text-amber-400 font-bold" : "text-slate-400 hover:text-slate-200"
+          }`}
         >
-          <Download className="w-5 h-5 mb-0.5 text-emerald-400 animate-bounce" />
-          <span>Install</span>
-        </button>
+          <HardHat className="w-5 h-5 mb-0.5" />
+          <span>Staff</span>
+        </Link>
         <button
           type="button"
           onClick={() => setMenuOpen(!menuOpen)}
@@ -257,11 +255,16 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
         </button>
       </div>
 
-      {/* Global Footer */}
-      <footer className="bg-white border-t border-slate-200 text-xs text-slate-500 py-4 text-center hidden md:block">
-        <p>
-          Oil Shop & Roznamcha Management System &copy; {new Date().getFullYear()} — Software by Roonjha Developer (03152914836)
-        </p>
+      {/* Global Footer on Every Page */}
+      <footer className="bg-white border-t border-slate-200 text-xs text-slate-600 py-4 px-4 text-center mt-auto">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p className="font-semibold text-slate-800">
+            Muslim Construction & Transport Roznamcha Management System
+          </p>
+          <p className="font-bold text-amber-600">
+            Software by Roonjha developers : 03152914836
+          </p>
+        </div>
       </footer>
     </>
   );

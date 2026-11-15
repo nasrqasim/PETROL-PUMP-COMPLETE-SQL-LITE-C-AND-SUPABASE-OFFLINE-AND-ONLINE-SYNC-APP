@@ -42,10 +42,10 @@ export default function DashboardPage() {
       <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black tracking-tight flex items-center gap-2">
-            <span>🛢️ Oil Shop & Roznamcha Management</span>
+            <span>🏗️ Muslim Construction & Roznamcha</span>
           </h2>
           <p className="text-slate-300 text-sm mt-1">
-            Complete Real-Time Accounting, Sales, Inventory, Cash/Bank Vouchers & Transport Roznamcha
+            Complete Construction Accounting, Daily Roznamcha, Vehicle Ledger & Labour Management
           </p>
         </div>
 
