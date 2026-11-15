@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -19,11 +19,41 @@ import {
   Menu,
   X,
   PlusCircle,
+  Download,
 } from "lucide-react";
 
 export function MobileNavHeader({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [installPromptEvent, setInstallPromptEvent] = useState<any>(null);
+  const [canInstall, setCanInstall] = useState(false);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: any) => {
+      e.preventDefault();
+      setInstallPromptEvent(e);
+      setCanInstall(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallApp = async () => {
+    if (!installPromptEvent) {
+      alert("To install on mobile: Open browser menu (⋮ or Share) and tap 'Add to Home Screen' or 'Install App'.");
+      return;
+    }
+    installPromptEvent.prompt();
+    const { outcome } = await installPromptEvent.userChoice;
+    if (outcome === "accepted") {
+      setCanInstall(false);
+      setInstallPromptEvent(null);
+    }
+  };
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, color: "text-sky-400" },
@@ -72,6 +102,17 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center space-x-2">
+            {/* Install App Button */}
+            <button
+              type="button"
+              onClick={handleInstallApp}
+              className="flex items-center space-x-1 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2.5 py-1.5 rounded-lg shadow transition"
+              title="Install Web App on your phone or PC"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Install</span> App
+            </button>
+
             <Link
               href="/"
               className="flex items-center space-x-1 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-2.5 py-1.5 rounded-lg shadow transition"
@@ -81,7 +122,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
             </Link>
             <div className="hidden md:flex items-center space-x-2 text-xs bg-slate-800 px-3 py-1.5 rounded-full border border-slate-700">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-slate-300 font-mono">Cloud Ready</span>
+              <span className="text-slate-300 font-mono">PWA Active</span>
             </div>
           </div>
         </div>
@@ -116,10 +157,21 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
 
         {/* Mobile Slide-down Drawer */}
         {menuOpen && (
-          <div className="lg:hidden bg-slate-800/98 backdrop-blur-md border-t border-slate-700 max-h-[82vh] overflow-y-auto px-4 py-3 space-y-1 animate-in slide-in-from-top duration-200">
-            <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 py-1">
-              Modules & Khatas (کھاتے)
+          <div className="lg:hidden bg-slate-800/98 backdrop-blur-md border-t border-slate-700 max-h-[82vh] overflow-y-auto px-4 py-3 space-y-2 animate-in slide-in-from-top duration-200">
+            <div className="flex items-center justify-between px-2 pt-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Modules & Khatas (کھاتے)
+              </span>
+              <button
+                type="button"
+                onClick={handleInstallApp}
+                className="flex items-center gap-1 text-[11px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/40 px-2 py-1 rounded-md"
+              >
+                <Download className="w-3 h-3" />
+                <span>Install Mobile App</span>
+              </button>
             </div>
+            
             <div className="grid grid-cols-2 gap-1.5">
               {navLinks.map((item) => {
                 const Icon = item.icon;
@@ -185,15 +237,14 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
           <ShoppingCart className="w-5 h-5 mb-0.5" />
           <span>Sales</span>
         </Link>
-        <Link
-          href="/customers"
-          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-medium transition ${
-            pathname === "/customers" ? "text-amber-400 font-bold" : "text-slate-400 hover:text-slate-200"
-          }`}
+        <button
+          type="button"
+          onClick={handleInstallApp}
+          className="flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-medium text-emerald-400 hover:text-emerald-300 transition"
         >
-          <Users className="w-5 h-5 mb-0.5" />
-          <span>Customers</span>
-        </Link>
+          <Download className="w-5 h-5 mb-0.5 text-emerald-400 animate-bounce" />
+          <span>Install</span>
+        </button>
         <button
           type="button"
           onClick={() => setMenuOpen(!menuOpen)}
