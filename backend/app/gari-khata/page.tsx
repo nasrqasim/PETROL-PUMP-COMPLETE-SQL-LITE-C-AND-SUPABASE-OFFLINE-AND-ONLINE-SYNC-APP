@@ -182,7 +182,7 @@ export default function GariWiseKhataPage() {
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center justify-between no-print">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center space-x-2">
-            <label className="text-xs font-bold text-slate-700">Vehicle (گاڑی):</label>
+            <label className="text-xs font-bold text-slate-700">Vehicle:</label>
             <select
               value={selectedGariNo}
               onChange={(e) => setSelectedGariNo(e.target.value)}
@@ -241,7 +241,7 @@ export default function GariWiseKhataPage() {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-2xl font-black text-slate-950 tracking-tight">MUSLIM CONSTRUCTION</h1>
-              <p className="text-xs text-slate-600">Vehicle Ledger Account Statement (گاڑی کھاتہ رپورٹ)</p>
+              <p className="text-xs text-slate-600">Vehicle Ledger Account Statement</p>
               <p className="text-xs font-bold text-slate-800 mt-1">
                 Vehicle: #{data?.gariNo || selectedGariNo} | Driver: {data?.driverName} | Owner: {data?.malik}
               </p>
@@ -268,7 +268,7 @@ export default function GariWiseKhataPage() {
                   <span className="flex items-center gap-1">
                     <User className="w-3.5 h-3.5 text-amber-400 print:text-slate-700" /> Driver: <strong>{data.driverName}</strong>
                   </span>
-                  <span>Owner (مالک): <strong>{data.malik}</strong></span>
+                  <span>Owner: <strong>{data.malik}</strong></span>
                   <span className="flex items-center gap-1">
                     <Phone className="w-3.5 h-3.5 text-emerald-400 print:text-slate-700" /> <strong>{data.phone}</strong>
                   </span>
@@ -323,14 +323,14 @@ export default function GariWiseKhataPage() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-900 text-white uppercase text-[11px] tracking-wider font-semibold print:bg-slate-200 print:text-black">
-                  <th className="py-3 px-3">Date (تاریخ)</th>
-                  <th className="py-3 px-3">Driver (ڈرائیور)</th>
-                  <th className="py-3 px-3">Maal (Material)</th>
+                  <th className="py-3 px-3">Date</th>
+                  <th className="py-3 px-3">Driver Name</th>
+                  <th className="py-3 px-3">Material</th>
                   <th className="py-3 px-3 text-right">Diesel</th>
-                  <th className="py-3 px-3 text-right">Kiraya (کرایہ)</th>
-                  <th className="py-3 px-3 text-right">Kharcha (خرچہ)</th>
-                  <th className="py-3 px-3 text-right">Advance (پیشگی)</th>
-                  <th className="py-3 px-3 text-right">Entry Baqaya</th>
+                  <th className="py-3 px-3 text-right">Freight (Kiraya)</th>
+                  <th className="py-3 px-3 text-right">Expenses (Kharcha)</th>
+                  <th className="py-3 px-3 text-right">Advance Paid</th>
+                  <th className="py-3 px-3 text-right">Entry Balance</th>
                   <th className="py-3 px-3 text-right">Running Balance</th>
                 </tr>
               </thead>

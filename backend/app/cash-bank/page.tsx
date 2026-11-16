@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Receipt, Search, ArrowUpRight, ArrowDownLeft, Truck, User, Plus, CheckCircle, X, Trash2 } from "lucide-react";
+import { Receipt, Search, ArrowUpRight, ArrowDownLeft, Truck, User, Plus, CheckCircle, X, Trash2, Edit2, Printer } from "lucide-react";
 
 export default function CashBankPage() {
   const [vouchers, setVouchers] = useState<any[]>([]);
@@ -12,6 +12,7 @@ export default function CashBankPage() {
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [form, setForm] = useState({
     VoucherType: "CashPayment",
@@ -27,7 +28,7 @@ export default function CashBankPage() {
     setLoading(true);
     fetch("/api/vouchers")
       .then((res) => (res.ok ? res.json() : []))
-      .then((data) => setVouchers(data))
+      .then((data) => setVouchers(Array.isArray(data) ? data : []))
       .catch(() => setVouchers([]))
       .finally(() => setLoading(false));
   };
@@ -36,30 +37,54 @@ export default function CashBankPage() {
     loadVouchers();
   }, []);
 
+  const resetForm = () => {
+    setEditingId(null);
+    setForm({
+      VoucherType: "CashPayment",
+      PartyType: "Vehicle",
+      GariNo: "",
+      DriverName: "",
+      PartyName: "",
+      Amount: 0,
+      Remarks: "",
+    });
+    setShowModal(false);
+  };
+
+  const handleEdit = (v: any) => {
+    setEditingId(v.Id);
+    setForm({
+      VoucherType: v.PaymentType || "CashPayment",
+      PartyType: v.PartyType || "Vehicle",
+      GariNo: v.GariNo || "",
+      DriverName: v.DriverName || "",
+      PartyName: v.Customer?.Name || v.Supplier?.Name || v.Staff?.Name || "",
+      Amount: Number(v.Amount || 0),
+      Remarks: v.Remarks || "",
+    });
+    setShowModal(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.Amount || form.Amount <= 0) return;
     setSubmitting(true);
     try {
-      const res = await fetch("/api/vouchers", {
-        method: "POST",
+      const url = editingId ? `/api/vouchers/${editingId}` : "/api/vouchers";
+      const method = editingId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
       if (res.ok) {
-        setMsg("Voucher / Payment settlement saved successfully!");
-        setShowModal(false);
-        setForm({
-          VoucherType: "CashPayment",
-          PartyType: "Vehicle",
-          GariNo: "",
-          DriverName: "",
-          PartyName: "",
-          Amount: 0,
-          Remarks: "",
-        });
+        setMsg(editingId ? "Voucher entry updated successfully!" : "Voucher entry saved successfully!");
+        resetForm();
         loadVouchers();
         setTimeout(() => setMsg(""), 3500);
+      } else {
+        alert("Failed to save voucher record.");
       }
     } catch (err: any) {
       alert("Error saving: " + err.message);
@@ -69,7 +94,7 @@ export default function CashBankPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this voucher?")) return;
+    if (!confirm("Are you sure you want to delete this voucher entry?")) return;
     try {
       const res = await fetch(`/api/vouchers/${id}`, { method: "DELETE" });
       if (res.ok) {
@@ -83,53 +108,67 @@ export default function CashBankPage() {
   };
 
   const filtered = vouchers.filter((v) => {
-    const matchesSearch =
-      v.VoucherNumber?.toLowerCase().includes(search.toLowerCase()) ||
-      v.Remarks?.toLowerCase().includes(search.toLowerCase()) ||
-      v.GariNo?.toLowerCase().includes(search.toLowerCase()) ||
-      v.DriverName?.toLowerCase().includes(search.toLowerCase()) ||
-      v.Customer?.Name?.toLowerCase().includes(search.toLowerCase()) ||
-      v.Supplier?.Name?.toLowerCase().includes(search.toLowerCase());
-
-    if (typeFilter === "all") return matchesSearch;
-    return matchesSearch && v.PaymentType?.toString() === typeFilter;
+    if (typeFilter !== "all" && v.PaymentType !== typeFilter) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const matchVoucher = v.VoucherNumber?.toLowerCase().includes(q);
+      const matchParty =
+        v.Customer?.Name?.toLowerCase().includes(q) ||
+        v.Supplier?.Name?.toLowerCase().includes(q) ||
+        v.Staff?.Name?.toLowerCase().includes(q) ||
+        v.GariNo?.toLowerCase().includes(q) ||
+        v.DriverName?.toLowerCase().includes(q);
+      const matchRemarks = v.Remarks?.toLowerCase().includes(q);
+      if (!matchVoucher && !matchParty && !matchRemarks) return false;
+    }
+    return true;
   });
+
+  const totalReceipts = filtered
+    .filter((v) => v.PaymentType === "CashReceipt" || v.PaymentType === "BankReceipt")
+    .reduce((acc, curr) => acc + (curr.Amount || 0), 0);
+
+  const totalPayments = filtered
+    .filter((v) => v.PaymentType === "CashPayment" || v.PaymentType === "BankPayment")
+    .reduce((acc, curr) => acc + (curr.Amount || 0), 0);
 
   return (
     <div className="space-y-6">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
             <Receipt className="w-6 h-6 text-teal-600" />
-            Cash & Bank Vouchers / Vehicle Settlement
+            Cash & Bank Vouchers Ledger
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Cash / Bank payments & receipts, customer collections, vendor payments, and vehicle Baqaya zeroing settlements
+            Cash receipts, bank deposits, vehicle balance settlements, vendor payments, and staff advances
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowModal(true)}
-            className="btn btn-green text-xs font-bold py-2 px-3.5 flex items-center gap-1.5 shadow-sm whitespace-nowrap"
+            onClick={() => {
+              setEditingId(null);
+              setForm({
+                VoucherType: "CashPayment",
+                PartyType: "Vehicle",
+                GariNo: "",
+                DriverName: "",
+                PartyName: "",
+                Amount: 0,
+                Remarks: "",
+              });
+              setShowModal(true);
+            }}
+            className="btn btn-green text-xs font-bold py-2 px-3.5 flex items-center gap-1.5 shadow-sm"
           >
-            <Plus className="w-4 h-4" /> + New Voucher / Settle
+            <Plus className="w-4 h-4" /> + New Voucher
           </button>
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="text-xs border border-slate-300 rounded-lg px-2.5 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
-          >
-            <option value="all">All Vouchers</option>
-            <option value="CashPayment">Cash Payment</option>
-            <option value="CashReceipt">Cash Receipt</option>
-            <option value="BankPayment">Bank Payment</option>
-            <option value="BankReceipt">Bank Receipt</option>
-          </select>
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
             <input
               type="text"
-              placeholder="Search voucher, gari, party..."
+              placeholder="Search voucher, party, vehicle..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9 pr-3 py-1.5 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none"
@@ -145,11 +184,54 @@ export default function CashBankPage() {
         </div>
       )}
 
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <span className="text-xs text-slate-500 font-semibold block uppercase">Total Cash & Bank Receipts</span>
+          <span className="text-2xl font-black text-emerald-600">
+            Rs. {totalReceipts.toLocaleString()}
+          </span>
+          <p className="text-xs text-slate-400 mt-0.5">Inflow from customers & sales</p>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <span className="text-xs text-slate-500 font-semibold block uppercase">Total Payments Disbursed</span>
+          <span className="text-2xl font-black text-rose-600">
+            Rs. {totalPayments.toLocaleString()}
+          </span>
+          <p className="text-xs text-slate-400 mt-0.5">Disbursed to suppliers, staff & vehicles</p>
+        </div>
+        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+          <span className="text-xs text-slate-500 font-semibold block uppercase">Net Cash Position</span>
+          <span className={`text-2xl font-black ${totalReceipts - totalPayments >= 0 ? "text-emerald-700" : "text-rose-700"}`}>
+            Rs. {(totalReceipts - totalPayments).toLocaleString()}
+          </span>
+          <p className="text-xs text-slate-400 mt-0.5">Current liquid net balance</p>
+        </div>
+      </div>
+
+      {/* Filter Tabs */}
+      <div className="flex gap-2 border-b border-slate-200 pb-2">
+        {["all", "CashPayment", "CashReceipt", "BankPayment", "BankReceipt"].map((type) => (
+          <button
+            key={type}
+            onClick={() => setTypeFilter(type)}
+            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+              typeFilter === type
+                ? "bg-slate-900 text-white"
+                : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+            }`}
+          >
+            {type === "all" ? "All Vouchers" : type}
+          </button>
+        ))}
+      </div>
+
+      {/* Vouchers Table */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
         {loading ? (
           <div className="p-8 text-center text-slate-500">Loading vouchers...</div>
         ) : filtered.length === 0 ? (
-          <div className="p-8 text-center text-slate-400">No vouchers found.</div>
+          <div className="p-8 text-center text-slate-400">No voucher records found.</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -158,15 +240,15 @@ export default function CashBankPage() {
                   <th className="py-3 px-4">Voucher #</th>
                   <th className="py-3 px-4">Date</th>
                   <th className="py-3 px-4">Type</th>
-                  <th className="py-3 px-4">Party / Vehicle / Driver</th>
-                  <th className="py-3 px-4">Description / Remarks</th>
+                  <th className="py-3 px-4">Party / Vehicle Reference</th>
+                  <th className="py-3 px-4">Description</th>
                   <th className="py-3 px-4 text-right">Amount</th>
-                  <th className="py-3 px-4 text-center">Action</th>
+                  <th className="py-3 px-4 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filtered.map((v) => {
-                  const isPayment = v.PaymentType?.toString().includes("Payment");
+                  const isPayment = v.PaymentType === "CashPayment" || v.PaymentType === "BankPayment";
                   const partyDisplay =
                     v.GariNo ? (
                       <span className="flex items-center gap-1 font-bold text-blue-700">
@@ -210,13 +292,22 @@ export default function CashBankPage() {
                         Rs. {Number(v.Amount || 0).toLocaleString()}
                       </td>
                       <td className="py-3 px-4 text-center">
-                        <button
-                          onClick={() => handleDelete(v.Id)}
-                          className="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 transition"
-                          title="Delete voucher"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex justify-center items-center gap-2">
+                          <button
+                            onClick={() => handleEdit(v)}
+                            className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition"
+                            title="Edit voucher"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(v.Id)}
+                            className="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 transition"
+                            title="Delete voucher"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -232,9 +323,10 @@ export default function CashBankPage() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-6 py-4 bg-slate-900 text-white flex justify-between items-center">
               <h3 className="font-bold text-base flex items-center gap-2">
-                <Receipt className="w-4 h-4 text-teal-400" /> Create Voucher / Vehicle Settlement
+                <Receipt className="w-4 h-4 text-teal-400" />
+                {editingId ? "Edit Voucher Entry" : "Create Cash / Bank Voucher"}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={resetForm} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -246,25 +338,25 @@ export default function CashBankPage() {
                   <select
                     value={form.VoucherType}
                     onChange={(e) => setForm({ ...form, VoucherType: e.target.value })}
-                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-white"
                   >
-                    <option value="CashPayment">Cash Payment</option>
-                    <option value="CashReceipt">Cash Receipt</option>
-                    <option value="BankPayment">Bank Payment</option>
-                    <option value="BankReceipt">Bank Receipt</option>
+                    <option value="CashPayment">Cash Payment (Out)</option>
+                    <option value="CashReceipt">Cash Receipt (In)</option>
+                    <option value="BankPayment">Bank Payment (Out)</option>
+                    <option value="BankReceipt">Bank Receipt (In)</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Party Classification *</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Party / Target *</label>
                   <select
                     value={form.PartyType}
                     onChange={(e) => setForm({ ...form, PartyType: e.target.value })}
-                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none bg-white"
                   >
-                    <option value="Vehicle">Vehicle (گاڑی حساب کتاب)</option>
-                    <option value="Customer">Customer (گاہک)</option>
-                    <option value="Supplier">Supplier / Vendor</option>
-                    <option value="Staff">Staff / Driver</option>
+                    <option value="Vehicle">Vehicle Settle</option>
+                    <option value="Customer">Customer</option>
+                    <option value="Supplier">Supplier</option>
+                    <option value="Staff">Staff / Labour</option>
                   </select>
                 </div>
               </div>
@@ -272,60 +364,61 @@ export default function CashBankPage() {
               {form.PartyType === "Vehicle" ? (
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Vehicle / Gari No *</label>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Vehicle No *</label>
                     <input
                       type="text"
                       required
+                      placeholder="e.g. 786"
                       value={form.GariNo}
                       onChange={(e) => setForm({ ...form, GariNo: e.target.value })}
-                      placeholder="e.g. 786"
-                      className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                      className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none uppercase font-bold"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-slate-700 mb-1">Driver Name</label>
                     <input
                       type="text"
+                      placeholder="Driver"
                       value={form.DriverName}
                       onChange={(e) => setForm({ ...form, DriverName: e.target.value })}
-                      placeholder="e.g. Rashid"
                       className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                     />
                   </div>
                 </div>
               ) : (
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Party / Person Title</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Party / Person Name *</label>
                   <input
                     type="text"
+                    required
+                    placeholder="Enter name"
                     value={form.PartyName}
                     onChange={(e) => setForm({ ...form, PartyName: e.target.value })}
-                    placeholder="Enter name..."
                     className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                   />
                 </div>
               )}
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Payment Amount (Rs.) *</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Amount (Rs.) *</label>
                 <input
                   type="number"
                   required
                   min="1"
-                  value={form.Amount}
+                  placeholder="e.g. 15000"
+                  value={form.Amount || ""}
                   onChange={(e) => setForm({ ...form, Amount: parseFloat(e.target.value) || 0 })}
-                  placeholder="0"
-                  className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none font-black text-emerald-600"
+                  className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none font-bold text-slate-900"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Remarks / Settlement Description</label>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Remarks / Note</label>
                 <input
                   type="text"
+                  placeholder="e.g. Dumper maintenance advance or bank cheque #"
                   value={form.Remarks}
                   onChange={(e) => setForm({ ...form, Remarks: e.target.value })}
-                  placeholder="e.g. Cleared vehicle Baqaya to 0"
                   className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
                 />
               </div>
@@ -333,7 +426,7 @@ export default function CashBankPage() {
               <div className="flex justify-end gap-2 pt-4 border-t">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={resetForm}
                   className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg"
                 >
                   Cancel
@@ -343,7 +436,7 @@ export default function CashBankPage() {
                   disabled={submitting}
                   className="btn btn-green text-xs font-bold px-5 py-2 flex items-center gap-1.5 shadow"
                 >
-                  {submitting ? "Saving..." : "Save Voucher"}
+                  {submitting ? "Saving..." : editingId ? "Update Voucher" : "Save Voucher"}
                 </button>
               </div>
             </form>

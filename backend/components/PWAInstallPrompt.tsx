@@ -77,14 +77,14 @@ export function PWAInstallPrompt() {
       <div className="bg-slate-900 border-2 border-amber-500 text-white p-4 rounded-2xl shadow-2xl flex items-center justify-between gap-3">
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 rounded-xl bg-amber-500 flex items-center justify-center font-black text-slate-950 text-xl shadow flex-shrink-0">
-            🛢️
+            🏗️
           </div>
           <div>
             <h4 className="font-bold text-xs sm:text-sm text-slate-100">
-              Install Roznamcha App
+              Install Muslim Construction
             </h4>
             <p className="text-[10px] sm:text-[11px] text-amber-300">
-              موبائل پر بطور ایپ انسٹال کریں
+              Install as standalone app on your device
             </p>
           </div>
         </div>

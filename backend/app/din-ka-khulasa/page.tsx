@@ -155,7 +155,7 @@ export default function DinKaKhulasaPage() {
       {/* Date Picker Bar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center justify-between no-print">
         <div className="flex items-center space-x-3">
-          <label className="text-xs font-bold text-slate-700">Select Date (تاریخ):</label>
+          <label className="text-xs font-bold text-slate-700">Select Date:</label>
           <input
             type="date"
             value={selectedDate}
@@ -280,14 +280,14 @@ export default function DinKaKhulasaPage() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-900 text-white uppercase text-[11px] tracking-wider font-semibold print:bg-slate-200 print:text-black">
-                  <th className="py-3 px-3">Gari No (گاڑی)</th>
-                  <th className="py-3 px-3">Driver (ڈرائیور)</th>
-                  <th className="py-3 px-3">Maal (Material)</th>
+                  <th className="py-3 px-3">Vehicle No</th>
+                  <th className="py-3 px-3">Driver Name</th>
+                  <th className="py-3 px-3">Material</th>
                   <th className="py-3 px-3 text-right">Diesel</th>
-                  <th className="py-3 px-3 text-right">Kiraya (کرایہ)</th>
-                  <th className="py-3 px-3 text-right">Kharcha (خرچہ)</th>
-                  <th className="py-3 px-3 text-right">Advance (پیشگی)</th>
-                  <th className="py-3 px-3 text-right">Baqaya / Bachat</th>
+                  <th className="py-3 px-3 text-right">Freight (Kiraya)</th>
+                  <th className="py-3 px-3 text-right">Expenses (Kharcha)</th>
+                  <th className="py-3 px-3 text-right">Advance Paid</th>
+                  <th className="py-3 px-3 text-right">Net Balance (Baqaya)</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

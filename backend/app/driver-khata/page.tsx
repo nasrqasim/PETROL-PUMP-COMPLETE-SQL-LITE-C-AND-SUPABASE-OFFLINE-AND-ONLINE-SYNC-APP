@@ -185,7 +185,7 @@ export default function DriverWiseKhataPage() {
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center justify-between no-print">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center space-x-2">
-            <label className="text-xs font-bold text-slate-700">Driver (ڈرائیور):</label>
+            <label className="text-xs font-bold text-slate-700">Driver:</label>
             <select
               value={selectedDriver}
               onChange={(e) => setSelectedDriver(e.target.value)}
@@ -244,7 +244,7 @@ export default function DriverWiseKhataPage() {
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-2xl font-black text-slate-950 tracking-tight">MUSLIM CONSTRUCTION</h1>
-              <p className="text-xs text-slate-600">Driver Ledger Account Statement (ڈرائیور کھاتہ رپورٹ)</p>
+              <p className="text-xs text-slate-600">Driver Ledger Account Statement</p>
               <p className="text-xs font-bold text-slate-800 mt-1">
                 Driver Name: {data?.driverName || selectedDriver} | Total Working Days: {data?.totalWorkingDays}
               </p>
@@ -328,14 +328,14 @@ export default function DriverWiseKhataPage() {
             <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr className="bg-slate-900 text-white uppercase text-[11px] tracking-wider font-semibold print:bg-slate-200 print:text-black">
-                  <th className="py-3 px-3">Date (تاریخ)</th>
-                  <th className="py-3 px-3">Gari No (گاڑی نمبر)</th>
-                  <th className="py-3 px-3">Maal (Material)</th>
+                  <th className="py-3 px-3">Date</th>
+                  <th className="py-3 px-3">Vehicle Number</th>
+                  <th className="py-3 px-3">Material</th>
                   <th className="py-3 px-3 text-right">Diesel</th>
-                  <th className="py-3 px-3 text-right">Kiraya (کرایہ)</th>
-                  <th className="py-3 px-3 text-right">Kharcha (خرچہ)</th>
-                  <th className="py-3 px-3 text-right">Advance (پیشگی)</th>
-                  <th className="py-3 px-3 text-right">Entry Baqaya</th>
+                  <th className="py-3 px-3 text-right">Freight (Kiraya)</th>
+                  <th className="py-3 px-3 text-right">Expenses (Kharcha)</th>
+                  <th className="py-3 px-3 text-right">Advance Paid</th>
+                  <th className="py-3 px-3 text-right">Entry Balance</th>
                   <th className="py-3 px-3 text-right">Running Balance</th>
                 </tr>
               </thead>

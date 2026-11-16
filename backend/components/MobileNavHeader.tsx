@@ -45,7 +45,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
 
   const handleInstallApp = async () => {
     if (!installPromptEvent) {
-      alert("To install on mobile: Open browser menu (⋮ or Share) and tap 'Add to Home Screen' or 'Install App'.");
+      alert("To install on mobile: Open browser menu (three dots or Share) and select 'Add to Home Screen' or 'Install App'.");
       return;
     }
     installPromptEvent.prompt();
@@ -58,11 +58,11 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, color: "text-sky-400" },
-    { href: "/", label: "Roznamcha (روزنامچہ)", icon: Calendar, color: "text-amber-400", highlight: true },
-    { href: "/din-ka-khulasa", label: "Din Ka Khulasa", icon: BarChart3, color: "text-rose-400" },
-    { href: "/gari-khata", label: "Gari Khata", icon: Truck, color: "text-blue-400" },
-    { href: "/driver-khata", label: "Driver Khata", icon: UserCheck, color: "text-emerald-400" },
-    { href: "/staff", label: "Staff & Labour Khata", icon: HardHat, color: "text-amber-400" },
+    { href: "/", label: "Daily Ledger", icon: Calendar, color: "text-amber-400", highlight: true },
+    { href: "/din-ka-khulasa", label: "Daily Summary", icon: BarChart3, color: "text-rose-400" },
+    { href: "/gari-khata", label: "Vehicle Ledger", icon: Truck, color: "text-blue-400" },
+    { href: "/driver-khata", label: "Driver Ledger", icon: UserCheck, color: "text-emerald-400" },
+    { href: "/staff", label: "Staff & Labour Ledger", icon: HardHat, color: "text-amber-400" },
     { href: "/customers", label: "Customers", icon: Users, color: "text-purple-400" },
     { href: "/suppliers", label: "Suppliers", icon: Building, color: "text-indigo-400" },
     { href: "/cash-bank", label: "Cash & Bank", icon: Receipt, color: "text-teal-400" },
@@ -70,7 +70,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
     { href: "/purchases", label: "Purchases", icon: Building, color: "text-blue-400" },
     { href: "/expenses", label: "Daily Expenses", icon: Tag, color: "text-rose-400" },
     { href: "/products", label: "Material & Products", icon: Package, color: "text-amber-400" },
-    { href: "/gariyan", label: "Gariyan Master", icon: Database, color: "text-slate-400" },
+    { href: "/gariyan", label: "Vehicle Master", icon: Database, color: "text-slate-400" },
   ];
 
   return (
@@ -96,7 +96,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
                   Muslim Construction
                 </h1>
                 <p className="text-[10px] sm:text-[11px] text-amber-400 font-medium truncate max-w-[190px] sm:max-w-none">
-                  مسلم کنسٹرکشن اینڈ ٹرانسپورٹ روزنامچہ
+                  Construction & Transport Management System
                 </p>
               </div>
             </Link>
@@ -119,7 +119,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
               className="flex items-center space-x-1 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-2.5 py-1.5 rounded-lg shadow transition"
             >
               <PlusCircle className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline">Roznamcha</span> Entry
+              <span className="hidden xs:inline">New</span> Entry
             </Link>
           </div>
         </div>
@@ -157,7 +157,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
           <div className="lg:hidden bg-slate-800/98 backdrop-blur-md border-t border-slate-700 max-h-[82vh] overflow-y-auto px-4 py-3 space-y-2 animate-in slide-in-from-top duration-200">
             <div className="flex items-center justify-between px-2 pt-1">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Modules & Khatas (کھاتے)
+                Modules & Ledgers
               </span>
               <button
                 type="button"
@@ -223,7 +223,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
           }`}
         >
           <Calendar className="w-5 h-5 mb-0.5" />
-          <span>Roznamcha</span>
+          <span>Ledger</span>
         </Link>
         <Link
           href="/din-ka-khulasa"
@@ -232,7 +232,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
           }`}
         >
           <BarChart3 className="w-5 h-5 mb-0.5" />
-          <span>Khulasa</span>
+          <span>Summary</span>
         </Link>
         <Link
           href="/staff"
@@ -259,7 +259,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
       <footer className="bg-white border-t border-slate-200 text-xs text-slate-600 py-4 px-4 text-center mt-auto">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="font-semibold text-slate-800">
-            Muslim Construction & Transport Roznamcha Management System
+            Muslim Construction & Transport Daily Ledger Management System
           </p>
           <p className="font-bold text-amber-600">
             Software by Roonjha developers : 03152914836

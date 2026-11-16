@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ShoppingCart, Search, Receipt, Plus, CheckCircle, X, Trash2 } from "lucide-react";
+import { ShoppingCart, Search, Plus, CheckCircle, X, Trash2, Edit2 } from "lucide-react";
 
 export default function SalesPage() {
   const [sales, setSales] = useState<any[]>([]);
@@ -12,6 +12,7 @@ export default function SalesPage() {
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [msg, setMsg] = useState("");
+  const [editingId, setEditingId] = useState<number | null>(null);
 
   const [form, setForm] = useState({
     CustomerName: "Walk-in Customer",
@@ -30,8 +31,8 @@ export default function SalesPage() {
       fetch("/api/customers").then((r) => (r.ok ? r.json() : [])),
     ])
       .then(([salesData, custData]) => {
-        setSales(salesData);
-        setCustomers(custData);
+        setSales(Array.isArray(salesData) ? salesData : []);
+        setCustomers(Array.isArray(custData) ? custData : []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -41,6 +42,34 @@ export default function SalesPage() {
     loadData();
   }, [search]);
 
+  const resetForm = () => {
+    setEditingId(null);
+    setForm({
+      CustomerName: "Walk-in Customer",
+      PaymentMode: "Cash",
+      SubTotal: 0,
+      Discount: 0,
+      Tax: 0,
+      PaidAmount: 0,
+      Remarks: "",
+    });
+    setShowModal(false);
+  };
+
+  const handleEdit = (s: any) => {
+    setEditingId(s.Id);
+    setForm({
+      CustomerName: s.Customer?.Name || s.CustomerName || "Walk-in Customer",
+      PaymentMode: s.PaymentMode || "Cash",
+      SubTotal: Number(s.SubTotal || s.GrandTotal || 0),
+      Discount: Number(s.Discount || 0),
+      Tax: Number(s.Tax || 0),
+      PaidAmount: Number(s.PaidAmount || 0),
+      Remarks: s.Remarks || "",
+    });
+    setShowModal(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.SubTotal || form.SubTotal <= 0) return;
@@ -49,29 +78,25 @@ export default function SalesPage() {
     const payload = {
       ...form,
       GrandTotal: grandTotal,
-      PaidAmount: form.PaymentMode === "Credit" ? 0 : grandTotal,
     };
 
     try {
-      const res = await fetch("/api/sales", {
-        method: "POST",
+      const url = editingId ? `/api/sales/${editingId}` : "/api/sales";
+      const method = editingId ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+
       if (res.ok) {
-        setMsg("Sales invoice created successfully!");
-        setShowModal(false);
-        setForm({
-          CustomerName: "Walk-in Customer",
-          PaymentMode: "Cash",
-          SubTotal: 0,
-          Discount: 0,
-          Tax: 0,
-          PaidAmount: 0,
-          Remarks: "",
-        });
+        setMsg(editingId ? "Sales invoice updated successfully!" : "Sale invoice created successfully!");
+        resetForm();
         loadData();
         setTimeout(() => setMsg(""), 3500);
+      } else {
+        alert("Failed to save sale invoice.");
       }
     } catch (err: any) {
       alert("Error saving: " + err.message);
@@ -81,11 +106,11 @@ export default function SalesPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this invoice?")) return;
+    if (!confirm("Are you sure you want to delete this sales invoice?")) return;
     try {
       const res = await fetch(`/api/sales/${id}`, { method: "DELETE" });
       if (res.ok) {
-        setMsg("Sales invoice deleted.");
+        setMsg("Invoice deleted.");
         loadData();
         setTimeout(() => setMsg(""), 3500);
       }
@@ -94,13 +119,15 @@ export default function SalesPage() {
     }
   };
 
+  const grandTotal = Math.max(0, form.SubTotal - form.Discount + form.Tax);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <div>
           <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
             <ShoppingCart className="w-6 h-6 text-emerald-600" />
-            Sales Invoices & Billing
+            Sales & Material Invoices
           </h2>
           <p className="text-xs text-slate-500 mt-1">
             Complete billing records, customer invoices, payment modes, and invoice totals
@@ -108,7 +135,19 @@ export default function SalesPage() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              setEditingId(null);
+              setForm({
+                CustomerName: "Walk-in Customer",
+                PaymentMode: "Cash",
+                SubTotal: 0,
+                Discount: 0,
+                Tax: 0,
+                PaidAmount: 0,
+                Remarks: "",
+              });
+              setShowModal(true);
+            }}
             className="btn btn-green text-xs font-bold py-2 px-3.5 flex items-center gap-1.5 shadow-sm"
           >
             <Plus className="w-4 h-4" /> + Create Invoice
@@ -151,7 +190,7 @@ export default function SalesPage() {
                   <th className="py-3 px-4 text-right">Discount</th>
                   <th className="py-3 px-4 text-right">Grand Total</th>
                   <th className="py-3 px-4 text-right">Paid Amount</th>
-                  <th className="py-3 px-4 text-center">Action</th>
+                  <th className="py-3 px-4 text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -162,7 +201,7 @@ export default function SalesPage() {
                       {new Date(s.Date).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4 font-semibold text-slate-700">
-                      {s.Customer?.Name || "Walk-in Customer"}
+                      {typeof s.Customer === 'object' ? s.Customer?.Name : s.Customer || "Walk-in Customer"}
                     </td>
                     <td className="py-3 px-4">
                       <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-800">
@@ -182,13 +221,22 @@ export default function SalesPage() {
                       Rs. {Number(s.PaidAmount || 0).toLocaleString()}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => handleDelete(s.Id)}
-                        className="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 transition"
-                        title="Delete invoice"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex justify-center items-center gap-2">
+                        <button
+                          onClick={() => handleEdit(s)}
+                          className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition"
+                          title="Edit invoice"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(s.Id)}
+                          className="text-rose-600 hover:text-rose-800 p-1 rounded hover:bg-rose-50 transition"
+                          title="Delete invoice"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -200,43 +248,40 @@ export default function SalesPage() {
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
             <div className="px-6 py-4 bg-slate-900 text-white flex justify-between items-center">
               <h3 className="font-bold text-base flex items-center gap-2">
-                <ShoppingCart className="w-4 h-4 text-emerald-400" /> Create Fast Sales Invoice
+                <ShoppingCart className="w-4 h-4 text-emerald-400" />
+                {editingId ? "Edit Sales Invoice" : "Create New Sales Invoice"}
               </h3>
-              <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-white">
+              <button onClick={resetForm} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-3.5">
+            <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Customer</label>
                 <input
                   type="text"
-                  required
                   value={form.CustomerName}
                   onChange={(e) => setForm({ ...form, CustomerName: e.target.value })}
-                  placeholder="e.g. Ahmed Khan or Walk-in"
+                  placeholder="e.g. Al-Madina Builders"
                   className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Payment Medium</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Payment Mode</label>
                   <select
                     value={form.PaymentMode}
                     onChange={(e) => setForm({ ...form, PaymentMode: e.target.value })}
-                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white"
                   >
-                    <option value="Cash">Cash (کیش ان ہینڈ)</option>
-                    <option value="Meezan Bank">Meezan Bank</option>
-                    <option value="Bank Al-Habib">Bank Al-Habib</option>
-                    <option value="EasyPaisa">EasyPaisa</option>
-                    <option value="JazzCash">JazzCash</option>
-                    <option value="Credit">Credit / Khata (ادھار)</option>
+                    <option value="Cash">Cash Sale</option>
+                    <option value="Credit">Credit / Account Udhar</option>
+                    <option value="Bank">Bank Deposit</option>
                   </select>
                 </div>
                 <div>
@@ -245,10 +290,11 @@ export default function SalesPage() {
                     type="number"
                     required
                     min="1"
-                    value={form.SubTotal}
-                    onChange={(e) => setForm({ ...form, SubTotal: parseFloat(e.target.value) || 0 })}
-                    placeholder="0"
-                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    value={form.SubTotal || ""}
+                    onChange={(e) =>
+                      setForm({ ...form, SubTotal: parseFloat(e.target.value) || 0 })
+                    }
+                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold"
                   />
                 </div>
               </div>
@@ -258,35 +304,48 @@ export default function SalesPage() {
                   <label className="block text-xs font-bold text-slate-700 mb-1">Discount (Rs.)</label>
                   <input
                     type="number"
-                    value={form.Discount}
-                    onChange={(e) => setForm({ ...form, Discount: parseFloat(e.target.value) || 0 })}
-                    placeholder="0"
+                    value={form.Discount || ""}
+                    onChange={(e) =>
+                      setForm({ ...form, Discount: parseFloat(e.target.value) || 0 })
+                    }
                     className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Tax / GST (Rs.)</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Paid Amount (Rs.)</label>
                   <input
                     type="number"
-                    value={form.Tax}
-                    onChange={(e) => setForm({ ...form, Tax: parseFloat(e.target.value) || 0 })}
-                    placeholder="0"
-                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    value={form.PaidAmount || ""}
+                    onChange={(e) =>
+                      setForm({ ...form, PaidAmount: parseFloat(e.target.value) || 0 })
+                    }
+                    className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none font-semibold text-emerald-700"
                   />
                 </div>
               </div>
 
-              <div className="bg-slate-50 p-3 rounded-lg border flex justify-between items-center text-sm">
-                <span className="font-bold text-slate-700">Calculated Grand Total:</span>
-                <span className="font-black text-emerald-600 text-base">
-                  Rs. {Math.max(0, form.SubTotal - form.Discount + form.Tax).toLocaleString()}
+              <div className="bg-slate-50 p-3 rounded-lg flex justify-between items-center text-sm font-bold border">
+                <span>Calculated Grand Total:</span>
+                <span className="text-emerald-700 font-black text-base">
+                  Rs. {grandTotal.toLocaleString()}
                 </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Remarks / Note</label>
+                <input
+                  type="text"
+                  value={form.Remarks}
+                  onChange={(e) => setForm({ ...form, Remarks: e.target.value })}
+                  placeholder="Material specification or delivery details"
+                  className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={resetForm}
                   className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-lg"
                 >
                   Cancel
@@ -296,7 +355,7 @@ export default function SalesPage() {
                   disabled={submitting}
                   className="btn btn-green text-xs font-bold px-5 py-2 flex items-center gap-1.5 shadow"
                 >
-                  {submitting ? "Saving..." : "Save Invoice"}
+                  {submitting ? "Saving..." : editingId ? "Update Invoice" : "Save Invoice"}
                 </button>
               </div>
             </form>

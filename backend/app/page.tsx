@@ -276,7 +276,7 @@ export default function AajKiEntryPage() {
               </h2>
             </div>
             <p className="text-xs text-slate-300 mt-1">
-              گاڑی و ڈرائیور روانگی، کرایہ، خرچہ، ڈیزل اور بقایا حساب کتاب
+              Vehicle & driver departures, freight, trip expenses, diesel consumption, and net balance accounts
             </p>
           </div>
           <button
@@ -337,7 +337,7 @@ export default function AajKiEntryPage() {
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
           <h3 className="font-bold text-slate-900 text-sm flex items-center space-x-2">
             <PlusCircle className="w-4 h-4 text-amber-500" />
-            <span>{editingId ? `Edit Entry #${editingId}` : "Nayi Entry Shamil Karein (نئی انٹری درج کریں)"}</span>
+            <span>{editingId ? `Edit Entry #${editingId}` : "Record Daily Ledger Entry"}</span>
           </h3>
           {editingId && (
             <span className="text-xs font-semibold px-2 py-0.5 rounded bg-blue-100 text-blue-700">
@@ -351,7 +351,7 @@ export default function AajKiEntryPage() {
             {/* 1. Date */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Date (تاریخ) <span className="text-rose-500">*</span>
+                Entry Date <span className="text-rose-500">*</span>
               </label>
               <input
                 type="date"
@@ -365,7 +365,7 @@ export default function AajKiEntryPage() {
             {/* 2. Gari No */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Gari No (گاڑی نمبر) <span className="text-rose-500">*</span>
+                Vehicle Number <span className="text-rose-500">*</span>
               </label>
               <div className="flex gap-1.5">
                 <input
@@ -397,7 +397,7 @@ export default function AajKiEntryPage() {
             {/* 3. Driver Name */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Driver Name (ڈرائیور) <span className="text-rose-500">*</span>
+                Driver Name <span className="text-rose-500">*</span>
               </label>
               <input
                 type="text"
@@ -412,7 +412,7 @@ export default function AajKiEntryPage() {
             {/* 4. Maal / Material */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1">
-                Maal (مال / Material)
+                Material / Cargo
               </label>
               <input
                 type="text"
@@ -443,7 +443,7 @@ export default function AajKiEntryPage() {
             {/* 6. Kiraya / Freight */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
-                <span>Kiraya (کرایہ)</span>
+                <span>Freight (Kiraya)</span>
                 <span className="text-emerald-600 font-bold">Rs.</span>
               </label>
               <input
@@ -459,7 +459,7 @@ export default function AajKiEntryPage() {
             {/* 7. Kharcha / Expenses */}
             <div>
               <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center justify-between">
-                <span>Kharcha (خرچہ)</span>
+                <span>Trip Expenses (Kharcha)</span>
                 <span className="text-rose-600 font-bold">Rs.</span>
               </label>
               <input
@@ -511,7 +511,7 @@ export default function AajKiEntryPage() {
                 disabled={saving}
                 className="flex-1 sm:flex-none px-6 py-2.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-slate-950 font-black text-xs rounded-xl shadow-sm transition disabled:opacity-50"
               >
-                {saving ? "Saving..." : editingId ? "Update Entry" : "Save Daily Entry (محفوظ کریں)"}
+                {saving ? "Saving..." : editingId ? "Update Entry" : "Save Daily Entry"}
               </button>
             </div>
           </div>
@@ -680,15 +680,15 @@ export default function AajKiEntryPage() {
           <table className="w-full text-left border-collapse text-xs">
             <thead>
               <tr className="bg-slate-900 text-white uppercase text-[11px] tracking-wider font-semibold">
-                <th className="py-3 px-3">Date (تاریخ)</th>
-                <th className="py-3 px-3">Gari No (گاڑی نمبر)</th>
-                <th className="py-3 px-3">Driver (ڈرائیور)</th>
-                <th className="py-3 px-3">Maal (مال / Material)</th>
+                <th className="py-3 px-3">Date</th>
+                <th className="py-3 px-3">Vehicle Number</th>
+                <th className="py-3 px-3">Driver Name</th>
+                <th className="py-3 px-3">Material / Cargo</th>
                 <th className="py-3 px-3 text-right">Diesel (Ltr)</th>
-                <th className="py-3 px-3 text-right">Kiraya (کرایہ)</th>
-                <th className="py-3 px-3 text-right">Kharcha (خرچہ)</th>
-                <th className="py-3 px-3 text-right">Advance (پیشگی)</th>
-                <th className="py-3 px-3 text-right">Baqaya (بقایا)</th>
+                <th className="py-3 px-3 text-right">Freight (Kiraya)</th>
+                <th className="py-3 px-3 text-right">Expenses (Kharcha)</th>
+                <th className="py-3 px-3 text-right">Advance Paid</th>
+                <th className="py-3 px-3 text-right">Net Balance (Baqaya)</th>
                 <th className="py-3 px-3 text-center">Receipt & Actions</th>
               </tr>
             </thead>
@@ -787,23 +787,23 @@ export default function AajKiEntryPage() {
             >
               <div className="text-center space-y-0.5 border-b border-dashed border-slate-400 pb-2">
                 <div className="text-base font-black tracking-wide">MUSLIM CONSTRUCTION</div>
-                <div className="text-[10px] font-bold text-slate-700">DAILY TRIP RECEIPT & ROZNAMCHA</div>
-                <div className="text-[10px] text-slate-600">مسلم کنسٹرکشن اینڈ ٹرانسپورٹ روزنامچہ</div>
+                <div className="text-[10px] font-bold text-slate-700">DAILY TRIP RECEIPT & LEDGER</div>
+                <div className="text-[10px] text-slate-600">Transport & Project Operations</div>
                 <div className="text-[10px] text-slate-500">Receipt #{receiptItem.id} | {receiptItem.date}</div>
               </div>
 
               <div className="space-y-1 py-1 border-b border-dashed border-slate-400 text-[11px]">
                 <div className="flex justify-between">
-                  <span>Gari No (گاڑی):</span>
+                  <span>Vehicle No:</span>
                   <span className="font-bold">{receiptItem.gariNo}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Driver (ڈرائیور):</span>
+                  <span>Driver:</span>
                   <span className="font-bold">{receiptItem.driverName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>Maal (مال):</span>
-                  <span>{receiptItem.maal || "General"}</span>
+                  <span>Material:</span>
+                  <span>{receiptItem.maal || "General Cargo"}</span>
                 </div>
                 {receiptItem.dieselLiter > 0 && (
                   <div className="flex justify-between">
@@ -815,21 +815,21 @@ export default function AajKiEntryPage() {
 
               <div className="space-y-1.5 py-1 border-b border-dashed border-slate-400 text-[11px]">
                 <div className="flex justify-between">
-                  <span>Kiraya (کرایہ):</span>
+                  <span>Freight (Kiraya):</span>
                   <span className="font-bold">Rs. {Number(receiptItem.kiraya || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-rose-700">
-                  <span>Kharcha (خرچہ):</span>
+                  <span>Expenses (Kharcha):</span>
                   <span>- Rs. {Number(receiptItem.kharcha || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-amber-700">
-                  <span>Advance (پیشگی):</span>
+                  <span>Advance Paid:</span>
                   <span>- Rs. {Number(receiptItem.advance || 0).toLocaleString()}</span>
                 </div>
               </div>
 
               <div className="pt-1 text-xs font-black flex justify-between items-center">
-                <span>Net Baqaya (بقایا):</span>
+                <span>Net Balance (Baqaya):</span>
                 <span className="text-sm">Rs. {Number(receiptItem.baqaya || 0).toLocaleString()}</span>
               </div>
 

@@ -481,7 +481,7 @@ export default function StaffPage() {
                     onChange={(e) => setForm({ ...form, Designation: e.target.value })}
                     className="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:outline-none"
                   >
-                    <option value="Driver">Driver (ڈرائیور)</option>
+                    <option value="Driver">Driver</option>
                     <option value="Senior Driver">Senior Driver</option>
                     <option value="Labour / Contractor">Labour / Contractor</option>
                     <option value="Accountant">Accountant / Munshi</option>
