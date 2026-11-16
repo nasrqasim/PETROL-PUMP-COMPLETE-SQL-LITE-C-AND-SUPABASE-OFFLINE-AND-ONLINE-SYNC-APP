@@ -58,8 +58,15 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const itemDate = d.date || new Date().toISOString().split("T")[0];
     const kiraya = Number(d.kiraya) || 0;
     const kharcha = Number(d.kharcha) || 0;
+    const otherExpenseAmount = Number(d.otherExpenseAmount) || 0;
+    const unitQuantity = Number(d.unitQuantity) || 0;
+    const pricePerUnit = Number(d.pricePerUnit) || 0;
+    const materialAmount = (unitQuantity > 0 && pricePerUnit > 0) ? (unitQuantity * pricePerUnit) : 0;
     const advance = Number(d.advance) || 0;
-    const baqaya = kiraya - kharcha - advance;
+
+    // Expenses add to total and only advance decreases it
+    const totalGross = kiraya + kharcha + otherExpenseAmount + materialAmount;
+    const baqaya = totalGross - advance;
 
     memoryStore.roznamcha[idx] = {
       ...memoryStore.roznamcha[idx],
@@ -68,9 +75,15 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       gariNo: d.gariNo,
       driverName: d.driverName,
       maal: d.maal || "",
+      unit: d.unit || "",
+      unitQuantity,
+      pricePerUnit,
+      materialAmount,
       dieselLiter: Number(d.dieselLiter) || 0,
       kiraya,
       kharcha,
+      otherExpenseName: d.otherExpenseName || "",
+      otherExpenseAmount,
       advance,
       baqaya,
     };

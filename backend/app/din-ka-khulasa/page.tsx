@@ -87,7 +87,7 @@ export default function DinKaKhulasaPage() {
 
   const handleExportCSV = () => {
     if (!summary || summary.records.length === 0) return;
-    const headers = ["Gari No", "Driver", "Maal", "Diesel (Ltr)", "Kiraya (Rs)", "Kharcha (Rs)", "Advance (Rs)", "Baqaya (Rs)", "Date"];
+    const headers = ["Vehicle No", "Driver", "Material", "Diesel (Ltr)", "Freight (Rs)", "Trip Expenses (Rs)", "Advance (Rs)", "Net Balance (Rs)", "Date"];
     const rows = summary.records.map((r) => [
       `"${r.gariNo}"`,
       `"${r.driverName}"`,
@@ -219,9 +219,9 @@ export default function DinKaKhulasaPage() {
               <p className="text-[10px] text-slate-400 mt-1">Fuel consumed</p>
             </div>
 
-            {/* 2. Total Kiraya */}
+            {/* 2. Total Freight */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm print:border print:shadow-none">
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Total Kiraya</span>
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Total Freight</span>
               <div className="mt-2">
                 <span className="text-lg sm:text-2xl font-black text-emerald-700">
                   Rs. {Number(summary.totalKiraya || 0).toLocaleString()}
@@ -230,9 +230,9 @@ export default function DinKaKhulasaPage() {
               <p className="text-[10px] text-slate-400 mt-1">Gross vehicle revenue</p>
             </div>
 
-            {/* 3. Total Kharcha */}
+            {/* 3. Total Trip Expenses */}
             <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm print:border print:shadow-none">
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Total Kharcha</span>
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500">Total Trip Expenses</span>
               <div className="mt-2">
                 <span className="text-lg sm:text-2xl font-black text-rose-700">
                   Rs. {Number(summary.totalKharcha || 0).toLocaleString()}
@@ -252,15 +252,15 @@ export default function DinKaKhulasaPage() {
               <p className="text-[10px] text-slate-400 mt-1">Advances paid</p>
             </div>
 
-            {/* 5. Total Bachat */}
+            {/* 5. Net Total Balance */}
             <div className="col-span-2 lg:col-span-1 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-md border border-slate-700 print:bg-white print:text-black print:border-2 print:border-slate-800">
-              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-400 print:text-slate-700">Total Bachat</span>
+              <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-amber-400 print:text-slate-700">Net Total Balance</span>
               <div className="mt-2">
                 <span className="text-xl sm:text-2xl font-black text-white print:text-slate-950">
                   Rs. {Number(summary.totalBachat || 0).toLocaleString()}
                 </span>
               </div>
-              <p className="text-[9px] text-slate-300 print:text-slate-600 mt-1 font-mono">Kiraya - Kharcha - Advance</p>
+              <p className="text-[9px] text-slate-300 print:text-slate-600 mt-1 font-mono">Gross Total - Advance Paid</p>
             </div>
           </div>
         )}
@@ -284,10 +284,10 @@ export default function DinKaKhulasaPage() {
                   <th className="py-3 px-3">Driver Name</th>
                   <th className="py-3 px-3">Material</th>
                   <th className="py-3 px-3 text-right">Diesel</th>
-                  <th className="py-3 px-3 text-right">Freight (Kiraya)</th>
-                  <th className="py-3 px-3 text-right">Expenses (Kharcha)</th>
+                  <th className="py-3 px-3 text-right">Freight</th>
+                  <th className="py-3 px-3 text-right">Trip Expenses</th>
                   <th className="py-3 px-3 text-right">Advance Paid</th>
-                  <th className="py-3 px-3 text-right">Net Balance (Baqaya)</th>
+                  <th className="py-3 px-3 text-right">Net Balance</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">

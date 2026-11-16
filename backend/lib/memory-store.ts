@@ -131,9 +131,15 @@ export interface RoznamchaItemData {
   gariNo: string;
   driverName: string;
   maal: string;
+  unit?: string;
+  unitQuantity?: number;
+  pricePerUnit?: number;
+  materialAmount?: number;
   dieselLiter: number;
   kiraya: number;
   kharcha: number;
+  otherExpenseName?: string;
+  otherExpenseAmount?: number;
   advance: number;
   baqaya: number;
 }
@@ -203,8 +209,8 @@ if (!global.__memoryStore) {
       { id: 3, gariNo: "TK-404", driverName: "Farooq", malik: "Nasrullah Qasim Transport", phone: "03108444612", modelYear: "2024", capacity: "18 Ton Truck", status: "Active" },
     ],
     roznamcha: [
-      { id: 1, date: todayStr, displayDate: displayDateStr, gariNo: "786", driverName: "Rashid Driver", maal: "Crush Stone Material", dieselLiter: 120, kiraya: 55000, kharcha: 9000, advance: 15000, baqaya: 31000 },
-      { id: 2, date: todayStr, displayDate: displayDateStr, gariNo: "LES-992", driverName: "Iqbal Driver", maal: "Construction Sand (Reti)", dieselLiter: 95, kiraya: 48000, kharcha: 7500, advance: 12000, baqaya: 28500 },
+      { id: 1, date: todayStr, displayDate: displayDateStr, gariNo: "786", driverName: "Rashid Driver", maal: "High Speed Diesel (HSD)", unit: "Liters", unitQuantity: 100, pricePerUnit: 285, materialAmount: 28500, dieselLiter: 100, kiraya: 55000, kharcha: 4000, otherExpenseName: "Toll Tax", otherExpenseAmount: 1500, advance: 15000, baqaya: 74000 },
+      { id: 2, date: todayStr, displayDate: displayDateStr, gariNo: "LES-992", driverName: "Iqbal Driver", maal: "Crush Stone Material", unit: "Dumpers", unitQuantity: 1, pricePerUnit: 38000, materialAmount: 38000, dieselLiter: 95, kiraya: 48000, kharcha: 3500, otherExpenseName: "Site Labour", otherExpenseAmount: 2000, advance: 12000, baqaya: 79500 },
     ],
   };
 }

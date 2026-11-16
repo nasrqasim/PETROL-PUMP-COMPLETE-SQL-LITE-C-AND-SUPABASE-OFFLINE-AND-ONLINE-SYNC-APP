@@ -120,7 +120,7 @@ export default function GariWiseKhataPage() {
 
   const handleDownloadLedger = () => {
     if (!data || data.records.length === 0) return;
-    const headers = ["Date", "Gari No", "Driver", "Maal", "Diesel (Ltr)", "Kiraya (Rs)", "Kharcha (Rs)", "Advance (Rs)", "Entry Baqaya (Rs)", "Running Balance (Rs)"];
+    const headers = ["Date", "Vehicle No", "Driver", "Material", "Diesel (Ltr)", "Freight (Rs)", "Trip Expenses (Rs)", "Advance (Rs)", "Entry Balance (Rs)", "Running Balance (Rs)"];
     const rows = data.records.map((r) => [
       `"${r.displayDate || r.date}"`,
       `"${r.gariNo}"`,
@@ -278,7 +278,7 @@ export default function GariWiseKhataPage() {
               {/* Net Balance Pill */}
               <div className="bg-white/10 print:bg-slate-100 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 print:border-slate-300 text-right w-full md:w-auto">
                 <span className="text-[10px] sm:text-xs text-slate-300 print:text-slate-600 uppercase font-semibold block">
-                  Net Outstanding Baqaya
+                  Net Outstanding Balance
                 </span>
                 <span className={`text-2xl sm:text-3xl font-black ${data.baqaya >= 0 ? "text-amber-400 print:text-slate-950" : "text-rose-400"}`}>
                   Rs. {Number(data.baqaya || 0).toLocaleString()}
@@ -293,11 +293,11 @@ export default function GariWiseKhataPage() {
                 <span className="text-base font-bold text-white print:text-slate-900">{data.totalTrips} Trips</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase text-slate-400 print:text-slate-600 block">Total Kiraya</span>
+                <span className="text-[10px] uppercase text-slate-400 print:text-slate-600 block">Total Freight</span>
                 <span className="text-base font-bold text-emerald-400 print:text-emerald-700">Rs. {Number(data.totalKiraya || 0).toLocaleString()}</span>
               </div>
               <div>
-                <span className="text-[10px] uppercase text-slate-400 print:text-slate-600 block">Total Kharcha</span>
+                <span className="text-[10px] uppercase text-slate-400 print:text-slate-600 block">Total Trip Expenses</span>
                 <span className="text-base font-bold text-rose-400 print:text-rose-700">Rs. {Number(data.totalKharcha || 0).toLocaleString()}</span>
               </div>
               <div>
@@ -327,8 +327,8 @@ export default function GariWiseKhataPage() {
                   <th className="py-3 px-3">Driver Name</th>
                   <th className="py-3 px-3">Material</th>
                   <th className="py-3 px-3 text-right">Diesel</th>
-                  <th className="py-3 px-3 text-right">Freight (Kiraya)</th>
-                  <th className="py-3 px-3 text-right">Expenses (Kharcha)</th>
+                  <th className="py-3 px-3 text-right">Freight</th>
+                  <th className="py-3 px-3 text-right">Trip Expenses</th>
                   <th className="py-3 px-3 text-right">Advance Paid</th>
                   <th className="py-3 px-3 text-right">Entry Balance</th>
                   <th className="py-3 px-3 text-right">Running Balance</th>
@@ -390,7 +390,7 @@ export default function GariWiseKhataPage() {
                       Rs. {Number(data.totalAdvance || 0).toLocaleString()}
                     </td>
                     <td className="py-3 px-3 text-right font-bold text-slate-800" colSpan={2}>
-                      Closing Baqaya: Rs. {Number(data.baqaya || 0).toLocaleString()}
+                      Closing Balance: Rs. {Number(data.baqaya || 0).toLocaleString()}
                     </td>
                   </tr>
                 </tfoot>
