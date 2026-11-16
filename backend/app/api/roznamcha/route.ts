@@ -5,6 +5,9 @@ import { fetchFromCSharp } from "@/lib/csharp-client";
 import { RoznamchaSchema } from "@/lib/validations";
 import { memoryStore } from "@/lib/memory-store";
 
+// Cache for duplicate submission prevention (stores recent hash within 5 seconds)
+const recentSubmissions = new Map<string, number>();
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -20,14 +23,71 @@ export async function GET(req: NextRequest) {
     // Fallback to cloud memory store
   }
 
-  // Fallback to memory store
+  // High-Performance Query with Filtering, Date Range & Pagination
   const { searchParams } = new URL(req.url);
   const date = searchParams.get("date");
+  const startDate = searchParams.get("startDate");
+  const endDate = searchParams.get("endDate");
   const gariNo = searchParams.get("gariNo");
+  const driverName = searchParams.get("driverName");
+  const q = searchParams.get("q") || searchParams.get("search");
+  const page = searchParams.get("page") ? parseInt(searchParams.get("page")!, 10) : null;
+  const limit = searchParams.get("limit") ? Math.min(parseInt(searchParams.get("limit")!, 10), 500) : 100;
 
-  let list = [...memoryStore.roznamcha];
-  if (date) list = list.filter((r) => r.date === date);
-  if (gariNo) list = list.filter((r) => r.gariNo === gariNo);
+  let list = memoryStore.roznamcha;
+
+  // Optimized Filtering
+  if (date) {
+    list = list.filter((r) => r.date === date);
+  } else if (startDate || endDate) {
+    list = list.filter((r) => {
+      if (startDate && r.date < startDate) return false;
+      if (endDate && r.date > endDate) return false;
+      return true;
+    });
+  }
+
+  if (gariNo) {
+    const gUpper = gariNo.trim().toUpperCase();
+    list = list.filter((r) => r.gariNo.toUpperCase() === gUpper);
+  }
+
+  if (driverName) {
+    const dLower = driverName.trim().toLowerCase();
+    list = list.filter((r) => r.driverName.toLowerCase().includes(dLower));
+  }
+
+  if (q) {
+    const query = q.trim().toLowerCase();
+    list = list.filter(
+      (r) =>
+        r.gariNo.toLowerCase().includes(query) ||
+        r.driverName.toLowerCase().includes(query) ||
+        (r.maal && r.maal.toLowerCase().includes(query)) ||
+        (r.otherExpenseName && r.otherExpenseName.toLowerCase().includes(query))
+    );
+  }
+
+  // If client requested server-side pagination
+  if (page !== null && page > 0) {
+    const total = list.length;
+    const totalPages = Math.ceil(total / limit) || 1;
+    const startIndex = (page - 1) * limit;
+    const paginatedRecords = list.slice(startIndex, startIndex + limit);
+
+    return NextResponse.json({
+      records: paginatedRecords,
+      total,
+      page,
+      limit,
+      totalPages,
+    });
+  }
+
+  // Return standard array (limit to max 500 items for memory safety in browser)
+  if (list.length > 500) {
+    return NextResponse.json(list.slice(0, 500));
+  }
 
   return NextResponse.json(list);
 }
@@ -48,6 +108,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const d = validated.data;
+
+  // Duplicate Submission Prevention (5-second window on identical payload)
+  const submissionKey = `${d.date}_${d.gariNo}_${d.driverName}_${d.kiraya}_${d.advance}`;
+  const now = Date.now();
+  const lastTime = recentSubmissions.get(submissionKey);
+  if (lastTime && now - lastTime < 5000) {
+    return NextResponse.json(
+      { error: "Duplicate entry detected. Please wait 5 seconds before submitting identical entry." },
+      { status: 409 }
+    );
+  }
+  recentSubmissions.set(submissionKey, now);
+
   try {
     const res = await fetchFromCSharp("api/roznamcha", {
       method: "POST",
@@ -61,14 +135,13 @@ export async function POST(req: NextRequest) {
     // Fallback to cloud memory store
   }
 
-  const d = validated.data;
   const itemDate = d.date || new Date().toISOString().split("T")[0];
   const kiraya = Number(d.kiraya) || 0;
   const kharcha = Number(d.kharcha) || 0;
   const otherExpenseAmount = Number(d.otherExpenseAmount) || 0;
   const unitQuantity = Number(d.unitQuantity) || 0;
   const pricePerUnit = Number(d.pricePerUnit) || 0;
-  const materialAmount = (unitQuantity > 0 && pricePerUnit > 0) ? (unitQuantity * pricePerUnit) : 0;
+  const materialAmount = unitQuantity > 0 && pricePerUnit > 0 ? unitQuantity * pricePerUnit : 0;
   const advance = Number(d.advance) || 0;
 
   // Expenses add to total and only advance decreases it

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Package,
@@ -21,6 +21,8 @@ import {
   PlusCircle,
   Download,
   HardHat,
+  ShieldCheck,
+  LogOut,
 } from "lucide-react";
 
 export function MobileNavHeader({ children }: { children: React.ReactNode }) {
@@ -28,6 +30,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
   const [installPromptEvent, setInstallPromptEvent] = useState<any>(null);
   const [canInstall, setCanInstall] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: any) => {
@@ -56,9 +59,22 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } finally {
+      router.push("/login");
+    }
+  };
+
+  // If on Public Landing Page, Login, or Trial Expired, render clean without ERP internal navigation
+  if (pathname === "/" || pathname === "/login" || pathname === "/trial-expired") {
+    return <>{children}</>;
+  }
+
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, color: "text-sky-400" },
-    { href: "/", label: "Daily Ledger", icon: Calendar, color: "text-amber-400", highlight: true },
+    { href: "/daily-ledger", label: "Daily Ledger", icon: Calendar, color: "text-amber-400", highlight: true },
     { href: "/din-ka-khulasa", label: "Daily Summary", icon: BarChart3, color: "text-rose-400" },
     { href: "/gari-khata", label: "Vehicle Ledger", icon: Truck, color: "text-blue-400" },
     { href: "/driver-khata", label: "Driver Ledger", icon: UserCheck, color: "text-emerald-400" },
@@ -71,6 +87,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
     { href: "/expenses", label: "Daily Expenses", icon: Tag, color: "text-rose-400" },
     { href: "/products", label: "Material & Products", icon: Package, color: "text-amber-400" },
     { href: "/gariyan", label: "Vehicle Master", icon: Database, color: "text-slate-400" },
+    { href: "/admin", label: "Admin Portal", icon: ShieldCheck, color: "text-amber-300" },
   ];
 
   return (
@@ -114,13 +131,24 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
               <span className="hidden sm:inline">Install</span> App
             </button>
 
+            {/* Quick New Roznamcha Entry */}
             <Link
-              href="/"
+              href="/daily-ledger"
               className="flex items-center space-x-1 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-2.5 py-1.5 rounded-lg shadow transition"
             >
               <PlusCircle className="w-3.5 h-3.5" />
               <span className="hidden xs:inline">New</span> Entry
             </Link>
+
+            {/* Sign Out Button */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-900/60 text-slate-300 hover:text-rose-300 transition"
+              title="Sign Out of ERP"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
@@ -191,7 +219,15 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
               })}
             </div>
 
-            <div className="pt-2 border-t border-slate-700 text-center">
+            <div className="pt-2 border-t border-slate-700 flex justify-between items-center text-xs">
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-rose-400 font-bold flex items-center gap-1 px-2 py-1 rounded bg-rose-950/40"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
               <p className="text-[11px] font-semibold text-amber-400">
                 Software by Roonjha Developers: 03152914836
               </p>
@@ -217,9 +253,9 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
           <span>Home</span>
         </Link>
         <Link
-          href="/"
+          href="/daily-ledger"
           className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-medium transition ${
-            pathname === "/" ? "text-amber-400 font-bold" : "text-slate-400 hover:text-slate-200"
+            pathname === "/daily-ledger" ? "text-amber-400 font-bold" : "text-slate-400 hover:text-slate-200"
           }`}
         >
           <Calendar className="w-5 h-5 mb-0.5" />
@@ -262,7 +298,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
             Muslim Construction & Transport Daily Ledger Management System
           </p>
           <p className="font-bold text-amber-600">
-            Software by Roonjha developers : 03152914836
+            Software by Roonjha Developers : 03152914836
           </p>
         </div>
       </footer>
