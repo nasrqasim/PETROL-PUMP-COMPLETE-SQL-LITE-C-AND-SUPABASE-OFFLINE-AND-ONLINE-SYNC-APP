@@ -86,6 +86,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       otherExpenseAmount,
       advance,
       baqaya,
+
+      // Customer, Location & Payment
+      customerId: d.customerId,
+      customerName: d.customerName || (d.customerId ? memoryStore.customers.find((c) => c.Id === d.customerId)?.Name : ""),
+      fromLocation: d.fromLocation || "",
+      toLocation: d.toLocation || "",
+      deliveryAddress: d.deliveryAddress || "",
+      paymentStatus: d.paymentStatus || "Credit / Pay Later",
+      paymentMethod: d.paymentMethod || "Cash",
+      bankAccountId: d.bankAccountId,
+      paidAmount: Number(d.paidAmount) || 0,
+      advanceUsed: Number(d.advanceUsed) || 0,
     };
     return NextResponse.json(memoryStore.roznamcha[idx]);
   }

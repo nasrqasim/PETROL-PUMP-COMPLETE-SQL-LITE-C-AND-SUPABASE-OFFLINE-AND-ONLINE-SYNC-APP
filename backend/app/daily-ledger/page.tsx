@@ -23,6 +23,7 @@ import {
   Wallet,
   Coins,
 } from "lucide-react";
+import { printTableDocument } from "@/lib/print-table";
 
 interface RoznamchaItem {
   id: number;
@@ -365,13 +366,74 @@ export default function AajKiEntryPage() {
   });
 
   // Aggregate totals
-  const totalFreightSummary = filteredEntries.reduce((sum, e) => sum + (e.kiraya || 0), 0);
-  const totalNetBalanceSummary = filteredEntries.reduce((sum, e) => sum + (e.baqaya || 0), 0);
+  const totalTripsCount = filteredEntries.length;
+  const totalDieselLiterSummary = filteredEntries.reduce((sum, e) => sum + (Number(e.dieselLiter) || 0), 0);
+  const totalFreightSummary = filteredEntries.reduce((sum, e) => sum + (Number(e.kiraya) || 0), 0);
+  const totalTripExpensesSummary = filteredEntries.reduce((sum, e) => sum + (Number(e.kharcha) || 0), 0);
+  const totalOtherExpenseSummary = filteredEntries.reduce((sum, e) => sum + (Number(e.otherExpenseAmount) || 0), 0);
+  const totalAdvanceSummary = filteredEntries.reduce((sum, e) => sum + (Number(e.advance) || 0), 0);
+  const totalNetBalanceSummary = filteredEntries.reduce((sum, e) => sum + (Number(e.baqaya) || 0), 0);
+
+  const handlePrintTableLedger = () => {
+    printTableDocument({
+      title: "Daily Roznamcha Ledger",
+      subtitle: "Vehicle & driver departures, materials, freight, trip expenses, diesel consumption, and net balance accounts",
+      headers: [
+        "Date",
+        "Vehicle #",
+        "Driver Name",
+        "Material / Units",
+        "Diesel (L)",
+        "Freight (Rs.)",
+        "Trip Exp (Rs.)",
+        "Other Exp (Rs.)",
+        "Advance (Rs.)",
+        "Net Total (Rs.)",
+      ],
+      columnAlignments: [
+        "center",
+        "center",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right",
+      ],
+      rows: filteredEntries.map((row) => [
+        row.displayDate || row.date,
+        row.gariNo,
+        row.driverName,
+        row.maal + (row.unit && row.unitQuantity ? ` (${row.unitQuantity} ${row.unit})` : ""),
+        row.dieselLiter > 0 ? `${row.dieselLiter} L` : "—",
+        `Rs. ${Number(row.kiraya || 0).toLocaleString()}`,
+        `Rs. ${Number(row.kharcha || 0).toLocaleString()}`,
+        `Rs. ${Number(row.otherExpenseAmount || 0).toLocaleString()}`,
+        `Rs. ${Number(row.advance || 0).toLocaleString()}`,
+        `Rs. ${Number(row.baqaya || 0).toLocaleString()}`,
+      ]),
+      footers: [
+        `TOTAL (${totalTripsCount} TRIPS)`,
+        "",
+        "",
+        "",
+        `${totalDieselLiterSummary} L`,
+        `Rs. ${totalFreightSummary.toLocaleString()}`,
+        `Rs. ${totalTripExpensesSummary.toLocaleString()}`,
+        `Rs. ${totalOtherExpenseSummary.toLocaleString()}`,
+        `Rs. ${totalAdvanceSummary.toLocaleString()}`,
+        `Rs. ${totalNetBalanceSummary.toLocaleString()}`,
+      ],
+      notes: "Software By Roonjha Developers : 03152914836 - Muslim Construction & Transport Management System",
+    });
+  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Title & Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-4 sm:p-5 rounded-2xl border border-slate-700/80 shadow-md">
+      <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-4 sm:p-5 rounded-2xl border border-slate-700/80 shadow-md no-print">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -386,17 +448,28 @@ export default function AajKiEntryPage() {
               Vehicle & driver departures, materials, freight, trip expenses, diesel consumption, and net balance accounts
             </p>
           </div>
-          <button
-            onClick={loadData}
-            className="self-end sm:self-auto flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-600 transition"
-          >
-            <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
-            <span>Refresh Data</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={handlePrintTableLedger}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black rounded-lg shadow-sm transition"
+              title="Print Roznamcha Ledger Table"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-950" />
+              <span>Print Ledger</span>
+            </button>
+            <button
+              onClick={loadData}
+              className="self-end sm:self-auto flex items-center space-x-1.5 px-3 py-1.5 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-600 transition"
+            >
+              <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+              <span>Refresh Data</span>
+            </button>
+          </div>
         </div>
 
         {/* Quick KPI Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t border-slate-700/60 text-xs">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 pt-3 border-t border-slate-700/60 text-xs top-cards-box">
           <div className="bg-slate-800/60 p-2 rounded-xl border border-slate-700/50">
             <span className="text-[10px] text-slate-400 uppercase font-semibold">Trips Recorded</span>
             <div className="text-sm font-bold text-slate-100">{filteredEntries.length} Trips</div>
@@ -1061,6 +1134,34 @@ export default function AajKiEntryPage() {
                 ))
               )}
             </tbody>
+            <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-900">
+              <tr>
+                <td colSpan={4} className="py-2.5 px-3 font-black uppercase text-[11px]">
+                  Grand Total ({totalTripsCount} Trips)
+                </td>
+                <td className="py-2.5 px-3 text-right font-mono text-slate-800">
+                  {totalDieselLiterSummary > 0 ? `${totalDieselLiterSummary} L` : "0 L"}
+                </td>
+                <td className="py-2.5 px-3 text-right font-black text-emerald-700">
+                  Rs. {totalFreightSummary.toLocaleString()}
+                </td>
+                <td className="py-2.5 px-3 text-right font-bold text-rose-700">
+                  Rs. {totalTripExpensesSummary.toLocaleString()}
+                </td>
+                <td className="py-2.5 px-3 text-right font-bold text-slate-700">
+                  Rs. {totalOtherExpenseSummary.toLocaleString()}
+                </td>
+                <td className="py-2.5 px-3 text-right font-bold text-amber-700">
+                  Rs. {totalAdvanceSummary.toLocaleString()}
+                </td>
+                <td className={`py-2.5 px-3 text-right font-black text-sm ${totalNetBalanceSummary >= 0 ? "text-slate-900" : "text-rose-700"}`}>
+                  Rs. {totalNetBalanceSummary.toLocaleString()}
+                </td>
+                <td className="py-2.5 px-3 text-center text-[10px] text-slate-500 font-semibold">
+                  Settled
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>

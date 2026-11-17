@@ -23,6 +23,9 @@ import {
   HardHat,
   ShieldCheck,
   LogOut,
+  Wallet,
+  Building2,
+  MapPin,
 } from "lucide-react";
 
 export function MobileNavHeader({ children }: { children: React.ReactNode }) {
@@ -81,11 +84,14 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
     { href: "/staff", label: "Staff & Labour Ledger", icon: HardHat, color: "text-amber-400" },
     { href: "/customers", label: "Customers", icon: Users, color: "text-purple-400" },
     { href: "/suppliers", label: "Suppliers", icon: Building, color: "text-indigo-400" },
-    { href: "/cash-bank", label: "Cash & Bank", icon: Receipt, color: "text-teal-400" },
+    { href: "/cash", label: "Cash Register", icon: Wallet, color: "text-emerald-400" },
+    { href: "/bank", label: "Bank Accounts", icon: Building2, color: "text-sky-400" },
+    { href: "/cash-bank", label: "Cash & Bank Vouchers", icon: Receipt, color: "text-teal-400" },
     { href: "/sales", label: "Sales & Invoices", icon: ShoppingCart, color: "text-emerald-400" },
     { href: "/purchases", label: "Purchases", icon: Building, color: "text-blue-400" },
     { href: "/expenses", label: "Daily Expenses", icon: Tag, color: "text-rose-400" },
     { href: "/products", label: "Material & Products", icon: Package, color: "text-amber-400" },
+    { href: "/locations", label: "Quarries & Sites", icon: MapPin, color: "text-emerald-300" },
     { href: "/gariyan", label: "Vehicle Master", icon: Database, color: "text-slate-400" },
     { href: "/admin", label: "Admin Portal", icon: ShieldCheck, color: "text-amber-300" },
   ];

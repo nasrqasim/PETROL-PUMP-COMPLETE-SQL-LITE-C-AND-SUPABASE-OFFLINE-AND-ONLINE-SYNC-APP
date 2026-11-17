@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ShoppingCart, Search, Plus, CheckCircle, X, Trash2, Edit2 } from "lucide-react";
+import { ShoppingCart, Search, Plus, CheckCircle, X, Trash2, Edit2, Printer } from "lucide-react";
+import { printTableDocument } from "@/lib/print-table";
 
 export default function SalesPage() {
   const [sales, setSales] = useState<any[]>([]);
@@ -121,9 +122,51 @@ export default function SalesPage() {
 
   const grandTotal = Math.max(0, form.SubTotal - form.Discount + form.Tax);
 
+  const totalSubtotal = sales.reduce((acc, s) => acc + Number(s.SubTotal || s.GrandTotal || 0), 0);
+  const totalDiscount = sales.reduce((acc, s) => acc + Number(s.Discount || 0), 0);
+  const totalGrandTotal = sales.reduce((acc, s) => acc + Number(s.GrandTotal || 0), 0);
+  const totalPaidAmount = sales.reduce((acc, s) => acc + Number(s.PaidAmount || 0), 0);
+  const totalRemainingBalance = totalGrandTotal - totalPaidAmount;
+
+  const handlePrintSalesTable = () => {
+    printTableDocument({
+      title: "Sales & Material Invoices Ledger",
+      subtitle: "Complete billing records, customer invoices, payment modes, and invoice totals",
+      headers: ["Invoice #", "Date", "Customer", "Payment Mode", "Subtotal", "Discount", "Grand Total", "Paid Amount", "Balance Due"],
+      columnAlignments: ["left", "center", "left", "center", "right", "right", "right", "right", "right"],
+      rows: sales.map((s) => {
+        const custName = typeof s.Customer === "object" ? s.Customer?.Name : s.Customer || "Walk-in Customer";
+        const bal = Math.max(0, Number(s.GrandTotal || 0) - Number(s.PaidAmount || 0));
+        return [
+          s.InvoiceNumber,
+          new Date(s.Date).toLocaleDateString(),
+          custName,
+          s.PaymentMode || "Cash",
+          `Rs. ${Number(s.SubTotal || 0).toLocaleString()}`,
+          `Rs. ${Number(s.Discount || 0).toLocaleString()}`,
+          `Rs. ${Number(s.GrandTotal || 0).toLocaleString()}`,
+          `Rs. ${Number(s.PaidAmount || 0).toLocaleString()}`,
+          `Rs. ${bal.toLocaleString()}`,
+        ];
+      }),
+      footers: [
+        "",
+        `TOTAL (${sales.length} INVOICES)`,
+        "",
+        "",
+        `Rs. ${totalSubtotal.toLocaleString()}`,
+        `Rs. ${totalDiscount.toLocaleString()}`,
+        `Rs. ${totalGrandTotal.toLocaleString()}`,
+        `Rs. ${totalPaidAmount.toLocaleString()}`,
+        `Rs. ${totalRemainingBalance.toLocaleString()}`,
+      ],
+      notes: "Software By Roonjha Developers : 03152914836 - Muslim Construction & Transport Management System",
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm no-print">
         <div>
           <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
             <ShoppingCart className="w-6 h-6 text-emerald-600" />
@@ -134,6 +177,14 @@ export default function SalesPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handlePrintSalesTable}
+            className="btn bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2 px-3.5 flex items-center gap-1.5 shadow-sm transition"
+            title="Print sales invoices table"
+          >
+            <Printer className="w-4 h-4 text-amber-400" /> Print Ledger
+          </button>
           <button
             onClick={() => {
               setEditingId(null);
@@ -241,6 +292,28 @@ export default function SalesPage() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-900">
+                <tr>
+                  <td colSpan={4} className="py-3 px-4 font-black uppercase text-xs">
+                    Grand Total ({sales.length} Invoices)
+                  </td>
+                  <td className="py-3 px-4 text-right font-bold text-slate-700">
+                    Rs. {totalSubtotal.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-right font-bold text-rose-600">
+                    Rs. {totalDiscount.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-right font-black text-emerald-700 text-sm">
+                    Rs. {totalGrandTotal.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-right font-black text-slate-900 text-sm">
+                    Rs. {totalPaidAmount.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-center text-xs font-bold text-rose-700">
+                    Due: Rs. {totalRemainingBalance.toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}

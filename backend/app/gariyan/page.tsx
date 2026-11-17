@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Truck, PlusCircle, Edit2, Trash2, CheckCircle2, AlertCircle } from "lucide-react";
+import Link from "next/link";
+import { Truck, PlusCircle, Edit2, Trash2, CheckCircle2, AlertCircle, Printer, BookOpen } from "lucide-react";
+import { printTableDocument } from "@/lib/print-table";
 
 interface Vehicle {
   id: number;
@@ -37,6 +39,33 @@ export default function VehicleMasterPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePrintVehiclesTable = () => {
+    const ownedCount = list.filter((v) => v.malik === "Owned" || v.malik === "Apni").length;
+    const rentedCount = list.length - ownedCount;
+
+    printTableDocument({
+      title: "Vehicle Registration & Fleet Directory",
+      subtitle: "Fleet dumpers, trucks, assigned drivers, and ownership records",
+      headers: ["#", "Vehicle Number", "Default Driver", "Ownership Type", "Contact Phone"],
+      columnAlignments: ["center", "left", "left", "center", "left"],
+      rows: list.map((v, idx) => [
+        idx + 1,
+        v.gariNo,
+        v.driverName || "—",
+        v.malik,
+        v.phone || "—",
+      ]),
+      footers: [
+        "",
+        `TOTAL (${list.length} VEHICLES)`,
+        `Owned: ${ownedCount}`,
+        `Rented / Other: ${rentedCount}`,
+        "Fleet Active",
+      ],
+      notes: "Software By Roonjha Developers : 03152914836 - Muslim Construction & Transport Management System",
+    });
   };
 
   useEffect(() => {
@@ -242,10 +271,18 @@ export default function VehicleMasterPage() {
 
       {/* Table Card */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center no-print">
           <h3 className="font-bold text-sm text-slate-800">
             Registered Fleet Vehicles ({list.length})
           </h3>
+          <button
+            type="button"
+            onClick={handlePrintVehiclesTable}
+            className="btn bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-1.5 px-3 flex items-center gap-1.5 shadow-sm transition"
+            title="Print fleet vehicles directory table"
+          >
+            <Printer className="w-3.5 h-3.5 text-amber-400" /> Print Directory
+          </button>
         </div>
 
         <div className="overflow-x-auto">
@@ -297,6 +334,14 @@ export default function VehicleMasterPage() {
                     <td className="py-3 px-4 text-slate-600">{v.phone || "—"}</td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex justify-center items-center gap-2">
+                        <Link
+                          href={`/gari-khata?gariNo=${encodeURIComponent(v.gariNo)}`}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2 py-1 rounded transition"
+                          title="View complete vehicle ledger"
+                        >
+                          <BookOpen className="w-3 h-3 text-amber-600" />
+                          <span>Ledger</span>
+                        </Link>
                         <button
                           onClick={() => handleEdit(v)}
                           title="Edit vehicle"
@@ -317,6 +362,20 @@ export default function VehicleMasterPage() {
                 ))
               )}
             </tbody>
+            <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-900">
+              <tr>
+                <td colSpan={3} className="py-3 px-4 font-black uppercase text-xs">
+                  Grand Total ({list.length} Vehicles Registered)
+                </td>
+                <td className="py-3 px-4 text-slate-800">
+                  <span className="text-emerald-700 font-bold">Owned: {list.filter((v) => v.malik === "Owned" || v.malik === "Apni").length}</span> |{" "}
+                  <span className="text-blue-700 font-bold">Rented: {list.filter((v) => v.malik !== "Owned" && v.malik !== "Apni").length}</span>
+                </td>
+                <td colSpan={2} className="py-3 px-4 text-center text-xs text-slate-600">
+                  Fleet Ready
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>

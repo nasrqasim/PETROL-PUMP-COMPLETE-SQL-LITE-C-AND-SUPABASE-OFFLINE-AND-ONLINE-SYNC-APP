@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { UserCheck, Search, Phone, Plus, CheckCircle, X, Trash2, Printer, Download, BookOpen, DollarSign } from "lucide-react";
+import { printTableDocument } from "@/lib/print-table";
 
 interface StaffPaymentRecord {
   id: number;
@@ -182,7 +183,36 @@ export default function StaffPage() {
       s.ContactNumber?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalSalaries = filtered.reduce((acc, s) => acc + Number(s.Salary || 0), 0);
   const totalPaid = staffLedger.reduce((sum, r) => sum + (r.amount || 0), 0);
+
+  const handlePrintStaffDirectory = () => {
+    printTableDocument({
+      title: "Staff & Labour Khata Directory",
+      subtitle: "Employees, drivers, project labours, attendance records, monthly salaries, advances, and payment ledgers",
+      headers: ["#", "Name", "Designation", "Department", "Contact Number", "CNIC", "Monthly Salary (Rs.)"],
+      columnAlignments: ["center", "left", "left", "left", "left", "center", "right"],
+      rows: filtered.map((s, idx) => [
+        idx + 1,
+        s.Name,
+        s.Designation || "—",
+        s.Department || "—",
+        s.ContactNumber || "—",
+        s.Cnic || "—",
+        `Rs. ${Number(s.Salary || 0).toLocaleString()}`,
+      ]),
+      footers: [
+        "",
+        `TOTAL (${filtered.length} STAFF / LABOUR)`,
+        "",
+        "",
+        "",
+        "Total Monthly Payroll:",
+        `Rs. ${totalSalaries.toLocaleString()}`,
+      ],
+      notes: "Software By Roonjha Developers : 03152914836 - Muslim Construction & Transport Management System",
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -198,6 +228,14 @@ export default function StaffPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handlePrintStaffDirectory}
+            className="btn bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2 px-3.5 flex items-center gap-1.5 shadow-sm transition"
+            title="Print entire staff and labour ledger table"
+          >
+            <Printer className="w-4 h-4 text-amber-400" /> Print Ledger
+          </button>
           <button
             onClick={() => setShowModal(true)}
             className="btn btn-green text-xs font-bold py-2 px-3.5 flex items-center gap-1.5 shadow-sm"
@@ -285,6 +323,22 @@ export default function StaffPage() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-900">
+                <tr>
+                  <td colSpan={4} className="py-3 px-4 font-black uppercase text-xs">
+                    Grand Total ({filtered.length} Staff / Drivers)
+                  </td>
+                  <td colSpan={2} className="py-3 px-4 text-right text-xs font-bold text-slate-700">
+                    Total Monthly Payroll:
+                  </td>
+                  <td className="py-3 px-4 text-right font-black text-emerald-700 text-sm">
+                    Rs. {totalSalaries.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-center text-xs text-slate-500 font-semibold">
+                    Active Staff
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}

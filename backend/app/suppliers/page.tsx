@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Building, Search, Phone, MapPin, Plus, CheckCircle, X, Trash2, Edit2 } from "lucide-react";
+import { Building, Search, Phone, MapPin, Plus, CheckCircle, X, Trash2, Edit2, Printer } from "lucide-react";
+import { printTableDocument } from "@/lib/print-table";
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -102,9 +103,41 @@ export default function SuppliersPage() {
       s.Phone?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalPayable = filtered.reduce((acc, s) => acc + Number(s.BalanceDue || 0), 0);
+  const totalAdvance = filtered.reduce((acc, s) => acc + Number(s.Advance || 0), 0);
+  const netPayable = totalPayable - totalAdvance;
+
+  const handlePrintSuppliersLedger = () => {
+    printTableDocument({
+      title: "Suppliers & Material Vendors Ledger",
+      subtitle: "Material suppliers, fuel vendors, payables, advances, and contact directories",
+      headers: ["#", "Supplier / Vendor Name", "Contact", "Address", "Payable Due (Rs.)", "Advance Paid (Rs.)", "Net Status"],
+      columnAlignments: ["center", "left", "left", "left", "right", "right", "center"],
+      rows: filtered.map((s, idx) => [
+        idx + 1,
+        s.Name,
+        s.Phone || "—",
+        s.Address || "—",
+        `Rs. ${Number(s.BalanceDue || 0).toLocaleString()}`,
+        `Rs. ${Number(s.Advance || 0).toLocaleString()}`,
+        Number(s.BalanceDue || 0) > Number(s.Advance || 0) ? "Payable" : Number(s.Advance || 0) > 0 ? "Advance" : "Settled",
+      ]),
+      footers: [
+        "",
+        `TOTAL (${filtered.length} SUPPLIERS)`,
+        "",
+        "",
+        `Rs. ${totalPayable.toLocaleString()}`,
+        `Rs. ${totalAdvance.toLocaleString()}`,
+        `Net: Rs. ${netPayable.toLocaleString()}`,
+      ],
+      notes: "Software By Roonjha Developers : 03152914836 - Muslim Construction & Transport Management System",
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm no-print">
         <div>
           <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
             <Building className="w-6 h-6 text-indigo-600" />
@@ -115,6 +148,14 @@ export default function SuppliersPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handlePrintSuppliersLedger}
+            className="btn bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2 px-3.5 flex items-center gap-1.5 shadow-sm transition"
+            title="Print entire suppliers ledger table"
+          >
+            <Printer className="w-4 h-4 text-amber-400" /> Print Ledger
+          </button>
           <button
             onClick={() => {
               setEditingId(null);
@@ -212,6 +253,22 @@ export default function SuppliersPage() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-900">
+                <tr>
+                  <td colSpan={3} className="py-3 px-4 font-black uppercase text-xs">
+                    Grand Total ({filtered.length} Suppliers)
+                  </td>
+                  <td className="py-3 px-4 text-right font-black text-rose-700 text-sm">
+                    Rs. {totalPayable.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-right font-black text-emerald-700 text-sm">
+                    Rs. {totalAdvance.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-center text-xs font-bold text-slate-700">
+                    Net: Rs. {netPayable.toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}

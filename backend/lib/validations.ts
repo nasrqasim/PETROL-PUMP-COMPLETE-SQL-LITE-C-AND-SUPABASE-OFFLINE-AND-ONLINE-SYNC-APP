@@ -14,6 +14,18 @@ export const RoznamchaSchema = z.object({
   otherExpenseName: z.string().optional().default(""),
   otherExpenseAmount: z.coerce.number().min(0, "Other expense cannot be negative").optional().default(0),
   advance: z.coerce.number().min(0, "Advance cannot be negative").default(0),
+
+  // Customer & Location Enhancements
+  customerId: z.coerce.number().optional(),
+  customerName: z.string().optional().default(""),
+  fromLocation: z.string().optional().default(""),
+  toLocation: z.string().optional().default(""),
+  deliveryAddress: z.string().optional().default(""),
+  paymentStatus: z.string().optional().default("Credit / Pay Later"),
+  paymentMethod: z.string().optional().default("Cash"),
+  bankAccountId: z.coerce.number().optional(),
+  paidAmount: z.coerce.number().optional().default(0),
+  advanceUsed: z.coerce.number().optional().default(0),
 });
 
 export const GariSchema = z.object({

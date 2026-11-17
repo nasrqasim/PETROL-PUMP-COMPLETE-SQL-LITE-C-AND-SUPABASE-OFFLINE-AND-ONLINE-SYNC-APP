@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Package, Search, AlertTriangle, Plus, CheckCircle, X, Trash2, Edit2 } from "lucide-react";
+import { Package, Search, AlertTriangle, Plus, CheckCircle, X, Trash2, Edit2, Printer } from "lucide-react";
+import { printTableDocument } from "@/lib/print-table";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
@@ -112,9 +113,40 @@ export default function ProductsPage() {
       p.Category?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalStockQuantity = filtered.reduce((acc, p) => acc + Number(p.StockQuantity || 0), 0);
+  const totalInventoryValue = filtered.reduce((acc, p) => acc + (Number(p.StockQuantity || 0) * Number(p.PurchasePrice || 0)), 0);
+
+  const handlePrintProductsTable = () => {
+    printTableDocument({
+      title: "Material & Products Inventory Master",
+      subtitle: "Fuel stocks, crush stone, lubricants, sale prices, cost prices, and stock indicators",
+      headers: ["Item Name", "Category", "Unit", "Sale Price (Rs.)", "Cost Price (Rs.)", "Stock Quantity", "Stock Status"],
+      columnAlignments: ["left", "left", "center", "right", "right", "right", "center"],
+      rows: filtered.map((p) => [
+        p.Name,
+        p.Category || "General",
+        p.Unit || "Liters",
+        `Rs. ${Number(p.SalePrice || 0).toLocaleString()}`,
+        `Rs. ${Number(p.PurchasePrice || 0).toLocaleString()}`,
+        Number(p.StockQuantity || 0).toLocaleString(),
+        p.StockQuantity <= p.LowStockAlert ? "LOW STOCK" : "Adequate",
+      ]),
+      footers: [
+        `TOTAL (${filtered.length} ITEMS)`,
+        "",
+        "",
+        "Total Stock:",
+        `Cost Valuation: Rs. ${totalInventoryValue.toLocaleString()}`,
+        totalStockQuantity.toLocaleString(),
+        "Active Inventory",
+      ],
+      notes: "Software By Roonjha Developers : 03152914836 - Muslim Construction & Transport Management System",
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm no-print">
         <div>
           <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
             <Package className="w-6 h-6 text-amber-500" />
@@ -125,6 +157,14 @@ export default function ProductsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handlePrintProductsTable}
+            className="btn bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2 px-3.5 flex items-center gap-1.5 shadow-sm transition"
+            title="Print material and products inventory table"
+          >
+            <Printer className="w-4 h-4 text-amber-400" /> Print Ledger
+          </button>
           <button
             onClick={() => {
               setEditingId(null);
@@ -237,6 +277,25 @@ export default function ProductsPage() {
                   );
                 })}
               </tbody>
+              <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-900">
+                <tr>
+                  <td colSpan={3} className="py-3 px-4 font-black uppercase text-xs">
+                    Grand Total ({filtered.length} Items)
+                  </td>
+                  <td className="py-3 px-4 text-right text-xs text-slate-600">
+                    Total Stock:
+                  </td>
+                  <td className="py-3 px-4 text-right font-black text-rose-700 text-sm">
+                    Rs. {totalInventoryValue.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-right font-black text-slate-900 text-sm font-mono">
+                    {totalStockQuantity.toLocaleString()}
+                  </td>
+                  <td colSpan={2} className="py-3 px-4 text-center text-xs font-semibold text-slate-600">
+                    Asset Value
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}

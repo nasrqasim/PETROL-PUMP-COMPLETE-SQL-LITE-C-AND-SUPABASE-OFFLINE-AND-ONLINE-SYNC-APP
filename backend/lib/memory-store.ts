@@ -1,5 +1,5 @@
-// In-Memory Store for Muslim Construction
-// Optimized, clean baseline ready for 10,000+ entries across all modules
+// In-Memory Store for Muslim Construction ERP
+// Production-Ready Interconnected Financial Ledgers, Bank Accounts, Customers & Roznamcha
 
 export interface CustomerData {
   Id: number;
@@ -95,7 +95,79 @@ export interface StaffData {
   Address?: string;
   Cnic: string;
   Salary: number;
+  Advance?: number;
   IsActive: boolean;
+}
+
+export interface BankAccountData {
+  Id: number;
+  BankName: string;
+  AccountTitle: string;
+  AccountNumber: string;
+  BranchName?: string;
+  OpeningBalance: number;
+  CurrentBalance: number;
+  Status: "Active" | "Inactive";
+  Description?: string;
+}
+
+export interface CashTransactionData {
+  Id: number;
+  Date: string;
+  VoucherNumber: string;
+  Description: string;
+  Reference?: string;
+  TransactionType: string;
+  CashIn: number;
+  CashOut: number;
+  RunningBalance: number;
+}
+
+export interface BankTransactionData {
+  Id: number;
+  BankAccountId: number;
+  Date: string;
+  VoucherNumber: string;
+  Description: string;
+  TransactionType: string;
+  BankIn: number;
+  BankOut: number;
+  RunningBalance: number;
+  Reference?: string;
+}
+
+export interface CustomerLedgerEntry {
+  Id: number;
+  CustomerId: number;
+  Date: string;
+  VoucherNumber: string;
+  TripRef?: string;
+  Description: string;
+  Debit: number;
+  Credit: number;
+  RunningBalance: number;
+  PaymentMethod?: string;
+}
+
+export interface SupplierLedgerEntry {
+  Id: number;
+  SupplierId: number;
+  Date: string;
+  VoucherNumber: string;
+  Description: string;
+  Debit: number;
+  Credit: number;
+  RunningBalance: number;
+  PaymentMethod?: string;
+}
+
+export interface LocationData {
+  id: number;
+  name: string;
+  city: string;
+  type: string;
+  address?: string;
+  status: "Active" | "Inactive";
 }
 
 export interface VoucherData {
@@ -104,6 +176,10 @@ export interface VoucherData {
   Date: string;
   PaymentType: string;
   PartyType: string;
+  CustomerId?: number;
+  SupplierId?: number;
+  StaffId?: number;
+  BankAccountId?: number;
   Customer?: { Name: string };
   Supplier?: { Name: string };
   Staff?: { Name: string };
@@ -142,6 +218,18 @@ export interface RoznamchaItemData {
   otherExpenseAmount?: number;
   advance: number;
   baqaya: number;
+
+  // Customer & Location Enhancements
+  customerId?: number;
+  customerName?: string;
+  fromLocation?: string;
+  toLocation?: string;
+  deliveryAddress?: string;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  bankAccountId?: number;
+  paidAmount?: number;
+  advanceUsed?: number;
 }
 
 declare global {
@@ -153,6 +241,12 @@ declare global {
     purchases: PurchaseInvoiceData[];
     expenses: ExpenseData[];
     staff: StaffData[];
+    bankAccounts: BankAccountData[];
+    cashTransactions: CashTransactionData[];
+    bankTransactions: BankTransactionData[];
+    customerLedgers: CustomerLedgerEntry[];
+    supplierLedgers: SupplierLedgerEntry[];
+    locations: LocationData[];
     vouchers: VoucherData[];
     gariyan: GariData[];
     roznamcha: RoznamchaItemData[];
@@ -193,14 +287,44 @@ if (!global.__memoryStore) {
       { Id: 3, Date: todayStr, Category: "Staff Mess & Daily Food", PaymentMode: "Cash", Amount: 2800, Remarks: "Site labours lunch & tea" },
     ],
     staff: [
-      { Id: 1, Name: "Iqbal Driver", Designation: "Senior Driver", Department: "Transport", ContactNumber: "03001234567", Cnic: "52101-1234567-1", Salary: 40000, IsActive: true },
-      { Id: 2, Name: "Rashid Driver", Designation: "Vehicle Driver", Department: "Transport", ContactNumber: "03007654321", Cnic: "52101-7654321-2", Salary: 35000, IsActive: true },
-      { Id: 3, Name: "Tariq Khan", Designation: "Accountant / Munshi", Department: "Accounts & Roznamcha", ContactNumber: "03152914836", Cnic: "52101-9988776-3", Salary: 50000, IsActive: true },
-      { Id: 4, Name: "Gul Muhammad", Designation: "Supervisor / Site Incharge", Department: "Construction Site", ContactNumber: "03108444612", Cnic: "52101-5544332-4", Salary: 45000, IsActive: true },
+      { Id: 1, Name: "Iqbal Driver", Designation: "Senior Driver", Department: "Transport", ContactNumber: "03001234567", Cnic: "52101-1234567-1", Salary: 40000, Advance: 15000, IsActive: true },
+      { Id: 2, Name: "Rashid Driver", Designation: "Vehicle Driver", Department: "Transport", ContactNumber: "03007654321", Cnic: "52101-7654321-2", Salary: 35000, Advance: 0, IsActive: true },
+      { Id: 3, Name: "Tariq Khan", Designation: "Accountant / Munshi", Department: "Accounts & Roznamcha", ContactNumber: "03152914836", Cnic: "52101-9988776-3", Salary: 50000, Advance: 0, IsActive: true },
+      { Id: 4, Name: "Gul Muhammad", Designation: "Supervisor / Site Incharge", Department: "Construction Site", ContactNumber: "03108444612", Cnic: "52101-5544332-4", Salary: 45000, Advance: 5000, IsActive: true },
+    ],
+    bankAccounts: [
+      { Id: 1, BankName: "Meezan Bank Limited", AccountTitle: "Muslim Construction Fleet Operations", AccountNumber: "0219-0103445892", BranchName: "Hub Chowki Branch", OpeningBalance: 450000, CurrentBalance: 450000, Status: "Active", Description: "Main operational account for transport & diesel purchases" },
+      { Id: 2, BankName: "Habib Bank Limited (HBL)", AccountTitle: "Muslim Construction Main Corporate", AccountNumber: "1104-7901234567", BranchName: "Lasbela Corporate Center", OpeningBalance: 1250000, CurrentBalance: 1250000, Status: "Active", Description: "Client bill receipts and mining project clearances" },
+    ],
+    cashTransactions: [
+      { Id: 1, Date: todayStr, VoucherNumber: "OP-CASH-001", Description: "Opening Cash in Hand", Reference: "System", TransactionType: "Opening Cash", CashIn: 150000, CashOut: 0, RunningBalance: 150000 },
+      { Id: 2, Date: todayStr, VoucherNumber: "CR-20261115-02", Description: "Customer Receipt: Lasbela Mining Corporation", Reference: "TRIP-01", TransactionType: "Customer Receipt", CashIn: 50000, CashOut: 0, RunningBalance: 200000 },
+      { Id: 3, Date: todayStr, VoucherNumber: "CP-20261115-01", Description: "Staff Payment: Iqbal Driver (Monthly Salary advance)", Reference: "STAFF-01", TransactionType: "Staff Payment", CashIn: 0, CashOut: 15000, RunningBalance: 185000 },
+    ],
+    bankTransactions: [
+      { Id: 1, BankAccountId: 1, Date: todayStr, VoucherNumber: "OP-BANK-001", Description: "Opening Balance Meezan Bank", TransactionType: "Opening Balance", BankIn: 450000, BankOut: 0, RunningBalance: 450000 },
+      { Id: 2, BankAccountId: 2, Date: todayStr, VoucherNumber: "OP-BANK-002", Description: "Opening Balance HBL Corporate", TransactionType: "Opening Balance", BankIn: 1250000, BankOut: 0, RunningBalance: 1250000 },
+    ],
+    customerLedgers: [
+      { Id: 1, CustomerId: 1, Date: todayStr, VoucherNumber: "TRIP-101", TripRef: "101", Description: "Diesel delivery trip to Site Hub", Debit: 85500, Credit: 0, RunningBalance: 85500, PaymentMethod: "Credit" },
+      { Id: 2, CustomerId: 1, Date: todayStr, VoucherNumber: "CR-101", TripRef: "101", Description: "Cash part payment received", Debit: 0, Credit: 40500, RunningBalance: 45000, PaymentMethod: "Cash" },
+      { Id: 3, CustomerId: 2, Date: todayStr, VoucherNumber: "TRIP-102", TripRef: "102", Description: "Crush stone 2 dumpers delivery", Debit: 170000, Credit: 0, RunningBalance: 170000, PaymentMethod: "Credit" },
+      { Id: 4, CustomerId: 2, Date: todayStr, VoucherNumber: "CR-102", TripRef: "102", Description: "Cash received from Lasbela Mining", Debit: 0, Credit: 50000, RunningBalance: 120000, PaymentMethod: "Cash" },
+    ],
+    supplierLedgers: [
+      { Id: 1, SupplierId: 1, Date: todayStr, VoucherNumber: "PUR-9812", Description: "Diesel tanker stock inward 2000L", Debit: 0, Credit: 540000, RunningBalance: 540000, PaymentMethod: "Credit" },
+      { Id: 2, SupplierId: 1, Date: todayStr, VoucherNumber: "CP-9812", Description: "Cash payment made to PSO Depot", Debit: 455000, Credit: 0, RunningBalance: 85000, PaymentMethod: "Cash" },
+    ],
+    locations: [
+      { id: 1, name: "Site Area Hub Plant", city: "Hub Chowki", type: "Construction Site", address: "Main Industrial Estate Hub", status: "Active" },
+      { id: 2, name: "Winder Mining Quarry", city: "Winder", type: "Quarry / Plant", address: "Winder Mining Zone Lasbela", status: "Active" },
+      { id: 3, name: "Karachi Port Depot / Site", city: "Karachi", type: "Depot", address: "West Wharf Port Area", status: "Active" },
+      { id: 4, name: "Uthal District Site Yard", city: "Uthal", type: "Client Yard", address: "Bypass Road Uthal", status: "Active" },
+      { id: 5, name: "Bhawalpur Highway Project", city: "Bhawalpur", type: "Construction Site", address: "N-5 Bypass Site Camp", status: "Active" },
     ],
     vouchers: [
-      { Id: 1, VoucherNumber: "CP-20261115-01", Date: todayStr, PaymentType: "CashPayment", PartyType: "Staff", Staff: { Name: "Iqbal Driver" }, DriverName: "Iqbal Driver", Amount: 15000, Remarks: "Monthly Salary advance payment" },
-      { Id: 2, VoucherNumber: "CR-20261115-02", Date: todayStr, PaymentType: "CashReceipt", PartyType: "Customer", Customer: { Name: "Lasbela Mining Corporation" }, Amount: 50000, Remarks: "Running bill cash clearance" },
+      { Id: 1, VoucherNumber: "CP-20261115-01", Date: todayStr, PaymentType: "CashPayment", PartyType: "Staff", StaffId: 1, Staff: { Name: "Iqbal Driver" }, DriverName: "Iqbal Driver", Amount: 15000, Remarks: "Monthly Salary advance payment" },
+      { Id: 2, VoucherNumber: "CR-20261115-02", Date: todayStr, PaymentType: "CashReceipt", PartyType: "Customer", CustomerId: 2, Customer: { Name: "Lasbela Mining Corporation" }, Amount: 50000, Remarks: "Running bill cash clearance" },
       { Id: 3, VoucherNumber: "CP-20261115-03", Date: todayStr, PaymentType: "CashPayment", PartyType: "Vehicle", GariNo: "786", DriverName: "Rashid Driver", Amount: 8000, Remarks: "Vehicle maintenance & brake shoes" },
     ],
     gariyan: [
@@ -209,8 +333,8 @@ if (!global.__memoryStore) {
       { id: 3, gariNo: "TK-404", driverName: "Farooq", malik: "Nasrullah Qasim Transport", phone: "03108444612", modelYear: "2024", capacity: "18 Ton Truck", status: "Active" },
     ],
     roznamcha: [
-      { id: 1, date: todayStr, displayDate: displayDateStr, gariNo: "786", driverName: "Rashid Driver", maal: "High Speed Diesel (HSD)", unit: "Liters", unitQuantity: 100, pricePerUnit: 285, materialAmount: 28500, dieselLiter: 100, kiraya: 55000, kharcha: 4000, otherExpenseName: "Toll Tax", otherExpenseAmount: 1500, advance: 15000, baqaya: 74000 },
-      { id: 2, date: todayStr, displayDate: displayDateStr, gariNo: "LES-992", driverName: "Iqbal Driver", maal: "Crush Stone Material", unit: "Dumpers", unitQuantity: 1, pricePerUnit: 38000, materialAmount: 38000, dieselLiter: 95, kiraya: 48000, kharcha: 3500, otherExpenseName: "Site Labour", otherExpenseAmount: 2000, advance: 12000, baqaya: 79500 },
+      { id: 1, date: todayStr, displayDate: displayDateStr, gariNo: "786", driverName: "Rashid Driver", maal: "High Speed Diesel (HSD)", unit: "Liters", unitQuantity: 100, pricePerUnit: 285, materialAmount: 28500, dieselLiter: 100, kiraya: 55000, kharcha: 4000, otherExpenseName: "Toll Tax", otherExpenseAmount: 1500, advance: 15000, baqaya: 74000, customerId: 2, customerName: "Lasbela Mining Corporation", fromLocation: "Site Area Hub Plant", toLocation: "Winder Mining Quarry", paymentStatus: "Partially Paid", paymentMethod: "Cash", paidAmount: 15000 },
+      { id: 2, date: todayStr, displayDate: displayDateStr, gariNo: "LES-992", driverName: "Iqbal Driver", maal: "Crush Stone Material", unit: "Dumpers", unitQuantity: 1, pricePerUnit: 38000, materialAmount: 38000, dieselLiter: 95, kiraya: 48000, kharcha: 3500, otherExpenseName: "Site Labour", otherExpenseAmount: 2000, advance: 12000, baqaya: 79500, customerId: 1, customerName: "Al-Madina Builders", fromLocation: "Winder Mining Quarry", toLocation: "Site Area Hub Plant", paymentStatus: "Credit / Pay Later", paymentMethod: "Credit", paidAmount: 0 },
     ],
   };
 }

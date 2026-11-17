@@ -4,6 +4,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { fetchFromCSharp } from "@/lib/csharp-client";
 import { RoznamchaSchema } from "@/lib/validations";
 import { memoryStore } from "@/lib/memory-store";
+import {
+  postCustomerTripCharge,
+  postCustomerPayment,
+  applyCustomerAdvance,
+  postCashTransaction,
+} from "@/lib/accounting";
 
 // Cache for duplicate submission prevention (stores recent hash within 5 seconds)
 const recentSubmissions = new Map<string, number>();
@@ -166,8 +172,64 @@ export async function POST(req: NextRequest) {
     otherExpenseAmount,
     advance,
     baqaya,
+
+    // Customer, Location & Payment
+    customerId: d.customerId,
+    customerName: d.customerName || (d.customerId ? memoryStore.customers.find((c) => c.Id === d.customerId)?.Name : ""),
+    fromLocation: d.fromLocation || "",
+    toLocation: d.toLocation || "",
+    deliveryAddress: d.deliveryAddress || "",
+    paymentStatus: d.paymentStatus || "Credit / Pay Later",
+    paymentMethod: d.paymentMethod || "Cash",
+    bankAccountId: d.bankAccountId,
+    paidAmount: Number(d.paidAmount) || 0,
+    advanceUsed: Number(d.advanceUsed) || 0,
   };
 
   memoryStore.roznamcha.unshift(newItem);
+
+  // Accounting Integration: Post to Customer Ledger & Cash/Bank
+  if (d.customerId) {
+    postCustomerTripCharge({
+      customerId: d.customerId,
+      date: itemDate,
+      tripRef: String(newItem.id),
+      description: `Trip #${newItem.id} - ${d.gariNo} (${d.maal || "Cargo"}) ${d.fromLocation ? `${d.fromLocation} → ` : ""}${d.toLocation || "Site"}`,
+      chargeAmount: kiraya,
+    });
+
+    if (d.paymentStatus === "Fully Paid") {
+      postCustomerPayment({
+        customerId: d.customerId,
+        date: itemDate,
+        voucherNumber: `REC-${newItem.id}`,
+        paymentAmount: kiraya,
+        paymentMethod: (d.paymentMethod === "Bank" ? "Bank" : "Cash") as "Cash" | "Bank",
+        bankAccountId: d.bankAccountId,
+        description: `Full payment received for Trip #${newItem.id}`,
+        tripRef: String(newItem.id),
+      });
+    } else if (d.paymentStatus === "Partially Paid" && Number(d.paidAmount) > 0) {
+      postCustomerPayment({
+        customerId: d.customerId,
+        date: itemDate,
+        voucherNumber: `PART-REC-${newItem.id}`,
+        paymentAmount: Number(d.paidAmount),
+        paymentMethod: (d.paymentMethod === "Bank" ? "Bank" : "Cash") as "Cash" | "Bank",
+        bankAccountId: d.bankAccountId,
+        description: `Partial payment received for Trip #${newItem.id}`,
+        tripRef: String(newItem.id),
+      });
+    } else if (d.paymentStatus === "Use Existing Customer Advance" || d.paymentStatus === "Advance Adjustment") {
+      const applyAmt = Number(d.advanceUsed) || Number(d.paidAmount) || kiraya;
+      applyCustomerAdvance({
+        customerId: d.customerId,
+        date: itemDate,
+        tripRef: String(newItem.id),
+        appliedAmount: applyAmt,
+      });
+    }
+  }
+
   return NextResponse.json(newItem, { status: 201 });
 }

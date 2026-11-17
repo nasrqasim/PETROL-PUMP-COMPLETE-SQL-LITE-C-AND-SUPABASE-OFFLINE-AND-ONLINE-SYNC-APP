@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, Search, Phone, MapPin, UserPlus, CheckCircle, X, Trash2, Edit2 } from "lucide-react";
+import { Users, Search, Phone, MapPin, UserPlus, CheckCircle, X, Trash2, Edit2, Printer } from "lucide-react";
+import { printTableDocument } from "@/lib/print-table";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -102,9 +103,41 @@ export default function CustomersPage() {
       c.Phone?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const totalBalanceDue = filtered.reduce((acc, c) => acc + Number(c.BalanceDue || 0), 0);
+  const totalAdvanceReceived = filtered.reduce((acc, c) => acc + Number(c.Advance || 0), 0);
+  const netReceivable = totalBalanceDue - totalAdvanceReceived;
+
+  const handlePrintLedger = () => {
+    printTableDocument({
+      title: "Customers & Receivables Ledger",
+      subtitle: "Customer directories, outstanding balances, advances, and contact records",
+      headers: ["#", "Customer Name", "Contact", "Address", "Balance Due", "Advance Received", "Net Status"],
+      columnAlignments: ["center", "left", "left", "left", "right", "right", "center"],
+      rows: filtered.map((c, idx) => [
+        idx + 1,
+        c.Name,
+        c.Phone || "—",
+        c.Address || "—",
+        `Rs. ${Number(c.BalanceDue || 0).toLocaleString()}`,
+        `Rs. ${Number(c.Advance || 0).toLocaleString()}`,
+        Number(c.BalanceDue || 0) > Number(c.Advance || 0) ? "Due" : Number(c.Advance || 0) > 0 ? "Advance" : "Settled",
+      ]),
+      footers: [
+        "",
+        `Grand Total (${filtered.length} Customers)`,
+        "",
+        "",
+        `Rs. ${totalBalanceDue.toLocaleString()}`,
+        `Rs. ${totalAdvanceReceived.toLocaleString()}`,
+        `Net Due: Rs. ${netReceivable.toLocaleString()}`,
+      ],
+      notes: "Software By Roonjha Developers : 03152914836 - Muslim Construction & Transport Management System",
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm no-print">
         <div>
           <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
             <Users className="w-6 h-6 text-purple-600" />
@@ -115,6 +148,14 @@ export default function CustomersPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handlePrintLedger}
+            className="btn bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2 px-3.5 flex items-center gap-1.5 shadow-sm transition"
+            title="Print entire customers ledger table"
+          >
+            <Printer className="w-4 h-4 text-amber-400" /> Print Ledger
+          </button>
           <button
             onClick={() => {
               setEditingId(null);
@@ -212,6 +253,22 @@ export default function CustomersPage() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-900">
+                <tr>
+                  <td colSpan={3} className="py-3 px-4 font-black text-slate-900 uppercase text-xs">
+                    Grand Total ({filtered.length} Customers)
+                  </td>
+                  <td className="py-3 px-4 text-right font-black text-rose-700 text-sm">
+                    Rs. {totalBalanceDue.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-right font-black text-emerald-700 text-sm">
+                    Rs. {totalAdvanceReceived.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-center text-xs font-bold text-slate-700">
+                    Net: Rs. {netReceivable.toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Building, Search, Plus, CheckCircle, X, Trash2, Edit2 } from "lucide-react";
+import { Building, Search, Plus, CheckCircle, X, Trash2, Edit2, Printer } from "lucide-react";
+import { printTableDocument } from "@/lib/print-table";
 
 export default function PurchasesPage() {
   const [purchases, setPurchases] = useState<any[]>([]);
@@ -137,9 +138,51 @@ export default function PurchasesPage() {
 
   const grandTotal = Math.max(0, form.SubTotal - form.DiscountAmount + form.TaxAmount);
 
+  const totalSubtotal = filtered.reduce((acc, p) => acc + Number(p.SubTotal || p.GrandTotal || 0), 0);
+  const totalDiscount = filtered.reduce((acc, p) => acc + Number(p.DiscountAmount || 0), 0);
+  const totalGrandTotal = filtered.reduce((acc, p) => acc + Number(p.GrandTotal || 0), 0);
+  const totalPaidAmount = filtered.reduce((acc, p) => acc + Number(p.PaidAmount || 0), 0);
+  const totalRemainingPayable = totalGrandTotal - totalPaidAmount;
+
+  const handlePrintPurchasesTable = () => {
+    printTableDocument({
+      title: "Purchases & Material Stock Inward Ledger",
+      subtitle: "Supplier purchase invoices, bulk fuel intake, stone delivery bills, and vendor payables",
+      headers: ["Bill #", "Date", "Supplier / Vendor", "Payment Mode", "Subtotal", "Discount", "Grand Total", "Paid Amount", "Balance Payable"],
+      columnAlignments: ["left", "center", "left", "center", "right", "right", "right", "right", "right"],
+      rows: filtered.map((p) => {
+        const suppName = typeof p.Supplier === "object" ? p.Supplier?.Name : p.Supplier || "Direct Vendor";
+        const bal = Math.max(0, Number(p.GrandTotal || 0) - Number(p.PaidAmount || 0));
+        return [
+          p.InvoiceNumber,
+          new Date(p.Date).toLocaleDateString(),
+          suppName,
+          p.PaymentMode || "Credit",
+          `Rs. ${Number(p.SubTotal || 0).toLocaleString()}`,
+          `Rs. ${Number(p.DiscountAmount || 0).toLocaleString()}`,
+          `Rs. ${Number(p.GrandTotal || 0).toLocaleString()}`,
+          `Rs. ${Number(p.PaidAmount || 0).toLocaleString()}`,
+          `Rs. ${bal.toLocaleString()}`,
+        ];
+      }),
+      footers: [
+        "",
+        `TOTAL (${filtered.length} PURCHASES)`,
+        "",
+        "",
+        `Rs. ${totalSubtotal.toLocaleString()}`,
+        `Rs. ${totalDiscount.toLocaleString()}`,
+        `Rs. ${totalGrandTotal.toLocaleString()}`,
+        `Rs. ${totalPaidAmount.toLocaleString()}`,
+        `Rs. ${totalRemainingPayable.toLocaleString()}`,
+      ],
+      notes: "Software By Roonjha Developers : 03152914836 - Muslim Construction & Transport Management System",
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm no-print">
         <div>
           <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
             <Building className="w-6 h-6 text-blue-600" />
@@ -150,6 +193,14 @@ export default function PurchasesPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handlePrintPurchasesTable}
+            className="btn bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2 px-3.5 flex items-center gap-1.5 shadow-sm transition"
+            title="Print purchases table ledger"
+          >
+            <Printer className="w-4 h-4 text-amber-400" /> Print Ledger
+          </button>
           <button
             onClick={() => {
               setEditingId(null);
@@ -258,6 +309,28 @@ export default function PurchasesPage() {
                   </tr>
                 ))}
               </tbody>
+              <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-900">
+                <tr>
+                  <td colSpan={4} className="py-3 px-4 font-black uppercase text-xs">
+                    Grand Total ({filtered.length} Purchases)
+                  </td>
+                  <td className="py-3 px-4 text-right font-bold text-slate-700">
+                    Rs. {totalSubtotal.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-right font-bold text-rose-600">
+                    Rs. {totalDiscount.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-right font-black text-emerald-700 text-sm">
+                    Rs. {totalGrandTotal.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-right font-black text-slate-900 text-sm">
+                    Rs. {totalPaidAmount.toLocaleString()}
+                  </td>
+                  <td className="py-3 px-4 text-center text-xs font-bold text-rose-700">
+                    Payable: Rs. {totalRemainingPayable.toLocaleString()}
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}

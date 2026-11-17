@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Tag, Search, Plus, CheckCircle, X, Trash2, Edit2 } from "lucide-react";
+import { Tag, Search, Plus, CheckCircle, X, Trash2, Edit2, Printer } from "lucide-react";
+import { printTableDocument } from "@/lib/print-table";
 
 export default function ExpensesPage() {
   const [expenses, setExpenses] = useState<any[]>([]);
@@ -105,9 +106,33 @@ export default function ExpensesPage() {
 
   const totalExpenseAmount = filtered.reduce((acc, curr) => acc + (curr.Amount || 0), 0);
 
+  const handlePrintExpensesTable = () => {
+    printTableDocument({
+      title: "Daily Project & Site Expenses Ledger",
+      subtitle: "Site fuel, generator costs, equipment repairs, toll fees, labour lunches, and daily maintenance",
+      headers: ["Date", "Expense Category", "Payment Mode", "Description / Remarks", "Amount (Rs.)"],
+      columnAlignments: ["center", "left", "center", "left", "right"],
+      rows: filtered.map((e) => [
+        new Date(e.Date).toLocaleDateString(),
+        e.Category,
+        e.PaymentMode || "Cash",
+        e.Remarks || "—",
+        `Rs. ${Number(e.Amount || 0).toLocaleString()}`,
+      ]),
+      footers: [
+        "",
+        `TOTAL (${filtered.length} EXPENSES)`,
+        "",
+        "Total Expenditures:",
+        `Rs. ${totalExpenseAmount.toLocaleString()}`,
+      ],
+      notes: "Software By Roonjha Developers : 03152914836 - Muslim Construction & Transport Management System",
+    });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-xl border border-slate-200 shadow-sm no-print">
         <div>
           <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
             <Tag className="w-6 h-6 text-rose-600" />
@@ -118,6 +143,14 @@ export default function ExpensesPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handlePrintExpensesTable}
+            className="btn bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold py-2 px-3.5 flex items-center gap-1.5 shadow-sm transition"
+            title="Print daily expenses table ledger"
+          >
+            <Printer className="w-4 h-4 text-amber-400" /> Print Ledger
+          </button>
           <button
             onClick={() => {
               setEditingId(null);
@@ -154,7 +187,7 @@ export default function ExpensesPage() {
       )}
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 no-print top-cards-box">
         <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
           <span className="text-xs text-slate-500 font-semibold block uppercase">Total Expenditures</span>
           <span className="text-2xl font-black text-rose-600">

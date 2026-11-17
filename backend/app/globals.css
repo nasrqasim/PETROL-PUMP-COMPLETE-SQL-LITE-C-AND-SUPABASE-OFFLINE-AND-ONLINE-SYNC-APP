@@ -41,10 +41,15 @@ body {
 @media print {
   /* Hide non-printable elements */
   .no-print,
+  .top-cards-box,
+  .search-filter-box,
+  .modal-overlay,
   header,
   footer,
   nav,
   button,
+  input,
+  select,
   .btn,
   .pwa-prompt {
     display: none !important;
