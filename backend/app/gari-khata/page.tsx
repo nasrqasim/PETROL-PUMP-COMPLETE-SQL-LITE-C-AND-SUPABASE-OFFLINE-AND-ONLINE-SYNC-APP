@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Truck, Printer, Calendar, User, Phone, CheckCircle, Download } from "lucide-react";
+import { Truck, Printer, Calendar, User, Phone, CheckCircle, Download, Share2 } from "lucide-react";
+import {
+  createLedgerStatementImageBlob,
+  shareOrDownloadWhatsApp,
+} from "@/lib/whatsapp-image";
 
 interface VehicleLedgerRecord {
   id: number;
@@ -143,6 +147,44 @@ export default function GariWiseKhataPage() {
     document.body.removeChild(link);
   };
 
+  const handleShareLedgerWhatsApp = async () => {
+    if (!data) return;
+    try {
+      const blob = await createLedgerStatementImageBlob({
+        title: "VEHICLE FINANCIAL KHATA",
+        subtitle: "Muslim Construction Vehicle & Trip Ledger",
+        partyName: `Vehicle #${data.gariNo} (${data.driverName})`,
+        partyPhone: data.phone || undefined,
+        dateRange: `Total Trips: ${data.totalTrips} • As of ${new Date().toLocaleDateString("en-GB")}`,
+        openingBalance: 0,
+        totalIn: Number(data.totalKiraya || 0),
+        totalOut: Number(data.totalKharcha || 0) + Number(data.totalAdvance || 0),
+        closingBalance: Number(data.baqaya || 0),
+        transactions: (data.records || []).slice(0, 10).map((r) => ({
+          date: r.displayDate || r.date,
+          voucher: `TRIP-#${r.id}`,
+          desc: `${r.driverName} - ${r.maal || "Trip Dispatch"}`,
+          inAmount: Number(r.kiraya || 0),
+          outAmount: Number(r.advance || 0),
+          balance: Number(r.runningBalance || 0),
+        })),
+      });
+
+      const filename = `Muslim-Construction-Vehicle-${data.gariNo}-Khata.png`;
+      const shareTitle = `Vehicle #${data.gariNo} Khata Statement`;
+      const shareText = `*Muslim Construction & Transport*\n*Vehicle #${data.gariNo} Khata Statement*\nDriver: *${data.driverName}*\nTotal Trips: *${data.totalTrips}*\nTotal Freight: *Rs. ${Number(data.totalKiraya || 0).toLocaleString()}*\nTotal Kharcha: *Rs. ${Number(data.totalKharcha || 0).toLocaleString()}*\nNet Baqaya: *Rs. ${Number(data.baqaya || 0).toLocaleString()}*\n\nSoftware By Roonjha Developers: 03152914836`;
+
+      await shareOrDownloadWhatsApp({
+        blob,
+        filename,
+        shareTitle,
+        shareText,
+      });
+    } catch (err: any) {
+      alert("Failed to share vehicle khata on WhatsApp: " + err.message);
+    }
+  };
+
   const records = data?.records || [];
 
   return (
@@ -159,13 +201,22 @@ export default function GariWiseKhataPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <button
+            onClick={handleShareLedgerWhatsApp}
+            className="flex-1 md:flex-none flex items-center justify-center space-x-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow transition"
+            title="Share Vehicle Statement on WhatsApp"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>WhatsApp Share</span>
+          </button>
+
           <button
             onClick={handleDownloadLedger}
             className="flex-1 md:flex-none flex items-center justify-center space-x-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-xl border border-emerald-200 transition"
           >
             <Download className="w-3.5 h-3.5" />
-            <span>Download Whole Ledger</span>
+            <span>Download CSV</span>
           </button>
 
           <button

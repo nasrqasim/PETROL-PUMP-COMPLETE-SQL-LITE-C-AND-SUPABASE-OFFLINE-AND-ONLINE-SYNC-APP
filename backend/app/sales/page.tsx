@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ShoppingCart, Search, Plus, CheckCircle, X, Trash2, Edit2, Printer } from "lucide-react";
+import { ShoppingCart, Search, Plus, CheckCircle, X, Trash2, Edit2, Printer, Share2 } from "lucide-react";
 import { printTableDocument } from "@/lib/print-table";
+import {
+  createSalesInvoiceImageBlob,
+  shareOrDownloadWhatsApp,
+} from "@/lib/whatsapp-image";
 
 export default function SalesPage() {
   const [sales, setSales] = useState<any[]>([]);
@@ -117,6 +121,37 @@ export default function SalesPage() {
       }
     } catch (err: any) {
       alert("Error deleting: " + err.message);
+    }
+  };
+
+  const handleShareInvoiceWhatsApp = async (s: any) => {
+    try {
+      const custName = typeof s.Customer === "object" ? s.Customer?.Name : s.Customer || "Walk-in Customer";
+      const blob = await createSalesInvoiceImageBlob({
+        invoiceNumber: s.InvoiceNumber || `INV-${s.Id}`,
+        date: s.Date ? new Date(s.Date).toLocaleDateString("en-GB") : new Date().toLocaleDateString("en-GB"),
+        customerName: custName,
+        paymentMode: s.PaymentMode || "Cash",
+        subtotal: Number(s.SubTotal || s.GrandTotal || 0),
+        discount: Number(s.Discount || 0),
+        grandTotal: Number(s.GrandTotal || 0),
+        paidAmount: Number(s.PaidAmount || 0),
+        remainingDue: Math.max(0, Number(s.GrandTotal || 0) - Number(s.PaidAmount || 0)),
+        remarks: s.Remarks || "Material and freight supply",
+      });
+
+      const filename = `Muslim-Construction-Invoice-${s.InvoiceNumber || s.Id}.png`;
+      const shareTitle = `Muslim Construction Invoice ${s.InvoiceNumber || s.Id}`;
+      const shareText = `*Muslim Construction & Transport Invoice*\nInvoice: *${s.InvoiceNumber || s.Id}*\nCustomer: *${custName}*\nTotal: *Rs. ${Number(s.GrandTotal || 0).toLocaleString()}*\nPaid: *Rs. ${Number(s.PaidAmount || 0).toLocaleString()}*\nDue: *Rs. ${Math.max(0, Number(s.GrandTotal || 0) - Number(s.PaidAmount || 0)).toLocaleString()}*\n\nSoftware By Roonjha Developers: 03152914836`;
+
+      await shareOrDownloadWhatsApp({
+        blob,
+        filename,
+        shareTitle,
+        shareText,
+      });
+    } catch (err: any) {
+      alert("Failed to share invoice on WhatsApp: " + err.message);
     }
   };
 
@@ -273,6 +308,13 @@ export default function SalesPage() {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex justify-center items-center gap-2">
+                        <button
+                          onClick={() => handleShareInvoiceWhatsApp(s)}
+                          className="text-emerald-600 hover:text-emerald-800 p-1 rounded hover:bg-emerald-50 transition"
+                          title="Share invoice on WhatsApp"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleEdit(s)}
                           className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition"

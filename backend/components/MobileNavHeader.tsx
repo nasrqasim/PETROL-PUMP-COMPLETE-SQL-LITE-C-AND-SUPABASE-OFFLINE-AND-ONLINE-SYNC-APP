@@ -26,6 +26,7 @@ import {
   Wallet,
   Building2,
   MapPin,
+  Navigation,
 } from "lucide-react";
 
 export function MobileNavHeader({ children }: { children: React.ReactNode }) {
@@ -77,7 +78,8 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
 
   const navLinks = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, color: "text-sky-400" },
-    { href: "/daily-ledger", label: "Daily Ledger", icon: Calendar, color: "text-amber-400", highlight: true },
+    { href: "/vehicle-tracking", label: "Vehicle Tracking", icon: Navigation, color: "text-amber-400", highlight: true },
+    { href: "/daily-ledger", label: "Daily Ledger", icon: Calendar, color: "text-amber-400" },
     { href: "/din-ka-khulasa", label: "Daily Summary", icon: BarChart3, color: "text-rose-400" },
     { href: "/gari-khata", label: "Vehicle Ledger", icon: Truck, color: "text-blue-400" },
     { href: "/driver-khata", label: "Driver Ledger", icon: UserCheck, color: "text-emerald-400" },

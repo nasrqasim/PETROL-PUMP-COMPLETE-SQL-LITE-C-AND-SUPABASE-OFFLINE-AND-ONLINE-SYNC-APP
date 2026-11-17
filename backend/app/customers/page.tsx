@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, Search, Phone, MapPin, UserPlus, CheckCircle, X, Trash2, Edit2, Printer } from "lucide-react";
+import { Users, Search, Phone, MapPin, UserPlus, CheckCircle, X, Trash2, Edit2, Printer, Share2 } from "lucide-react";
 import { printTableDocument } from "@/lib/print-table";
+import {
+  createLedgerStatementImageBlob,
+  shareOrDownloadWhatsApp,
+} from "@/lib/whatsapp-image";
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -94,6 +98,58 @@ export default function CustomersPage() {
       }
     } catch (err: any) {
       alert("Error deleting: " + err.message);
+    }
+  };
+
+  const handleShareCustomerWhatsApp = async (c: any) => {
+    try {
+      const due = Number(c.BalanceDue || 0);
+      const adv = Number(c.Advance || 0);
+      const netBalance = due - adv;
+      const blob = await createLedgerStatementImageBlob({
+        title: "CUSTOMER RECEIVABLES STATEMENT",
+        subtitle: "Muslim Construction & Transport Client Khata",
+        partyName: c.Name,
+        partyPhone: c.Phone || undefined,
+        dateRange: `As of ${new Date().toLocaleDateString("en-GB")}`,
+        openingBalance: 0,
+        totalIn: due,
+        totalOut: adv,
+        closingBalance: netBalance,
+        transactions: [
+          {
+            date: new Date().toLocaleDateString("en-GB"),
+            voucher: "CUST-DUE",
+            desc: "Current Outstanding Balance Due",
+            inAmount: due,
+            balance: due,
+          },
+          ...(adv > 0
+            ? [
+                {
+                  date: new Date().toLocaleDateString("en-GB"),
+                  voucher: "ADV-REC",
+                  desc: "Advance Deposit Received",
+                  outAmount: adv,
+                  balance: netBalance,
+                },
+              ]
+            : []),
+        ],
+      });
+
+      const filename = `Muslim-Construction-Customer-${c.Name.replace(/\s+/g, "_")}.png`;
+      const shareTitle = `Customer Ledger: ${c.Name}`;
+      const shareText = `*Muslim Construction & Transport*\n*Customer Ledger Statement: ${c.Name}*\nTotal Due: *Rs. ${due.toLocaleString()}*\nAdvance: *Rs. ${adv.toLocaleString()}*\nNet Balance: *Rs. ${netBalance.toLocaleString()}*\n\nSoftware By Roonjha Developers: 03152914836`;
+
+      await shareOrDownloadWhatsApp({
+        blob,
+        filename,
+        shareTitle,
+        shareText,
+      });
+    } catch (err: any) {
+      alert("Failed to share on WhatsApp: " + err.message);
     }
   };
 
@@ -234,6 +290,13 @@ export default function CustomersPage() {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex justify-center items-center gap-2">
+                        <button
+                          onClick={() => handleShareCustomerWhatsApp(c)}
+                          className="text-emerald-600 hover:text-emerald-800 p-1 rounded hover:bg-emerald-50 transition"
+                          title="Share statement on WhatsApp"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleEdit(c)}
                           className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition"

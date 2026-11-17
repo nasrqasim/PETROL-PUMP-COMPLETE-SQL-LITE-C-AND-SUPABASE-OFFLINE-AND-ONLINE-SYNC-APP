@@ -400,3 +400,150 @@ export function createLedgerStatementImageBlob(params: {
     }, "image/png");
   });
 }
+
+// ==========================================
+// 3. SALES & MATERIAL INVOICE RECEIPT IMAGE
+// ==========================================
+
+export function createSalesInvoiceImageBlob(inv: {
+  invoiceNumber: string;
+  date: string;
+  customerName: string;
+  paymentMode: string;
+  subtotal: number;
+  discount: number;
+  grandTotal: number;
+  paidAmount: number;
+  remainingDue: number;
+  remarks?: string;
+}): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const canvas = document.createElement("canvas");
+    const width = 600;
+    const height = 750;
+    const scale = 2;
+
+    canvas.width = width * scale;
+    canvas.height = height * scale;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return reject(new Error("Canvas context not available"));
+
+    ctx.scale(scale, scale);
+
+    // Background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, width, height);
+
+    // Header (Navy)
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(0, 0, width, 120);
+
+    ctx.fillStyle = "#f59e0b";
+    ctx.fillRect(0, 116, width, 4);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 24px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("MUSLIM CONSTRUCTION", width / 2, 45);
+
+    ctx.fillStyle = "#f59e0b";
+    ctx.font = "bold 13px Arial, sans-serif";
+    ctx.fillText("SALES & MATERIAL INVOICE", width / 2, 70);
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "11px Arial, sans-serif";
+    ctx.fillText("Construction Materials, Aggregate & Heavy Haulage", width / 2, 92);
+
+    // Invoice Meta Card
+    ctx.fillStyle = "#f8fafc";
+    ctx.fillRect(20, 135, width - 40, 50);
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.strokeRect(20, 135, width - 40, 50);
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 15px Arial, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText(`INVOICE #${inv.invoiceNumber}`, 35, 165);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "12px Arial, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(`Date: ${inv.date}`, width - 35, 165);
+
+    // Rows
+    let y = 215;
+    const drawRow = (label: string, value: string, isBold = false, valColor = "#1e293b") => {
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(20, y - 18, width - 40, 28);
+      ctx.strokeStyle = "#f1f5f9";
+      ctx.strokeRect(20, y - 18, width - 40, 28);
+
+      ctx.fillStyle = "#475569";
+      ctx.font = "12px Arial, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(label, 35, y);
+
+      ctx.fillStyle = valColor;
+      ctx.font = isBold ? "bold 13px Arial, sans-serif" : "12px Arial, sans-serif";
+      ctx.textAlign = "right";
+      ctx.fillText(value, width - 35, y);
+
+      y += 32;
+    };
+
+    drawRow("Customer Name", inv.customerName, true, "#0f172a");
+    drawRow("Payment Mode", inv.paymentMode);
+    drawRow("Subtotal Amount", `Rs. ${inv.subtotal.toLocaleString()}`);
+    if (inv.discount > 0) {
+      drawRow("Discount Allowed", `- Rs. ${inv.discount.toLocaleString()}`, false, "#b91c1c");
+    }
+    if (inv.remarks) {
+      drawRow("Remarks / Project", inv.remarks);
+    }
+
+    // Grand Total Highlight Card
+    y += 10;
+    ctx.fillStyle = "#f1f5f9";
+    ctx.fillRect(20, y - 10, width - 40, 60);
+    ctx.strokeStyle = "#cbd5e1";
+    ctx.strokeRect(20, y - 10, width - 40, 60);
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 13px Arial, sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("GRAND TOTAL", 35, y + 25);
+
+    ctx.fillStyle = "#047857";
+    ctx.font = "bold 20px Arial, sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(`Rs. ${inv.grandTotal.toLocaleString()}`, width - 35, y + 27);
+
+    // Paid & Due
+    y += 75;
+    drawRow("Paid Amount", `Rs. ${inv.paidAmount.toLocaleString()}`, true, "#047857");
+    drawRow("Remaining Due", `Rs. ${inv.remainingDue.toLocaleString()}`, true, inv.remainingDue > 0 ? "#b91c1c" : "#0f172a");
+
+    // Attribution Footer
+    y = height - 55;
+    ctx.strokeStyle = "#e2e8f0";
+    ctx.beginPath();
+    ctx.moveTo(20, y);
+    ctx.lineTo(width - 20, y);
+    ctx.stroke();
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "bold 12px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("Software By Roonjha Developers : 03152914836", width / 2, y + 26);
+
+    ctx.fillStyle = "#94a3b8";
+    ctx.font = "10px Arial, sans-serif";
+    ctx.fillText("Muslim Construction ERP • Official Invoice Record", width / 2, y + 42);
+
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error("Failed to create blob"));
+    }, "image/png");
+  });
+}

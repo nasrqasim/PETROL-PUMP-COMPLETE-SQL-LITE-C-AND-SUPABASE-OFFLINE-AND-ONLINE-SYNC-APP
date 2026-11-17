@@ -2,8 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Building, Search, Phone, MapPin, Plus, CheckCircle, X, Trash2, Edit2, Printer } from "lucide-react";
+import { Building, Search, Phone, MapPin, Plus, CheckCircle, X, Trash2, Edit2, Printer, Share2 } from "lucide-react";
 import { printTableDocument } from "@/lib/print-table";
+import {
+  createLedgerStatementImageBlob,
+  shareOrDownloadWhatsApp,
+} from "@/lib/whatsapp-image";
 
 export default function SuppliersPage() {
   const [suppliers, setSuppliers] = useState<any[]>([]);
@@ -94,6 +98,58 @@ export default function SuppliersPage() {
       }
     } catch (err: any) {
       alert("Error deleting: " + err.message);
+    }
+  };
+
+  const handleShareSupplierWhatsApp = async (s: any) => {
+    try {
+      const payable = Number(s.BalanceDue || 0);
+      const adv = Number(s.Advance || 0);
+      const netBalance = payable - adv;
+      const blob = await createLedgerStatementImageBlob({
+        title: "SUPPLIER PAYABLES STATEMENT",
+        subtitle: "Muslim Construction & Transport Vendor Khata",
+        partyName: s.Name,
+        partyPhone: s.Phone || undefined,
+        dateRange: `As of ${new Date().toLocaleDateString("en-GB")}`,
+        openingBalance: 0,
+        totalIn: payable,
+        totalOut: adv,
+        closingBalance: netBalance,
+        transactions: [
+          {
+            date: new Date().toLocaleDateString("en-GB"),
+            voucher: "SUPP-DUE",
+            desc: "Current Outstanding Balance Payable",
+            inAmount: payable,
+            balance: payable,
+          },
+          ...(adv > 0
+            ? [
+                {
+                  date: new Date().toLocaleDateString("en-GB"),
+                  voucher: "ADV-PAID",
+                  desc: "Advance Payment Disbursed",
+                  outAmount: adv,
+                  balance: netBalance,
+                },
+              ]
+            : []),
+        ],
+      });
+
+      const filename = `Muslim-Construction-Supplier-${s.Name.replace(/\s+/g, "_")}.png`;
+      const shareTitle = `Supplier Statement: ${s.Name}`;
+      const shareText = `*Muslim Construction & Transport*\n*Supplier / Vendor Statement: ${s.Name}*\nTotal Payable: *Rs. ${payable.toLocaleString()}*\nAdvance Paid: *Rs. ${adv.toLocaleString()}*\nNet Payable: *Rs. ${netBalance.toLocaleString()}*\n\nSoftware By Roonjha Developers: 03152914836`;
+
+      await shareOrDownloadWhatsApp({
+        blob,
+        filename,
+        shareTitle,
+        shareText,
+      });
+    } catch (err: any) {
+      alert("Failed to share on WhatsApp: " + err.message);
     }
   };
 
@@ -234,6 +290,13 @@ export default function SuppliersPage() {
                     </td>
                     <td className="py-3 px-4 text-center">
                       <div className="flex justify-center items-center gap-2">
+                        <button
+                          onClick={() => handleShareSupplierWhatsApp(s)}
+                          className="text-emerald-600 hover:text-emerald-800 p-1 rounded hover:bg-emerald-50 transition"
+                          title="Share statement on WhatsApp"
+                        >
+                          <Share2 className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={() => handleEdit(s)}
                           className="text-blue-600 hover:text-blue-800 p-1 rounded hover:bg-blue-50 transition"

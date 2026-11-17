@@ -478,3 +478,151 @@ export function processVoucher(v: {
   memoryStore.vouchers.unshift(voucherRecord);
   return voucherRecord;
 }
+
+// ==========================================
+// 8. VEHICLE DAILY TRACKING & TIMELINE ENGINE
+// ==========================================
+
+export function syncVehicleTrackingFromRoznamcha(entry: RoznamchaItemData): void {
+  const gUpper = entry.gariNo.trim().toUpperCase();
+  const dateStr = entry.date;
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+  const vehicle = memoryStore.gariyan.find(
+    (g) => g.gariNo.trim().toUpperCase() === gUpper
+  );
+  const vehicleName = vehicle ? `${vehicle.capacity || "Fleet Vehicle"} (${vehicle.malik})` : "Fleet Vehicle";
+
+  const startingLoc = entry.fromLocation || "Site Area Hub Plant";
+  const destination = entry.toLocation || "Site Delivery Point";
+
+  // Check if today's status already exists for this vehicle
+  let dailyStatus = memoryStore.vehicleStatuses.find(
+    (s) => s.gariNo.trim().toUpperCase() === gUpper && s.date === dateStr
+  );
+
+  if (dailyStatus) {
+    dailyStatus.tripId = entry.id;
+    dailyStatus.tripNumber = `TRIP-${String(entry.id).padStart(3, "0")}`;
+    dailyStatus.driverName = entry.driverName;
+    dailyStatus.startingLocation = startingLoc;
+    dailyStatus.destination = destination;
+    dailyStatus.currentLocation = `${startingLoc} (Dispatched)`;
+    dailyStatus.status = "On the Way";
+    dailyStatus.departureTime = timeStr;
+    dailyStatus.lastUpdated = `${dateStr} ${timeStr}`;
+    dailyStatus.updatedBy = "Roznamcha Dispatch";
+  } else {
+    dailyStatus = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      gariNo: entry.gariNo,
+      vehicleName,
+      driverName: entry.driverName,
+      date: dateStr,
+      tripId: entry.id,
+      tripNumber: `TRIP-${String(entry.id).padStart(3, "0")}`,
+      startingLocation: startingLoc,
+      currentLocation: `${startingLoc} (Dispatched)`,
+      destination: destination,
+      departureTime: timeStr,
+      status: "On the Way",
+      lastUpdated: `${dateStr} ${timeStr}`,
+      updatedBy: "Roznamcha Dispatch",
+    };
+    memoryStore.vehicleStatuses.push(dailyStatus);
+  }
+
+  // Record an immutable status timeline history event
+  const historyEvent = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    gariNo: entry.gariNo,
+    driverName: entry.driverName,
+    tripId: entry.id,
+    date: dateStr,
+    time: timeStr,
+    location: startingLoc,
+    startingLocation: startingLoc,
+    destination: destination,
+    status: "On the Way" as const,
+    remarks: `Trip recorded via Daily Roznamcha: ${entry.maal || "Material"} (${entry.unitQuantity || 1} ${entry.unit || "Cargo"}), freight Rs. ${entry.kiraya.toLocaleString()}. Moving towards ${destination}.`,
+    updatedBy: "Roznamcha Dispatch",
+    createdAt: new Date().toISOString(),
+  };
+
+  memoryStore.vehicleStatusHistory.push(historyEvent);
+}
+
+export function updateVehicleStatus(params: {
+  gariNo: string;
+  driverName?: string;
+  status: any;
+  currentLocation: string;
+  destination?: string;
+  tripId?: number;
+  remarks?: string;
+  date?: string;
+  time?: string;
+  updatedBy?: string;
+}) {
+  const gUpper = params.gariNo.trim().toUpperCase();
+  const dateStr = params.date || new Date().toISOString().split("T")[0];
+  const timeStr = params.time || new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  const updatedBy = params.updatedBy || "Operations Officer";
+
+  const vehicle = memoryStore.gariyan.find(
+    (g) => g.gariNo.trim().toUpperCase() === gUpper
+  );
+  const vehicleName = vehicle ? `${vehicle.capacity || "Fleet Vehicle"} (${vehicle.malik})` : "Fleet Vehicle";
+
+  let dailyStatus = memoryStore.vehicleStatuses.find(
+    (s) => s.gariNo.trim().toUpperCase() === gUpper && s.date === dateStr
+  );
+
+  if (dailyStatus) {
+    dailyStatus.status = params.status;
+    dailyStatus.currentLocation = params.currentLocation;
+    if (params.destination) dailyStatus.destination = params.destination;
+    if (params.driverName) dailyStatus.driverName = params.driverName;
+    if (params.tripId) dailyStatus.tripId = params.tripId;
+    dailyStatus.lastUpdated = `${dateStr} ${timeStr}`;
+    dailyStatus.updatedBy = updatedBy;
+  } else {
+    dailyStatus = {
+      id: Date.now() + Math.floor(Math.random() * 1000),
+      gariNo: params.gariNo,
+      vehicleName,
+      driverName: params.driverName || (vehicle ? vehicle.driverName : "Driver"),
+      date: dateStr,
+      tripId: params.tripId,
+      tripNumber: params.tripId ? `TRIP-${String(params.tripId).padStart(3, "0")}` : undefined,
+      startingLocation: params.currentLocation,
+      currentLocation: params.currentLocation,
+      destination: params.destination || "Base / Available",
+      status: params.status,
+      lastUpdated: `${dateStr} ${timeStr}`,
+      updatedBy: updatedBy,
+    };
+    memoryStore.vehicleStatuses.push(dailyStatus);
+  }
+
+  // Append immutable history record
+  const historyRecord = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    gariNo: params.gariNo,
+    driverName: params.driverName || dailyStatus.driverName,
+    tripId: params.tripId || dailyStatus.tripId,
+    date: dateStr,
+    time: timeStr,
+    location: params.currentLocation,
+    destination: params.destination || dailyStatus.destination,
+    startingLocation: dailyStatus.startingLocation,
+    status: params.status,
+    remarks: params.remarks || `Status updated to ${params.status} at ${params.currentLocation}`,
+    updatedBy: updatedBy,
+    createdAt: new Date().toISOString(),
+  };
+
+  memoryStore.vehicleStatusHistory.push(historyRecord);
+  return { dailyStatus, historyRecord };
+}

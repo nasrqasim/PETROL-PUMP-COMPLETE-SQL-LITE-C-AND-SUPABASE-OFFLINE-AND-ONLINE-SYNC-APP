@@ -232,6 +232,54 @@ export interface RoznamchaItemData {
   advanceUsed?: number;
 }
 
+export type VehicleTripStatus =
+  | "Available / At Base"
+  | "Loading"
+  | "Loaded / Ready to Depart"
+  | "On the Way"
+  | "At Destination"
+  | "Unloading"
+  | "Returning"
+  | "Returned to Base"
+  | "Trip Completed"
+  | "Pending"
+  | "Under Maintenance";
+
+export interface VehicleStatusHistoryRecord {
+  id: number;
+  vehicleId?: number;
+  gariNo: string;
+  driverName: string;
+  tripId?: number;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM AM/PM
+  location: string;
+  destination?: string;
+  startingLocation?: string;
+  status: VehicleTripStatus;
+  remarks?: string;
+  updatedBy: string;
+  createdAt: string;
+}
+
+export interface VehicleDailyStatusRecord {
+  id: number;
+  gariNo: string;
+  vehicleName?: string;
+  driverName: string;
+  date: string; // YYYY-MM-DD
+  tripId?: number;
+  tripNumber?: string;
+  startingLocation: string;
+  currentLocation: string;
+  destination: string;
+  departureTime?: string;
+  expectedReturn?: string;
+  status: VehicleTripStatus;
+  lastUpdated: string;
+  updatedBy: string;
+}
+
 declare global {
   var __memoryStore: {
     customers: CustomerData[];
@@ -250,6 +298,8 @@ declare global {
     vouchers: VoucherData[];
     gariyan: GariData[];
     roznamcha: RoznamchaItemData[];
+    vehicleStatuses: VehicleDailyStatusRecord[];
+    vehicleStatusHistory: VehicleStatusHistoryRecord[];
   } | undefined;
 }
 
@@ -335,6 +385,121 @@ if (!global.__memoryStore) {
     roznamcha: [
       { id: 1, date: todayStr, displayDate: displayDateStr, gariNo: "786", driverName: "Rashid Driver", maal: "High Speed Diesel (HSD)", unit: "Liters", unitQuantity: 100, pricePerUnit: 285, materialAmount: 28500, dieselLiter: 100, kiraya: 55000, kharcha: 4000, otherExpenseName: "Toll Tax", otherExpenseAmount: 1500, advance: 15000, baqaya: 74000, customerId: 2, customerName: "Lasbela Mining Corporation", fromLocation: "Site Area Hub Plant", toLocation: "Winder Mining Quarry", paymentStatus: "Partially Paid", paymentMethod: "Cash", paidAmount: 15000 },
       { id: 2, date: todayStr, displayDate: displayDateStr, gariNo: "LES-992", driverName: "Iqbal Driver", maal: "Crush Stone Material", unit: "Dumpers", unitQuantity: 1, pricePerUnit: 38000, materialAmount: 38000, dieselLiter: 95, kiraya: 48000, kharcha: 3500, otherExpenseName: "Site Labour", otherExpenseAmount: 2000, advance: 12000, baqaya: 79500, customerId: 1, customerName: "Al-Madina Builders", fromLocation: "Winder Mining Quarry", toLocation: "Site Area Hub Plant", paymentStatus: "Credit / Pay Later", paymentMethod: "Credit", paidAmount: 0 },
+    ],
+    vehicleStatuses: [
+      {
+        id: 1,
+        gariNo: "786",
+        vehicleName: "25 Ton Dumper",
+        driverName: "Rashid Driver",
+        date: todayStr,
+        tripId: 1,
+        tripNumber: "TRIP-001",
+        startingLocation: "Site Area Hub Plant",
+        currentLocation: "Winder Mining Highway (Near Lasbela Toll Plaza)",
+        destination: "Winder Mining Quarry",
+        departureTime: "08:30 AM",
+        expectedReturn: "06:00 PM",
+        status: "On the Way",
+        lastUpdated: `${todayStr} 09:45 AM`,
+        updatedBy: "Dispatch Officer (Hub Base)",
+      },
+      {
+        id: 2,
+        gariNo: "LES-992",
+        vehicleName: "30 Ton Heavy Trailer",
+        driverName: "Iqbal Driver",
+        date: todayStr,
+        tripId: 2,
+        tripNumber: "TRIP-002",
+        startingLocation: "Winder Mining Quarry",
+        currentLocation: "Site Area Hub Plant Yard",
+        destination: "Site Area Hub Plant",
+        departureTime: "09:00 AM",
+        expectedReturn: "04:30 PM",
+        status: "At Destination",
+        lastUpdated: `${todayStr} 11:15 AM`,
+        updatedBy: "Site Supervisor (Hub Yard)",
+      },
+      {
+        id: 3,
+        gariNo: "TK-404",
+        vehicleName: "18 Ton Truck",
+        driverName: "Farooq",
+        date: todayStr,
+        tripId: undefined,
+        tripNumber: undefined,
+        startingLocation: "Site Area Hub Base Yard",
+        currentLocation: "Site Area Hub Base Yard",
+        destination: "Base / Available",
+        departureTime: undefined,
+        expectedReturn: undefined,
+        status: "Available / At Base",
+        lastUpdated: `${todayStr} 07:00 AM`,
+        updatedBy: "System (Ready for Dispatch)",
+      },
+    ],
+    vehicleStatusHistory: [
+      {
+        id: 1,
+        gariNo: "786",
+        driverName: "Rashid Driver",
+        tripId: 1,
+        date: todayStr,
+        time: "08:00 AM",
+        location: "Site Area Hub Plant Yard",
+        startingLocation: "Site Area Hub Plant",
+        destination: "Winder Mining Quarry",
+        status: "Loading",
+        remarks: "Loading 100 Liters fuel tanker and project consumables.",
+        updatedBy: "Base Munshi",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 2,
+        gariNo: "786",
+        driverName: "Rashid Driver",
+        tripId: 1,
+        date: todayStr,
+        time: "08:30 AM",
+        location: "Site Area Hub Exit Gate",
+        startingLocation: "Site Area Hub Plant",
+        destination: "Winder Mining Quarry",
+        status: "On the Way",
+        remarks: "Departed from Hub base heading towards Winder quarry.",
+        updatedBy: "Dispatch Gate",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 3,
+        gariNo: "LES-992",
+        driverName: "Iqbal Driver",
+        tripId: 2,
+        date: todayStr,
+        time: "09:00 AM",
+        location: "Winder Mining Quarry",
+        startingLocation: "Winder Mining Quarry",
+        destination: "Site Area Hub Plant",
+        status: "On the Way",
+        remarks: "Loaded 1 Dumper crush stone material, moving to Hub.",
+        updatedBy: "Quarry Supervisor",
+        createdAt: new Date().toISOString(),
+      },
+      {
+        id: 4,
+        gariNo: "LES-992",
+        driverName: "Iqbal Driver",
+        tripId: 2,
+        date: todayStr,
+        time: "11:15 AM",
+        location: "Site Area Hub Plant Yard",
+        startingLocation: "Winder Mining Quarry",
+        destination: "Site Area Hub Plant",
+        status: "At Destination",
+        remarks: "Vehicle arrived at destination site, queueing for unloading.",
+        updatedBy: "Site Supervisor",
+        createdAt: new Date().toISOString(),
+      },
     ],
   };
 }

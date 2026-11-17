@@ -9,6 +9,7 @@ import {
   postCustomerPayment,
   applyCustomerAdvance,
   postCashTransaction,
+  syncVehicleTrackingFromRoznamcha,
 } from "@/lib/accounting";
 
 // Cache for duplicate submission prevention (stores recent hash within 5 seconds)
@@ -229,6 +230,13 @@ export async function POST(req: NextRequest) {
         appliedAmount: applyAmt,
       });
     }
+  }
+
+  // Automatic Vehicle Tracking Sync
+  try {
+    syncVehicleTrackingFromRoznamcha(newItem);
+  } catch (trackErr) {
+    console.error("Vehicle tracking sync warning:", trackErr);
   }
 
   return NextResponse.json(newItem, { status: 201 });

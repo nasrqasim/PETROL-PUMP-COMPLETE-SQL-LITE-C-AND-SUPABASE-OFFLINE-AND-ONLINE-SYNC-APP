@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import {
   PlusCircle,
   Search,
@@ -22,8 +23,15 @@ import {
   ArrowDownRight,
   Wallet,
   Coins,
+  Share2,
+  Navigation,
+  MapPin,
 } from "lucide-react";
 import { printTableDocument } from "@/lib/print-table";
+import {
+  createDailyEntryImageBlob,
+  shareOrDownloadWhatsApp,
+} from "@/lib/whatsapp-image";
 
 interface RoznamchaItem {
   id: number;
@@ -43,6 +51,9 @@ interface RoznamchaItem {
   otherExpenseAmount?: number;
   advance: number;
   baqaya: number;
+  fromLocation?: string;
+  toLocation?: string;
+  customerName?: string;
 }
 
 interface Gari {
@@ -99,6 +110,9 @@ export default function AajKiEntryPage() {
   const [otherExpenseName, setOtherExpenseName] = useState("");
   const [otherExpenseAmount, setOtherExpenseAmount] = useState<number | "">("");
   const [advance, setAdvance] = useState<number | "">("");
+  const [fromLocation, setFromLocation] = useState("");
+  const [toLocation, setToLocation] = useState("");
+  const [locationsList, setLocationsList] = useState<any[]>([]);
 
   // Thermal Receipt State
   const [receiptItem, setReceiptItem] = useState<RoznamchaItem | null>(null);
@@ -114,23 +128,44 @@ export default function AajKiEntryPage() {
     setLoading(true);
     setError(null);
     try {
-      const [gariRes, rozRes, prodRes] = await Promise.all([
+      const [gariRes, rozRes, prodRes, locRes] = await Promise.all([
         fetch("/api/gariyan"),
         fetch("/api/roznamcha"),
         fetch("/api/products"),
+        fetch("/api/locations").catch(() => null),
       ]);
 
       const gariData = gariRes.ok ? await gariRes.json().catch(() => []) : [];
       const rozData = rozRes.ok ? await rozRes.json().catch(() => []) : [];
       const prodData = prodRes.ok ? await prodRes.json().catch(() => []) : [];
+      const locData = locRes && locRes.ok ? await locRes.json().catch(() => []) : [];
 
       setGariyan(Array.isArray(gariData) ? gariData : []);
       setEntries(Array.isArray(rozData) ? rozData : []);
       setProducts(Array.isArray(prodData) ? prodData : []);
+      setLocationsList(Array.isArray(locData) ? locData : []);
     } catch (err: any) {
       setError(err?.message || "Failed to load data.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleShareEntryWhatsApp = async (item: RoznamchaItem) => {
+    try {
+      const blob = await createDailyEntryImageBlob(item);
+      const filename = `Muslim-Construction-Trip-${item.gariNo}-${item.date}.png`;
+      const shareTitle = `Muslim Construction Trip Receipt #${item.id}`;
+      const shareText = `*Muslim Construction Trip Receipt #${item.id}*\nVehicle: *${item.gariNo}*\nDriver: *${item.driverName}*\nRoute: *${item.fromLocation || "Site Area Hub"} → ${item.toLocation || "Destination"}*\nCargo: *${item.maal || "Material"}*\nFreight: *Rs. ${item.kiraya.toLocaleString()}*\nNet Total: *Rs. ${item.baqaya.toLocaleString()}*\n\nSoftware By Roonjha Developers: 03152914836`;
+
+      await shareOrDownloadWhatsApp({
+        blob,
+        filename,
+        shareTitle,
+        shareText,
+      });
+    } catch (err: any) {
+      alert("Failed to share on WhatsApp: " + err.message);
     }
   };
 
@@ -193,6 +228,8 @@ export default function AajKiEntryPage() {
     setOtherExpenseName("");
     setOtherExpenseAmount("");
     setAdvance("");
+    setFromLocation("");
+    setToLocation("");
   };
 
   const handleEdit = (item: RoznamchaItem) => {
@@ -200,6 +237,8 @@ export default function AajKiEntryPage() {
     setFormDate(item.date);
     setGariNo(item.gariNo);
     setDriverName(item.driverName);
+    setFromLocation(item.fromLocation || "");
+    setToLocation(item.toLocation || "");
     setMaal(item.maal);
     setUnit(item.unit || "");
     setUnitQuantity(item.unitQuantity !== undefined && item.unitQuantity !== null ? item.unitQuantity : "");
@@ -278,6 +317,8 @@ export default function AajKiEntryPage() {
       date: formDate,
       gariNo: gariNo.trim(),
       driverName: driverName.trim(),
+      fromLocation: fromLocation.trim(),
+      toLocation: toLocation.trim(),
       maal: maal.trim(),
       unit: unit.trim(),
       unitQuantity: liveUnitQty,
@@ -319,6 +360,8 @@ export default function AajKiEntryPage() {
         displayDate: new Date(payload.date).toLocaleDateString("en-GB"),
         gariNo: payload.gariNo,
         driverName: payload.driverName,
+        fromLocation: payload.fromLocation,
+        toLocation: payload.toLocation,
         maal: payload.maal,
         unit: payload.unit,
         unitQuantity: payload.unitQuantity,
@@ -588,6 +631,86 @@ export default function AajKiEntryPage() {
                 onChange={(e) => setDriverName(e.target.value)}
                 className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2.5 focus:ring-2 focus:ring-amber-500 focus:outline-none"
               />
+            </div>
+          </div>
+
+          {/* Row 1.5: Trip Route & Locations (Where Vehicle is Going) */}
+          <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-200/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Navigation className="w-3.5 h-3.5 text-amber-600" />
+                Trip Route & Dispatch Locations (Optional)
+              </span>
+              <Link
+                href="/locations"
+                className="text-[11px] text-amber-700 hover:text-amber-800 font-semibold underline flex items-center gap-1"
+              >
+                <MapPin className="w-3 h-3" />
+                <span>Manage Locations</span>
+              </Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* From Location */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs font-semibold text-slate-700">
+                    From Location (Departure / Loading)
+                  </label>
+                  {locationsList.length > 0 && (
+                    <select
+                      value=""
+                      onChange={(e) => e.target.value && setFromLocation(e.target.value)}
+                      className="text-[10px] border border-slate-300 rounded px-1.5 py-0.5 bg-white text-slate-700 cursor-pointer"
+                      title="Choose saved location"
+                    >
+                      <option value="">Saved Locations...</option>
+                      {locationsList.map((loc: any) => (
+                        <option key={loc.id} value={loc.name}>
+                          {loc.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  placeholder="e.g. Site Area Hub, Quarry, Crusher Plant"
+                  value={fromLocation}
+                  onChange={(e) => setFromLocation(e.target.value)}
+                  className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white"
+                />
+              </div>
+
+              {/* To Location */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-xs font-semibold text-slate-700">
+                    To Location (Destination / Delivery)
+                  </label>
+                  {locationsList.length > 0 && (
+                    <select
+                      value=""
+                      onChange={(e) => e.target.value && setToLocation(e.target.value)}
+                      className="text-[10px] border border-slate-300 rounded px-1.5 py-0.5 bg-white text-slate-700 cursor-pointer"
+                      title="Choose saved location"
+                    >
+                      <option value="">Saved Locations...</option>
+                      {locationsList.map((loc: any) => (
+                        <option key={loc.id} value={loc.name}>
+                          {loc.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  placeholder="e.g. Karachi Port, Bahria Town, Gwadar Project"
+                  value={toLocation}
+                  onChange={(e) => setToLocation(e.target.value)}
+                  className="w-full text-sm border border-slate-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-amber-500 focus:outline-none bg-white"
+                />
+              </div>
             </div>
           </div>
 
@@ -994,16 +1117,37 @@ export default function AajKiEntryPage() {
                 </div>
               )}
 
+              {/* Route */}
+              {(row.fromLocation || row.toLocation) && (
+                <div className="text-[11px] text-slate-700 bg-amber-50/70 border border-amber-200/60 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+                  <Navigation className="w-3 h-3 text-amber-600 flex-shrink-0" />
+                  <span className="font-semibold">{row.fromLocation || "Site Hub"}</span>
+                  <span className="text-amber-500 font-bold">→</span>
+                  <span className="font-semibold">{row.toLocation || "Destination"}</span>
+                </div>
+              )}
+
               {/* Actions Footer */}
               <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => handlePrintReceipt(row)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-slate-800 bg-amber-400 hover:bg-amber-500 rounded-lg shadow-xs"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  <span>Thermal Receipt</span>
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handlePrintReceipt(row)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-slate-800 bg-amber-400 hover:bg-amber-500 rounded-lg shadow-xs"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Receipt</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleShareEntryWhatsApp(row)}
+                    className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg border border-emerald-300 shadow-xs"
+                    title="Share Slip Image on WhatsApp"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>WhatsApp</span>
+                  </button>
+                </div>
 
                 <div className="flex gap-2">
                   <button
@@ -1069,6 +1213,12 @@ export default function AajKiEntryPage() {
                       <span className="inline-block bg-slate-100 text-slate-800 font-bold px-2 py-0.5 rounded border border-slate-200">
                         {row.gariNo}
                       </span>
+                      {(row.fromLocation || row.toLocation) && (
+                        <div className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5" title={`${row.fromLocation || "Site"} to ${row.toLocation || "Dest"}`}>
+                          <Navigation className="w-2.5 h-2.5 text-amber-600 flex-shrink-0" />
+                          <span className="truncate max-w-[120px]">{row.fromLocation || "Site"} → {row.toLocation || "Dest"}</span>
+                        </div>
+                      )}
                     </td>
                     <td className="py-2.5 px-3 text-slate-800 font-medium">{row.driverName}</td>
                     <td className="py-2.5 px-3 text-slate-600">
@@ -1113,6 +1263,13 @@ export default function AajKiEntryPage() {
                           className="p-1 hover:bg-amber-100 text-amber-700 bg-amber-50 rounded border border-amber-200"
                         >
                           <Printer className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleShareEntryWhatsApp(row)}
+                          title="Share Receipt Image on WhatsApp"
+                          className="p-1 hover:bg-emerald-100 text-emerald-700 bg-emerald-50 rounded border border-emerald-300"
+                        >
+                          <Share2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleEdit(row)}
@@ -1205,6 +1362,14 @@ export default function AajKiEntryPage() {
                   <span>Driver:</span>
                   <span className="font-bold">{receiptItem.driverName}</span>
                 </div>
+                {(receiptItem.fromLocation || receiptItem.toLocation) && (
+                  <div className="flex justify-between text-[10px]">
+                    <span>Trip Route:</span>
+                    <span className="font-bold text-right">
+                      {receiptItem.fromLocation || "Site Hub"} → {receiptItem.toLocation || "Dest"}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span>Material:</span>
                   <span className="font-semibold">{receiptItem.maal || "General Cargo"}</span>
@@ -1286,9 +1451,17 @@ export default function AajKiEntryPage() {
               <button
                 type="button"
                 onClick={() => setShowReceiptModal(false)}
-                className="flex-1 py-2 text-xs font-semibold text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-100"
+                className="py-2 px-3 text-xs font-semibold text-slate-700 border border-slate-300 rounded-lg hover:bg-slate-100"
               >
                 Close
+              </button>
+              <button
+                type="button"
+                onClick={() => receiptItem && handleShareEntryWhatsApp(receiptItem)}
+                className="flex-1 py-2 text-xs font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-lg flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <Share2 className="w-3.5 h-3.5 text-emerald-700" />
+                Share WhatsApp
               </button>
               <button
                 type="button"
@@ -1296,7 +1469,7 @@ export default function AajKiEntryPage() {
                 className="flex-1 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg flex items-center justify-center gap-1.5 shadow"
               >
                 <Printer className="w-4 h-4" />
-                Print Thermal Slip
+                Print Slip
               </button>
             </div>
           </div>
