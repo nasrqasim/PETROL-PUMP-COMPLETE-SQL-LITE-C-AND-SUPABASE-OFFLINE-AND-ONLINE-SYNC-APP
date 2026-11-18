@@ -75,19 +75,42 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     });
   }
 
-  // Recalculate running balance through filtered transactions
+  // Recalculate running balance and sequential status through filtered transactions
   let running = openingBalance;
   const transactionsWithRunning = filteredTx.map((t) => {
-    running = running + (Number(t.Debit) || 0) - (Number(t.Credit) || 0);
+    const debit = Number(t.Debit) || 0;
+    const credit = Number(t.Credit) || 0;
+    running = running + debit - credit;
+
+    const runningDue = running > 0 ? running : 0;
+    const runningAdvance = running < 0 ? Math.abs(running) : 0;
+    const status: "DUE" | "ADVANCE" | "SETTLED" =
+      running > 0 ? "DUE" : running < 0 ? "ADVANCE" : "SETTLED";
+
     return {
       ...t,
+      Debit: debit,
+      Credit: credit,
+      Charges: debit,
+      Payment: credit,
       RunningBalance: running,
+      Advance: runningAdvance,
+      Due: runningDue,
+      Status: status,
     };
   });
 
   const totalCharges = filteredTx.reduce((sum, t) => sum + (Number(t.Debit) || 0), 0);
   const totalPayments = filteredTx.reduce((sum, t) => sum + (Number(t.Credit) || 0), 0);
   const lastTxDate = allTx.length > 0 ? allTx[allTx.length - 1].Date : null;
+
+  const openingDue = openingBalance > 0 ? openingBalance : 0;
+  const openingAdvance = openingBalance < 0 ? Math.abs(openingBalance) : 0;
+  const openingStatus = openingBalance > 0 ? "DUE" : openingBalance < 0 ? "ADVANCE" : "SETTLED";
+
+  const closingDue = running > 0 ? running : 0;
+  const closingAdvance = running < 0 ? Math.abs(running) : 0;
+  const closingStatus = running > 0 ? "DUE" : running < 0 ? "ADVANCE" : "SETTLED";
 
   return NextResponse.json({
     customer: {
@@ -101,9 +124,15 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     },
     summary: {
       openingBalance,
+      openingDue,
+      openingAdvance,
+      openingStatus,
       totalCharges,
       totalPayments,
       closingBalance: running,
+      closingDue,
+      closingAdvance,
+      closingStatus,
       currentDue: Number(customer.BalanceDue) || 0,
       currentAdvance: Number(customer.Advance) || 0,
       lastTransactionDate: lastTxDate,

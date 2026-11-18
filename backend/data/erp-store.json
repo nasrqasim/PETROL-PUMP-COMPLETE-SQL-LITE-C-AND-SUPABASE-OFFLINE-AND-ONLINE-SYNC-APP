@@ -7,8 +7,8 @@
       "Address": "Site Area Hub / Karachi",
       "BalanceDue": 40000,
       "Advance": 0,
-      "CreatedAt": "2026-11-18T14:47:56.844Z",
-      "UpdatedAt": "2026-11-18T14:47:56.844Z"
+      "CreatedAt": "2026-11-18T20:27:46.907Z",
+      "UpdatedAt": "2026-11-18T20:27:46.908Z"
     },
     {
       "Id": 2,
@@ -17,8 +17,8 @@
       "Address": "Winder Lasbela",
       "BalanceDue": 120000,
       "Advance": 0,
-      "CreatedAt": "2026-11-18T14:47:56.844Z",
-      "UpdatedAt": "2026-11-18T14:47:56.844Z"
+      "CreatedAt": "2026-11-18T20:27:46.908Z",
+      "UpdatedAt": "2026-11-18T20:27:46.908Z"
     },
     {
       "Id": 3,
@@ -27,8 +27,8 @@
       "Address": "Uthal District Lasbela",
       "BalanceDue": 0,
       "Advance": 25000,
-      "CreatedAt": "2026-11-18T14:47:56.844Z",
-      "UpdatedAt": "2026-11-18T14:47:56.844Z"
+      "CreatedAt": "2026-11-18T20:27:46.908Z",
+      "UpdatedAt": "2026-11-18T20:27:46.908Z"
     }
   ],
   "suppliers": [
@@ -39,8 +39,8 @@
       "Address": "Main Hub Depot",
       "BalanceDue": 85000,
       "Advance": 0,
-      "CreatedAt": "2026-11-18T14:47:56.844Z",
-      "UpdatedAt": "2026-11-18T14:47:56.844Z"
+      "CreatedAt": "2026-11-18T20:27:46.908Z",
+      "UpdatedAt": "2026-11-18T20:27:46.908Z"
     },
     {
       "Id": 2,
@@ -49,8 +49,8 @@
       "Address": "Bhawalpur Bypass",
       "BalanceDue": 0,
       "Advance": 50000,
-      "CreatedAt": "2026-11-18T14:47:56.844Z",
-      "UpdatedAt": "2026-11-18T14:47:56.844Z"
+      "CreatedAt": "2026-11-18T20:27:46.908Z",
+      "UpdatedAt": "2026-11-18T20:27:46.908Z"
     },
     {
       "Id": 3,
@@ -59,8 +59,8 @@
       "Address": "Transport Chowk Hub",
       "BalanceDue": 34000,
       "Advance": 0,
-      "CreatedAt": "2026-11-18T14:47:56.844Z",
-      "UpdatedAt": "2026-11-18T14:47:56.844Z"
+      "CreatedAt": "2026-11-18T20:27:46.908Z",
+      "UpdatedAt": "2026-11-18T20:27:46.908Z"
     }
   ],
   "products": [
@@ -73,8 +73,8 @@
       "PurchasePrice": 270,
       "StockQuantity": 15400,
       "LowStockAlert": 2000,
-      "CreatedAt": "2026-11-18T14:47:56.844Z",
-      "UpdatedAt": "2026-11-18T14:47:56.844Z"
+      "CreatedAt": "2026-11-18T20:27:46.908Z",
+      "UpdatedAt": "2026-11-18T20:27:46.908Z"
     },
     {
       "Id": 2,
@@ -85,8 +85,8 @@
       "PurchasePrice": 265,
       "StockQuantity": 8200,
       "LowStockAlert": 1500,
-      "CreatedAt": "2026-11-18T14:47:56.844Z",
-      "UpdatedAt": "2026-11-18T14:47:56.844Z"
+      "CreatedAt": "2026-11-18T20:27:46.908Z",
+      "UpdatedAt": "2026-11-18T20:27:46.908Z"
     },
     {
       "Id": 3,
@@ -97,8 +97,8 @@
       "PurchasePrice": 1050,
       "StockQuantity": 240,
       "LowStockAlert": 20,
-      "CreatedAt": "2026-11-18T14:47:56.844Z",
-      "UpdatedAt": "2026-11-18T14:47:56.844Z"
+      "CreatedAt": "2026-11-18T20:27:46.908Z",
+      "UpdatedAt": "2026-11-18T20:27:46.908Z"
     },
     {
       "Id": 4,
@@ -109,8 +109,8 @@
       "PurchasePrice": 32000,
       "StockQuantity": 45,
       "LowStockAlert": 5,
-      "CreatedAt": "2026-11-18T14:47:56.844Z",
-      "UpdatedAt": "2026-11-18T14:47:56.844Z"
+      "CreatedAt": "2026-11-18T20:27:46.908Z",
+      "UpdatedAt": "2026-11-18T20:27:46.908Z"
     }
   ],
   "sales": [
@@ -559,7 +559,7 @@
     {
       "id": 1,
       "date": "2026-11-18",
-      "displayDate": "18/11/2026",
+      "displayDate": "19/11/2026",
       "gariNo": "786",
       "driverName": "Rashid Driver",
       "maal": "High Speed Diesel (HSD)",
@@ -585,7 +585,7 @@
     {
       "id": 2,
       "date": "2026-11-18",
-      "displayDate": "18/11/2026",
+      "displayDate": "19/11/2026",
       "gariNo": "LES-992",
       "driverName": "Iqbal Driver",
       "maal": "Crush Stone Material",
@@ -672,7 +672,7 @@
       "status": "Loading",
       "remarks": "Loading 100 Liters fuel tanker and project consumables.",
       "updatedBy": "Base Munshi",
-      "createdAt": "2026-11-18T14:47:56.844Z"
+      "createdAt": "2026-11-18T20:27:46.908Z"
     },
     {
       "id": 2,
@@ -687,7 +687,7 @@
       "status": "On the Way",
       "remarks": "Departed from Hub base heading towards Winder quarry.",
       "updatedBy": "Dispatch Gate",
-      "createdAt": "2026-11-18T14:47:56.844Z"
+      "createdAt": "2026-11-18T20:27:46.908Z"
     },
     {
       "id": 3,
@@ -702,7 +702,7 @@
       "status": "On the Way",
       "remarks": "Loaded 1 Dumper crush stone material, moving to Hub.",
       "updatedBy": "Quarry Supervisor",
-      "createdAt": "2026-11-18T14:47:56.844Z"
+      "createdAt": "2026-11-18T20:27:46.908Z"
     },
     {
       "id": 4,
@@ -717,7 +717,7 @@
       "status": "At Destination",
       "remarks": "Vehicle arrived at destination site, queueing for unloading.",
       "updatedBy": "Site Supervisor",
-      "createdAt": "2026-11-18T14:47:56.844Z"
+      "createdAt": "2026-11-18T20:27:46.908Z"
     }
   ],
   "companySettings": {
@@ -730,7 +730,7 @@
     "logoUrl": "/icons/icon-192x192.png",
     "permanentCredit": "Software By Roonjha Developers : 03152914836",
     "developerAttribution": "Software By Roonjha Developers : 03152914836",
-    "updatedAt": "2026-11-18T14:47:56.844Z"
+    "updatedAt": "2026-11-18T20:27:46.908Z"
   },
   "auditLogs": [
     {
@@ -743,7 +743,7 @@
       "details": "Cash payment of Rs. 5,000 received from Al-Madina Builders. Balance reduced to Rs. 40,000.",
       "oldValue": "BalanceDue: 45000",
       "newValue": "BalanceDue: 40000",
-      "timestamp": "2026-11-18T14:47:56.844Z",
+      "timestamp": "2026-11-18T20:27:46.908Z",
       "reference": "CR-20261117-05"
     },
     {
@@ -753,7 +753,7 @@
       "action": "SYSTEM_INIT",
       "module": "Authentication",
       "details": "System security audit and trial account initialization completed.",
-      "timestamp": "2026-11-18T14:47:56.844Z"
+      "timestamp": "2026-11-18T20:27:46.908Z"
     }
   ]
 }

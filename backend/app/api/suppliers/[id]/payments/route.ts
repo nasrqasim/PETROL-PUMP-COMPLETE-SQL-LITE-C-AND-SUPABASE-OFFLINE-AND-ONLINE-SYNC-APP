@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { memoryStore } from "@/lib/memory-store";
-import { postSupplierPayment } from "@/lib/accounting";
+import { postSupplierPayment, postSupplierRefund } from "@/lib/accounting";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const suppId = Number(params.id);
@@ -32,19 +32,40 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const date = body.date || new Date().toISOString().split("T")[0];
+  const isInflow =
+    body.isInflow === true ||
+    body.type === "refundIn" ||
+    body.type === "refund" ||
+    body.paymentType === "RefundIn" ||
+    body.paymentType === "CashReceipt" ||
+    body.paymentType === "BankReceipt";
+
   const voucherNumber =
     body.voucherNumber?.trim() ||
-    `CP-${date.replace(/-/g, "")}-${Math.floor(100 + Math.random() * 900)}`;
+    `${isInflow ? (paymentMethod === "Cash" ? "CR" : "BR") : (paymentMethod === "Cash" ? "CP" : "BP")}-${date.replace(/-/g, "")}-${Math.floor(100 + Math.random() * 900)}`;
 
-  const result = postSupplierPayment({
-    supplierId: suppId,
-    date,
-    voucherNumber,
-    paymentAmount: amount,
-    paymentMethod,
-    bankAccountId,
-    description: body.narration || body.description || `Payment disbursed to ${supplier.Name}`,
-  });
+  let result: any;
+  if (isInflow) {
+    result = postSupplierRefund({
+      supplierId: suppId,
+      date,
+      voucherNumber,
+      amount,
+      paymentMethod,
+      bankAccountId,
+      description: body.narration || body.description || `Refund received from supplier ${supplier.Name}`,
+    });
+  } else {
+    result = postSupplierPayment({
+      supplierId: suppId,
+      date,
+      voucherNumber,
+      paymentAmount: amount,
+      paymentMethod,
+      bankAccountId,
+      description: body.narration || body.description || `Payment disbursed to ${supplier.Name}`,
+    });
+  }
 
   return NextResponse.json({
     success: true,

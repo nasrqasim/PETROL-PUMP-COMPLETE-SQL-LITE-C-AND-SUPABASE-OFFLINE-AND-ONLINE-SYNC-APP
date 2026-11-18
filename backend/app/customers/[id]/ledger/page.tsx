@@ -45,6 +45,7 @@ export default function CustomerLedgerPage() {
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
   const [paymentForm, setPaymentForm] = useState({
+    nature: "inflow" as "inflow" | "outflow",
     amount: "",
     paymentMethod: "Cash" as "Cash" | "Bank",
     bankAccountId: "",
@@ -96,28 +97,64 @@ export default function CustomerLedgerPage() {
     printTableDocument({
       title: `${data.customer.name} — Customer Ledger Statement`,
       subtitle: `Contact: ${data.customer.phone} | Location: ${data.customer.address} | Period: ${filter.toUpperCase()}`,
-      headers: ["#", "Date", "Voucher #", "Description", "Ref", "Debit (Charges)", "Credit (Paid)", "Running Balance", "Mode"],
-      columnAlignments: ["center", "center", "left", "left", "center", "right", "right", "right", "center"],
+      headers: [
+        "#",
+        "Date",
+        "Voucher #",
+        "Description",
+        "Ref",
+        "Charges",
+        "Payment",
+        "Advance",
+        "Due",
+        "Running Balance",
+        "Status",
+        "Mode",
+      ],
+      columnAlignments: [
+        "center",
+        "center",
+        "left",
+        "left",
+        "center",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right",
+        "center",
+        "center",
+      ],
       rows: (data.transactions || []).map((t: any, idx: number) => [
         idx + 1,
         t.Date,
         t.VoucherNumber,
         t.Description,
         t.TripRef || "—",
-        Number(t.Debit || 0) > 0 ? `Rs. ${Number(t.Debit).toLocaleString()}` : "—",
-        Number(t.Credit || 0) > 0 ? `Rs. ${Number(t.Credit).toLocaleString()}` : "—",
+        Number(t.Charges || t.Debit || 0) > 0 ? `Rs. ${Number(t.Charges || t.Debit).toLocaleString()}` : "—",
+        Number(t.Payment || t.Credit || 0) > 0 ? `Rs. ${Number(t.Payment || t.Credit).toLocaleString()}` : "—",
+        Number(t.Advance || 0) > 0 ? `Rs. ${Number(t.Advance).toLocaleString()}` : "—",
+        Number(t.Due || 0) > 0 ? `Rs. ${Number(t.Due).toLocaleString()}` : "—",
         `Rs. ${Number(t.RunningBalance || 0).toLocaleString()}`,
+        t.Status || (Number(t.RunningBalance || 0) > 0 ? "DUE" : Number(t.RunningBalance || 0) < 0 ? "ADVANCE" : "SETTLED"),
         t.PaymentMethod || "Credit",
       ]),
       footers: [
         "",
         "",
         "",
-        `Closing Balance (Due: Rs. ${data.summary.currentDue.toLocaleString()} | Advance: Rs. ${data.summary.currentAdvance.toLocaleString()})`,
+        `Closing Balance (Net: Rs. ${Number(data.summary.closingBalance || 0).toLocaleString()})`,
         "",
-        `Rs. ${data.summary.totalCharges.toLocaleString()}`,
-        `Rs. ${data.summary.totalPayments.toLocaleString()}`,
-        `Rs. ${data.summary.closingBalance.toLocaleString()}`,
+        `Rs. ${Number(data.summary.totalCharges || 0).toLocaleString()}`,
+        `Rs. ${Number(data.summary.totalPayments || 0).toLocaleString()}`,
+        Number(data.summary.closingAdvance || data.summary.currentAdvance || 0) > 0
+          ? `Rs. ${Number(data.summary.closingAdvance || data.summary.currentAdvance).toLocaleString()}`
+          : "—",
+        Number(data.summary.closingDue || data.summary.currentDue || 0) > 0
+          ? `Rs. ${Number(data.summary.closingDue || data.summary.currentDue).toLocaleString()}`
+          : "—",
+        `Rs. ${Number(data.summary.closingBalance || 0).toLocaleString()}`,
+        data.summary.closingStatus || "SETTLED",
         "",
       ],
     });
@@ -125,16 +162,32 @@ export default function CustomerLedgerPage() {
 
   const handleExportCSV = () => {
     if (!data || !data.transactions?.length) return;
-    const headers = ["Index", "Date", "VoucherNumber", "Description", "Reference", "Debit", "Credit", "RunningBalance", "PaymentMethod"];
+    const headers = [
+      "Index",
+      "Date",
+      "VoucherNumber",
+      "Description",
+      "Reference",
+      "Charges",
+      "Payment",
+      "Advance",
+      "Due",
+      "RunningBalance",
+      "Status",
+      "PaymentMethod",
+    ];
     const rows = data.transactions.map((t: any, idx: number) => [
       idx + 1,
       `"${t.Date}"`,
       `"${t.VoucherNumber}"`,
       `"${(t.Description || "").replace(/"/g, '""')}"`,
       `"${t.TripRef || ""}"`,
-      t.Debit || 0,
-      t.Credit || 0,
+      t.Charges || t.Debit || 0,
+      t.Payment || t.Credit || 0,
+      t.Advance || 0,
+      t.Due || 0,
       t.RunningBalance || 0,
+      `"${t.Status || ""}"`,
       `"${t.PaymentMethod || ""}"`,
     ]);
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r: any) => r.join(","))].join("\n");
@@ -164,15 +217,15 @@ export default function CustomerLedgerPage() {
           date: t.Date,
           voucher: t.VoucherNumber,
           desc: t.Description,
-          inAmount: Number(t.Debit) || 0,
-          outAmount: Number(t.Credit) || 0,
+          inAmount: Number(t.Charges || t.Debit) || 0,
+          outAmount: Number(t.Payment || t.Credit) || 0,
           balance: Number(t.RunningBalance) || 0,
         })),
       });
 
       const filename = `Customer-${data.customer.name.replace(/\s+/g, "_")}-Ledger.png`;
       const shareTitle = `${data.customer.name} - Ledger Statement`;
-      const shareText = `*Muslim Construction & Transport*\n*Customer Ledger: ${data.customer.name}*\nBalance Due: *Rs. ${data.summary.currentDue.toLocaleString()}*\nAdvance: *Rs. ${data.summary.currentAdvance.toLocaleString()}*\nNet Balance: *Rs. ${data.summary.closingBalance.toLocaleString()}*\n\nSoftware By Roonjha Developers: 03152914836`;
+      const shareText = `*Muslim Construction & Transport*\n*Customer Ledger: ${data.customer.name}*\nBalance Due: *Rs. ${Number(data.summary.currentDue || 0).toLocaleString()}*\nAdvance: *Rs. ${Number(data.summary.currentAdvance || 0).toLocaleString()}*\nNet Balance: *Rs. ${Number(data.summary.closingBalance || 0).toLocaleString()}*\nStatus: *${data.summary.closingStatus || "SETTLED"}*\n\nSoftware By Roonjha Developers: 03152914836`;
 
       await shareOrDownloadWhatsApp({
         blob,
@@ -193,17 +246,19 @@ export default function CustomerLedgerPage() {
       return;
     }
     if (paymentForm.paymentMethod === "Bank" && !paymentForm.bankAccountId) {
-      alert("Please select a receiving bank account.");
+      alert("Please select a bank account.");
       return;
     }
 
     setPaymentSubmitting(true);
     try {
+      const isOut = paymentForm.nature === "outflow";
       const res = await fetch(`/api/customers/${customerId}/payments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: amt,
+          isOutflow: isOut,
           paymentMethod: paymentForm.paymentMethod,
           bankAccountId: paymentForm.bankAccountId,
           date: paymentForm.date,
@@ -218,11 +273,16 @@ export default function CustomerLedgerPage() {
         throw new Error(errJson.error || "Failed to post payment.");
       }
 
-      setPaymentSuccess(`Payment of Rs. ${amt.toLocaleString()} recorded successfully!`);
+      setPaymentSuccess(
+        isOut
+          ? `Disbursement of Rs. ${amt.toLocaleString()} paid to customer successfully!`
+          : `Payment of Rs. ${amt.toLocaleString()} recorded successfully!`
+      );
       setTimeout(() => {
         setPaymentSuccess(null);
         setShowPaymentModal(false);
         setPaymentForm({
+          nature: "inflow",
           amount: "",
           paymentMethod: "Cash",
           bankAccountId: "",
@@ -240,7 +300,7 @@ export default function CustomerLedgerPage() {
     }
   };
 
-  // Preview calculations for Receive Payment form
+  // Preview calculations for Receive/Disburse Payment form
   const inputAmt = parseFloat(paymentForm.amount) || 0;
   const currentDueVal = data?.summary?.currentDue || 0;
   const currentAdvVal = data?.summary?.currentAdvance || 0;
@@ -248,11 +308,28 @@ export default function CustomerLedgerPage() {
   let previewAdvance = currentAdvVal;
 
   if (inputAmt > 0) {
-    if (inputAmt <= currentDueVal) {
-      previewDue = currentDueVal - inputAmt;
+    if (paymentForm.nature === "inflow") {
+      if (inputAmt <= currentDueVal) {
+        previewDue = currentDueVal - inputAmt;
+        previewAdvance = currentAdvVal;
+      } else {
+        previewDue = 0;
+        previewAdvance = currentAdvVal + (inputAmt - currentDueVal);
+      }
     } else {
-      previewDue = 0;
-      previewAdvance = currentAdvVal + (inputAmt - currentDueVal);
+      // Outflow / disbursement to customer
+      if (currentAdvVal > 0) {
+        if (inputAmt <= currentAdvVal) {
+          previewAdvance = currentAdvVal - inputAmt;
+          previewDue = 0;
+        } else {
+          previewAdvance = 0;
+          previewDue = currentDueVal + (inputAmt - currentAdvVal);
+        }
+      } else {
+        previewDue = currentDueVal + inputAmt;
+        previewAdvance = 0;
+      }
     }
   }
 
@@ -457,46 +534,72 @@ export default function CustomerLedgerPage() {
                 <th className="py-3 px-3">Voucher / Entry #</th>
                 <th className="py-3 px-3">Description / Narration</th>
                 <th className="py-3 px-3">Trip Ref</th>
-                <th className="py-3 px-3 text-right">Debit (Charges)</th>
-                <th className="py-3 px-3 text-right">Credit (Paid)</th>
+                <th className="py-3 px-3 text-right">Charges</th>
+                <th className="py-3 px-3 text-right">Payment</th>
+                <th className="py-3 px-3 text-right text-emerald-400">Advance</th>
+                <th className="py-3 px-3 text-right text-rose-400">Due</th>
                 <th className="py-3 px-3 text-right">Running Balance</th>
-                <th className="py-3 px-3 text-center">Payment Method</th>
+                <th className="py-3 px-3 text-center">Status</th>
+                <th className="py-3 px-3 text-center">Mode</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400">
+                  <td colSpan={11} className="py-8 text-center text-slate-400">
                     Loading customer ledger records...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-rose-500 font-bold">
+                  <td colSpan={11} className="py-8 text-center text-rose-500 font-bold">
                     {error}
                   </td>
                 </tr>
               ) : !data?.transactions || data.transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400">
+                  <td colSpan={11} className="py-8 text-center text-slate-400">
                     No transactions found in this date period.
                   </td>
                 </tr>
               ) : (
                 data.transactions.map((tx: any) => (
                   <tr key={tx.Id} className="hover:bg-slate-50 transition">
-                    <td className="py-2.5 px-3 font-medium text-slate-700">{tx.Date}</td>
-                    <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{tx.VoucherNumber}</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-700 whitespace-nowrap">{tx.Date}</td>
+                    <td className="py-2.5 px-3 font-mono font-bold text-slate-800 whitespace-nowrap">{tx.VoucherNumber}</td>
                     <td className="py-2.5 px-3 text-slate-700">{tx.Description}</td>
-                    <td className="py-2.5 px-3 font-mono text-slate-500">{tx.TripRef || "—"}</td>
-                    <td className="py-2.5 px-3 text-right font-semibold text-rose-700">
-                      {Number(tx.Debit || 0) > 0 ? `Rs. ${Number(tx.Debit).toLocaleString()}` : "—"}
+                    <td className="py-2.5 px-3 font-mono text-slate-500 whitespace-nowrap">{tx.TripRef || "—"}</td>
+                    <td className="py-2.5 px-3 text-right font-semibold text-slate-800">
+                      {Number(tx.Charges || tx.Debit || 0) > 0 ? `Rs. ${Number(tx.Charges || tx.Debit).toLocaleString()}` : "—"}
                     </td>
-                    <td className="py-2.5 px-3 text-right font-semibold text-emerald-700">
-                      {Number(tx.Credit || 0) > 0 ? `Rs. ${Number(tx.Credit).toLocaleString()}` : "—"}
+                    <td className="py-2.5 px-3 text-right font-semibold text-slate-800">
+                      {Number(tx.Payment || tx.Credit || 0) > 0 ? `Rs. ${Number(tx.Payment || tx.Credit).toLocaleString()}` : "—"}
                     </td>
-                    <td className="py-2.5 px-3 text-right font-black text-slate-900">
+                    <td className="py-2.5 px-3 text-right font-black text-emerald-700">
+                      {Number(tx.Advance || 0) > 0 ? `Rs. ${Number(tx.Advance).toLocaleString()}` : "—"}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-black text-rose-700">
+                      {Number(tx.Due || 0) > 0 ? `Rs. ${Number(tx.Due).toLocaleString()}` : "—"}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-black text-slate-900 font-mono">
                       Rs. {Number(tx.RunningBalance || 0).toLocaleString()}
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      {tx.Status === "DUE" || (!tx.Status && Number(tx.RunningBalance || 0) > 0) ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                          DUE
+                        </span>
+                      ) : tx.Status === "ADVANCE" || (!tx.Status && Number(tx.RunningBalance || 0) < 0) ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                          ADVANCE
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                          SETTLED
+                        </span>
+                      )}
                     </td>
                     <td className="py-2.5 px-3 text-center">
                       <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
@@ -511,16 +614,39 @@ export default function CustomerLedgerPage() {
               <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-900 text-xs">
                 <tr>
                   <td colSpan={4} className="py-3 px-3 uppercase font-black text-[11px]">
-                    Period Totals
-                  </td>
-                  <td className="py-3 px-3 text-right font-black text-rose-700">
-                    Rs. {Number(data.summary.totalCharges || 0).toLocaleString()}
-                  </td>
-                  <td className="py-3 px-3 text-right font-black text-emerald-700">
-                    Rs. {Number(data.summary.totalPayments || 0).toLocaleString()}
+                    Closing Position Summary
                   </td>
                   <td className="py-3 px-3 text-right font-black text-slate-900">
+                    Rs. {Number(data.summary.totalCharges || 0).toLocaleString()}
+                  </td>
+                  <td className="py-3 px-3 text-right font-black text-slate-900">
+                    Rs. {Number(data.summary.totalPayments || 0).toLocaleString()}
+                  </td>
+                  <td className="py-3 px-3 text-right font-black text-emerald-700">
+                    {Number(data.summary.closingAdvance ?? data.summary.currentAdvance ?? 0) > 0
+                      ? `Rs. ${Number(data.summary.closingAdvance ?? data.summary.currentAdvance).toLocaleString()}`
+                      : "—"}
+                  </td>
+                  <td className="py-3 px-3 text-right font-black text-rose-700">
+                    {Number(data.summary.closingDue ?? data.summary.currentDue ?? 0) > 0
+                      ? `Rs. ${Number(data.summary.closingDue ?? data.summary.currentDue).toLocaleString()}`
+                      : "—"}
+                  </td>
+                  <td className="py-3 px-3 text-right font-black text-slate-900 font-mono">
                     Rs. {Number(data.summary.closingBalance || 0).toLocaleString()}
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        (data.summary.closingStatus || "SETTLED") === "DUE"
+                          ? "bg-rose-100 text-rose-800"
+                          : (data.summary.closingStatus || "SETTLED") === "ADVANCE"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {data.summary.closingStatus || "SETTLED"}
+                    </span>
                   </td>
                   <td></td>
                 </tr>
@@ -530,7 +656,7 @@ export default function CustomerLedgerPage() {
         </div>
       </div>
 
-      {/* RECEIVE PAYMENT MODAL */}
+      {/* RECEIVE / DISBURSE PAYMENT MODAL */}
       {showPaymentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95">
@@ -538,7 +664,7 @@ export default function CustomerLedgerPage() {
               <div>
                 <h3 className="font-bold text-base flex items-center gap-2">
                   <Coins className="w-4 h-4 text-emerald-400" />
-                  <span>Receive Customer Payment</span>
+                  <span>Record Customer Payment / Voucher</span>
                 </h3>
                 <p className="text-[11px] text-slate-400">
                   Customer: <strong>{data?.customer?.name}</strong>
@@ -556,11 +682,40 @@ export default function CustomerLedgerPage() {
             {paymentSuccess ? (
               <div className="p-8 text-center space-y-3">
                 <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
-                <h4 className="font-black text-base text-slate-800">Payment Successfully Recorded!</h4>
+                <h4 className="font-black text-base text-slate-800">Recorded Successfully!</h4>
                 <p className="text-xs text-slate-600">{paymentSuccess}</p>
               </div>
             ) : (
               <form onSubmit={handleReceivePaymentSubmit} className="p-6 space-y-4 text-xs">
+                {/* Transaction Nature Toggle */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Transaction Nature *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentForm({ ...paymentForm, nature: "inflow" })}
+                      className={`py-2 rounded-xl font-bold border transition text-center ${
+                        paymentForm.nature === "inflow"
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                          : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      + Receive Payment (Inflow)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentForm({ ...paymentForm, nature: "outflow" })}
+                      className={`py-2 rounded-xl font-bold border transition text-center ${
+                        paymentForm.nature === "outflow"
+                          ? "bg-rose-600 text-white border-rose-600 shadow-xs"
+                          : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      - Pay Customer / Outflow
+                    </button>
+                  </div>
+                </div>
+
                 {/* Outstanding & Advance Summary */}
                 <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <div>
@@ -580,7 +735,7 @@ export default function CustomerLedgerPage() {
                 {/* Amount */}
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    Payment Amount (Rs.) <span className="text-rose-500">*</span>
+                    Amount (Rs.) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -598,11 +753,11 @@ export default function CustomerLedgerPage() {
                 {inputAmt > 0 && (
                   <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-slate-800 space-y-1">
                     <div className="flex justify-between">
-                      <span>Remaining Due After Payment:</span>
+                      <span>{paymentForm.nature === "inflow" ? "Remaining Due After Payment:" : "New Due After Outflow:"}</span>
                       <strong className="text-rose-700">Rs. {previewDue.toLocaleString()}</strong>
                     </div>
                     <div className="flex justify-between">
-                      <span>New Advance Credit:</span>
+                      <span>{paymentForm.nature === "inflow" ? "New Advance Credit:" : "Remaining Advance Credit:"}</span>
                       <strong className="text-emerald-700">Rs. {previewAdvance.toLocaleString()}</strong>
                     </div>
                   </div>
@@ -626,7 +781,9 @@ export default function CustomerLedgerPage() {
 
                   {paymentForm.paymentMethod === "Bank" ? (
                     <div>
-                      <label className="block font-bold text-slate-700 mb-1">Receiving Bank *</label>
+                      <label className="block font-bold text-slate-700 mb-1">
+                        {paymentForm.nature === "inflow" ? "Receiving Bank *" : "Disbursing Bank *"}
+                      </label>
                       <select
                         required
                         value={paymentForm.bankAccountId}
@@ -657,7 +814,7 @@ export default function CustomerLedgerPage() {
                 {/* Payment Date & Reference */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-bold text-slate-700 mb-1">Payment Date</label>
+                    <label className="block font-bold text-slate-700 mb-1">Transaction Date</label>
                     <input
                       type="date"
                       value={paymentForm.date}
@@ -700,9 +857,17 @@ export default function CustomerLedgerPage() {
                   <button
                     type="submit"
                     disabled={paymentSubmitting}
-                    className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black shadow transition disabled:opacity-50"
+                    className={`px-6 py-2 rounded-xl font-black shadow transition disabled:opacity-50 text-white ${
+                      paymentForm.nature === "inflow"
+                        ? "bg-emerald-600 hover:bg-emerald-700"
+                        : "bg-rose-600 hover:bg-rose-700"
+                    }`}
                   >
-                    {paymentSubmitting ? "Saving Receipt..." : "Save Payment Receipt"}
+                    {paymentSubmitting
+                      ? "Recording..."
+                      : paymentForm.nature === "inflow"
+                      ? "Save Payment Receipt"
+                      : "Disburse Payment Out"}
                   </button>
                 </div>
               </form>

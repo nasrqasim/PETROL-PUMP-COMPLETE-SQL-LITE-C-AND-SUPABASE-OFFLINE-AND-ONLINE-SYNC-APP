@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { memoryStore } from "@/lib/memory-store";
-import { postCustomerPayment } from "@/lib/accounting";
+import { postCustomerPayment, postCustomerDisbursement } from "@/lib/accounting";
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const custId = Number(params.id);
@@ -32,20 +32,41 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   const date = body.date || new Date().toISOString().split("T")[0];
+  const isOutflow =
+    body.isOutflow === true ||
+    body.type === "paymentOut" ||
+    body.type === "disbursement" ||
+    body.paymentType === "PaymentOut" ||
+    body.paymentType === "CashPayment" ||
+    body.paymentType === "BankPayment";
+
   const voucherNumber =
     body.voucherNumber?.trim() ||
-    `CR-${date.replace(/-/g, "")}-${Math.floor(100 + Math.random() * 900)}`;
+    `${isOutflow ? (paymentMethod === "Cash" ? "CP" : "BP") : (paymentMethod === "Cash" ? "CR" : "BR")}-${date.replace(/-/g, "")}-${Math.floor(100 + Math.random() * 900)}`;
 
-  const result = postCustomerPayment({
-    customerId: custId,
-    date,
-    voucherNumber,
-    paymentAmount: amount,
-    paymentMethod,
-    bankAccountId,
-    description: body.narration || body.description || `Payment received from ${customer.Name}`,
-    tripRef: body.referenceNumber || body.tripRef,
-  });
+  let result: any;
+  if (isOutflow) {
+    result = postCustomerDisbursement({
+      customerId: custId,
+      date,
+      voucherNumber,
+      amount,
+      paymentMethod,
+      bankAccountId,
+      description: body.narration || body.description || `Payment disbursed to customer ${customer.Name}`,
+    });
+  } else {
+    result = postCustomerPayment({
+      customerId: custId,
+      date,
+      voucherNumber,
+      paymentAmount: amount,
+      paymentMethod,
+      bankAccountId,
+      description: body.narration || body.description || `Payment received from ${customer.Name}`,
+      tripRef: body.referenceNumber || body.tripRef,
+    });
+  }
 
   return NextResponse.json({
     success: true,

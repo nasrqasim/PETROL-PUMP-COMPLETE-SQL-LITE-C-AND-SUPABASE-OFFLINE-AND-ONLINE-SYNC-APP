@@ -62,9 +62,17 @@ export default function CashManagementPage() {
   // New Cash Voucher Modal
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [staffList, setStaffList] = useState<any[]>([]);
+  const [gariyan, setGariyan] = useState<any[]>([]);
   const [form, setForm] = useState({
     VoucherType: "CashReceipt",
     TransactionType: "Customer Receipt",
+    CustomerId: "",
+    SupplierId: "",
+    StaffId: "",
+    GariNo: "",
     Amount: "",
     Remarks: "",
     Reference: "",
@@ -74,9 +82,26 @@ export default function CashManagementPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/cash");
+      const [res, cRes, sRes, stRes, gRes] = await Promise.all([
+        fetch("/api/cash"),
+        fetch("/api/customers"),
+        fetch("/api/suppliers"),
+        fetch("/api/staff"),
+        fetch("/api/gariyan"),
+      ]);
       if (!res.ok) throw new Error("Failed to load cash ledger.");
       const data = await res.json();
+      const [cData, sData, stData, gData] = await Promise.all([
+        cRes.ok ? cRes.json().catch(() => []) : [],
+        sRes.ok ? sRes.json().catch(() => []) : [],
+        stRes.ok ? stRes.json().catch(() => []) : [],
+        gRes.ok ? gRes.json().catch(() => []) : [],
+      ]);
+      setCustomers(Array.isArray(cData) ? cData : []);
+      setSuppliers(Array.isArray(sData) ? sData : []);
+      setStaffList(Array.isArray(stData) ? stData : []);
+      setGariyan(Array.isArray(gData) ? gData : []);
+
       setCurrentBalance(data.currentBalance || 0);
       setTotalCashIn(data.totalCashIn || 0);
       setTotalCashOut(data.totalCashOut || 0);
@@ -154,6 +179,29 @@ export default function CashManagementPage() {
       return;
     }
 
+    let partyType = "General";
+    if (form.TransactionType.includes("Customer")) partyType = "Customer";
+    else if (form.TransactionType.includes("Supplier")) partyType = "Supplier";
+    else if (form.TransactionType.includes("Staff")) partyType = "Staff";
+    else if (form.TransactionType.includes("Vehicle")) partyType = "Vehicle";
+
+    if (partyType === "Customer" && !form.CustomerId) {
+      alert("Please select a customer.");
+      return;
+    }
+    if (partyType === "Supplier" && !form.SupplierId) {
+      alert("Please select a supplier.");
+      return;
+    }
+    if (partyType === "Staff" && !form.StaffId) {
+      alert("Please select a staff member.");
+      return;
+    }
+    if (partyType === "Vehicle" && !form.GariNo) {
+      alert("Please select a vehicle.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const res = await fetch("/api/vouchers", {
@@ -161,7 +209,11 @@ export default function CashManagementPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           PaymentType: form.VoucherType,
-          PartyType: "General",
+          PartyType: partyType,
+          CustomerId: form.CustomerId ? Number(form.CustomerId) : undefined,
+          SupplierId: form.SupplierId ? Number(form.SupplierId) : undefined,
+          StaffId: form.StaffId ? Number(form.StaffId) : undefined,
+          GariNo: form.GariNo || undefined,
           Amount: amt,
           Remarks: form.Remarks || form.TransactionType,
         }),
@@ -174,6 +226,10 @@ export default function CashManagementPage() {
       setForm({
         VoucherType: "CashReceipt",
         TransactionType: "Customer Receipt",
+        CustomerId: "",
+        SupplierId: "",
+        StaffId: "",
+        GariNo: "",
         Amount: "",
         Remarks: "",
         Reference: "",
@@ -559,10 +615,16 @@ export default function CashManagementPage() {
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setForm({ ...form, VoucherType: "CashReceipt" })}
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        VoucherType: "CashReceipt",
+                        TransactionType: "Customer Receipt",
+                      })
+                    }
                     className={`py-2 rounded-xl font-bold border transition ${
                       form.VoucherType === "CashReceipt"
-                        ? "bg-emerald-600 text-white border-emerald-600"
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
                         : "bg-slate-50 text-slate-700 border-slate-200"
                     }`}
                   >
@@ -570,10 +632,16 @@ export default function CashManagementPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setForm({ ...form, VoucherType: "CashPayment" })}
+                    onClick={() =>
+                      setForm({
+                        ...form,
+                        VoucherType: "CashPayment",
+                        TransactionType: "Customer Payment",
+                      })
+                    }
                     className={`py-2 rounded-xl font-bold border transition ${
                       form.VoucherType === "CashPayment"
-                        ? "bg-rose-600 text-white border-rose-600"
+                        ? "bg-rose-600 text-white border-rose-600 shadow-xs"
                         : "bg-slate-50 text-slate-700 border-slate-200"
                     }`}
                   >
@@ -589,14 +657,100 @@ export default function CashManagementPage() {
                   onChange={(e) => setForm({ ...form, TransactionType: e.target.value })}
                   className="w-full border border-slate-300 rounded-xl px-3 py-2 bg-white"
                 >
-                  <option value="Customer Receipt">Customer Cash Receipt</option>
-                  <option value="Supplier Payment">Supplier Cash Payment</option>
-                  <option value="Staff Payment">Staff Salary / Advance</option>
-                  <option value="Vehicle Expense">Vehicle Cash Expense</option>
-                  <option value="Expense">General Site Expense</option>
-                  <option value="Other Income">Other Income</option>
+                  {form.VoucherType === "CashReceipt" ? (
+                    <>
+                      <option value="Customer Receipt">Customer Cash Receipt</option>
+                      <option value="Supplier Refund">Supplier Cash Refund</option>
+                      <option value="Other Income">Other Income</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="Customer Payment">Customer Cash Payment (Outflow)</option>
+                      <option value="Supplier Payment">Supplier Cash Payment</option>
+                      <option value="Staff Payment">Staff Salary / Advance</option>
+                      <option value="Vehicle Expense">Vehicle Cash Expense</option>
+                      <option value="Expense">General Site Expense</option>
+                    </>
+                  )}
                 </select>
               </div>
+
+              {/* Conditional Party Selectors */}
+              {(form.TransactionType === "Customer Receipt" || form.TransactionType === "Customer Payment") && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Select Customer *</label>
+                  <select
+                    required
+                    value={form.CustomerId}
+                    onChange={(e) => setForm({ ...form, CustomerId: e.target.value })}
+                    className="w-full border border-amber-300 rounded-xl px-3 py-2 bg-amber-50/40 font-semibold"
+                  >
+                    <option value="">Choose Customer...</option>
+                    {customers.map((c) => (
+                      <option key={c.Id} value={String(c.Id)}>
+                        {c.Name} (Due: Rs. {Number(c.BalanceDue || 0).toLocaleString()} | Adv: Rs. {Number(c.Advance || 0).toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {(form.TransactionType === "Supplier Payment" || form.TransactionType === "Supplier Refund") && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Select Supplier / Vendor *</label>
+                  <select
+                    required
+                    value={form.SupplierId}
+                    onChange={(e) => setForm({ ...form, SupplierId: e.target.value })}
+                    className="w-full border border-indigo-300 rounded-xl px-3 py-2 bg-indigo-50/40 font-semibold"
+                  >
+                    <option value="">Choose Supplier...</option>
+                    {suppliers.map((s) => (
+                      <option key={s.Id} value={String(s.Id)}>
+                        {s.Name} (Payable: Rs. {Number(s.BalanceDue || 0).toLocaleString()} | Adv: Rs. {Number(s.Advance || 0).toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {form.TransactionType === "Staff Payment" && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Select Staff Member *</label>
+                  <select
+                    required
+                    value={form.StaffId}
+                    onChange={(e) => setForm({ ...form, StaffId: e.target.value })}
+                    className="w-full border border-slate-300 rounded-xl px-3 py-2 bg-slate-50 font-semibold"
+                  >
+                    <option value="">Choose Staff...</option>
+                    {staffList.map((st) => (
+                      <option key={st.Id} value={String(st.Id)}>
+                        {st.Name} ({st.Designation || "Employee"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {form.TransactionType === "Vehicle Expense" && (
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Select Vehicle *</label>
+                  <select
+                    required
+                    value={form.GariNo}
+                    onChange={(e) => setForm({ ...form, GariNo: e.target.value })}
+                    className="w-full border border-slate-300 rounded-xl px-3 py-2 bg-slate-50 font-semibold"
+                  >
+                    <option value="">Choose Vehicle...</option>
+                    {gariyan.map((g, idx) => (
+                      <option key={idx} value={g.gariNo}>
+                        #{g.gariNo} - {g.malik} ({g.capacity || "Fleet"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Amount (Rs.) *</label>

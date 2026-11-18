@@ -12,7 +12,11 @@
 import { memoryStore } from "../lib/memory-store";
 import {
   postCustomerPayment,
+  postCustomerDisbursement,
   postSupplierPayment,
+  postSupplierRefund,
+  processVoucher,
+  postCustomerTripCharge,
   reconcileCustomerBalance,
   reconcileSupplierBalance,
   reconcileCashBalance,
@@ -457,6 +461,301 @@ async function runTests() {
   assert(
     !memoryStore.roznamcha.find((r) => r.id === rozId),
     "Roznamcha DELETE: Successfully deleted roznamcha entry"
+  );
+  console.log();
+
+  // --------------------------------------------------------------------------
+  // TEST SCENARIO G: Customer Cash / Bank Payment (Outflow) & Advance / Due Integration
+  // --------------------------------------------------------------------------
+  console.log("👉 SCENARIO G: Customer Cash / Bank Payment (Outflow) - Examples A, B, C, D, E");
+
+  // Example A: Customer already has due (Due: 10,000, Adv: 0). Pay 5,000 -> Due: 15,000, Adv: 0, Status: DUE
+  const custA_id = 1001;
+  memoryStore.customers.push({
+    Id: custA_id,
+    Name: "Test Customer A (Due Balance)",
+    BalanceDue: 10000,
+    Advance: 0,
+    Phone: "0300-1111111",
+  } as any);
+
+  postCustomerDisbursement({
+    customerId: custA_id,
+    amount: 5000,
+    paymentMethod: "Cash",
+    date: "2026-11-18",
+    description: "Example A: Cash Paid to Customer",
+  });
+
+  const custA = memoryStore.customers.find((c) => c.Id === custA_id)!;
+  assert(
+    custA.BalanceDue === 15000 && custA.Advance === 0,
+    "Example A: Customer Due increased from Rs. 10,000 to Rs. 15,000 (Advance: 0)",
+    `Actual Due: ${custA.BalanceDue}, Advance: ${custA.Advance}`
+  );
+
+  // Example B: Customer has advance (Adv: 10,000, Due: 0). Pay 5,000 -> Adv: 5,000, Due: 0, Status: ADVANCE
+  const custB_id = 1002;
+  memoryStore.customers.push({
+    Id: custB_id,
+    Name: "Test Customer B (Advance Balance)",
+    BalanceDue: 0,
+    Advance: 10000,
+    Phone: "0300-2222222",
+  } as any);
+
+  postCustomerDisbursement({
+    customerId: custB_id,
+    amount: 5000,
+    paymentMethod: "Cash",
+    date: "2026-11-18",
+    description: "Example B: Cash Paid to Customer with Advance",
+  });
+
+  const custB = memoryStore.customers.find((c) => c.Id === custB_id)!;
+  assert(
+    custB.Advance === 5000 && custB.BalanceDue === 0,
+    "Example B: Customer Advance reduced from Rs. 10,000 to Rs. 5,000 (Due: 0)",
+    `Actual Advance: ${custB.Advance}, Due: ${custB.BalanceDue}`
+  );
+
+  // Example C: Customer has no balance (Due: 0, Adv: 0). Pay 5,000 Bank -> Due: 5,000, Adv: 0, Status: DUE
+  const custC_id = 1003;
+  memoryStore.customers.push({
+    Id: custC_id,
+    Name: "Test Customer C (Zero Balance)",
+    BalanceDue: 0,
+    Advance: 0,
+    Phone: "0300-3333333",
+  } as any);
+
+  postCustomerDisbursement({
+    customerId: custC_id,
+    amount: 5000,
+    paymentMethod: "Bank",
+    bankAccountId: 1,
+    date: "2026-11-18",
+    description: "Example C: Bank Payment to Customer with Zero Balance",
+  });
+
+  const custC = memoryStore.customers.find((c) => c.Id === custC_id)!;
+  assert(
+    custC.BalanceDue === 5000 && custC.Advance === 0,
+    "Example C: Customer Due becomes Rs. 5,000 (Advance: 0)",
+    `Actual Due: ${custC.BalanceDue}, Advance: ${custC.Advance}`
+  );
+
+  // Example D: Customer has Due Rs. 10,000. Customer pays us Rs. 5,000 -> Due: 5,000, Adv: 0, Status: DUE
+  const custD_id = 1004;
+  memoryStore.customers.push({
+    Id: custD_id,
+    Name: "Test Customer D (Due Payment)",
+    BalanceDue: 10000,
+    Advance: 0,
+    Phone: "0300-4444444",
+  } as any);
+
+  postCustomerPayment({
+    customerId: custD_id,
+    paymentAmount: 5000,
+    paymentMethod: "Cash",
+    date: "2026-11-18",
+    description: "Example D: Cash Receipt from Customer",
+  });
+
+  const custD = memoryStore.customers.find((c) => c.Id === custD_id)!;
+  assert(
+    custD.BalanceDue === 5000 && custD.Advance === 0,
+    "Example D: Customer Due reduced from Rs. 10,000 to Rs. 5,000 (Advance: 0)",
+    `Actual Due: ${custD.BalanceDue}, Advance: ${custD.Advance}`
+  );
+
+  // Example E: Customer has Advance Rs. 2,000. We pay Rs. 5,000 -> Adv consumed (0), Due: 3,000, Status: DUE
+  const custE_id = 1005;
+  memoryStore.customers.push({
+    Id: custE_id,
+    Name: "Test Customer E (Partial Advance)",
+    BalanceDue: 0,
+    Advance: 2000,
+    Phone: "0300-5555555",
+  } as any);
+
+  postCustomerDisbursement({
+    customerId: custE_id,
+    amount: 5000,
+    paymentMethod: "Cash",
+    date: "2026-11-18",
+    description: "Example E: Cash Paid exceeding Customer Advance",
+  });
+
+  const custE = memoryStore.customers.find((c) => c.Id === custE_id)!;
+  assert(
+    custE.Advance === 0 && custE.BalanceDue === 3000,
+    "Example E: Advance consumed (0), remaining excess becomes Due Rs. 3,000",
+    `Actual Advance: ${custE.Advance}, Due: ${custE.BalanceDue}`
+  );
+
+  // Test processVoucher pipeline routing for Customer Cash Payment
+  const prevCustADue = custA.BalanceDue;
+  processVoucher({
+    VoucherNumber: "CP-TEST-VOUCHER-01",
+    Date: "2026-11-18",
+    PaymentType: "CashPayment",
+    PartyType: "Customer",
+    CustomerId: custA_id,
+    Amount: 2000,
+    Remarks: "processVoucher customer disbursement integration test",
+  });
+  assert(
+    custA.BalanceDue === prevCustADue + 2000,
+    "processVoucher correctly updates customer ledger & balance on CashPayment",
+    `Expected: ${prevCustADue + 2000}, Actual: ${custA.BalanceDue}`
+  );
+  console.log();
+
+  // --------------------------------------------------------------------------
+  // TEST SCENARIO H: Sequential Running Advance / Due / Status Recalculation
+  // --------------------------------------------------------------------------
+  console.log("👉 SCENARIO H: Sequential Ledger Advance / Due / Status (Prompt Example 3)");
+
+  const custH_id = 1006;
+  memoryStore.customers.push({
+    Id: custH_id,
+    Name: "Sequential Ledger Verification Customer",
+    BalanceDue: 0,
+    Advance: 0,
+    Phone: "0300-6666666",
+  } as any);
+
+  // Step 1: TRIP-101: Charges Rs. 85,500
+  postCustomerTripCharge({
+    customerId: custH_id,
+    chargeAmount: 85500,
+    date: "2026-11-15",
+    tripRef: "TRIP-101",
+    description: "Trip 101 Freight Charges",
+  });
+  const custH = memoryStore.customers.find((c) => c.Id === custH_id)!;
+  assert(
+    custH.BalanceDue === 85500 && custH.Advance === 0,
+    "Step 1: TRIP-101 -> Due: Rs. 85,500, Advance: 0, Status: DUE"
+  );
+
+  // Step 2: CR-101: Payment Rs. 40,500
+  postCustomerPayment({
+    customerId: custH_id,
+    paymentAmount: 40500,
+    voucherNumber: "CR-101",
+    date: "2026-11-16",
+    paymentMethod: "Cash",
+    description: "Payment CR-101",
+  });
+  assert(
+    custH.BalanceDue === 45000 && custH.Advance === 0,
+    "Step 2: CR-101 (Rs. 40,500) -> Due: Rs. 45,000, Advance: 0, Status: DUE"
+  );
+
+  // Step 3: CR-20261117-05: Payment Rs. 5,000
+  postCustomerPayment({
+    customerId: custH_id,
+    paymentAmount: 5000,
+    voucherNumber: "CR-20261117-05",
+    date: "2026-11-17",
+    paymentMethod: "Cash",
+    description: "Payment CR-20261117-05",
+  });
+  assert(
+    custH.BalanceDue === 40000 && custH.Advance === 0,
+    "Step 3: CR-20261117-05 (Rs. 5,000) -> Due: Rs. 40,000, Advance: 0, Status: DUE"
+  );
+
+  // Step 4: Additional Payment: Rs. 45,000 (exceeds Rs. 40,000 due by Rs. 5,000)
+  postCustomerPayment({
+    customerId: custH_id,
+    paymentAmount: 45000,
+    voucherNumber: "CR-ADDITIONAL-01",
+    date: "2026-11-18",
+    paymentMethod: "Bank",
+    bankAccountId: 1,
+    description: "Additional payment exceeding due",
+  });
+  assert(
+    custH.BalanceDue === 0 && custH.Advance === 5000,
+    "Step 4: Additional Payment (Rs. 45,000) -> Due: 0, Advance: Rs. 5,000, Status: ADVANCE"
+  );
+
+  // Check ledger entries sequential invariants
+  const hLedger = memoryStore.customerLedgers.filter((l) => l.CustomerId === custH_id);
+  assert(hLedger.length === 4, `Customer H has exactly 4 ledger entries (actual: ${hLedger.length})`);
+
+  let hRunning = 0;
+  for (let i = 0; i < hLedger.length; i++) {
+    const entry = hLedger[i];
+    hRunning += (Number(entry.Debit) || 0) - (Number(entry.Credit) || 0);
+    const due = hRunning > 0 ? hRunning : 0;
+    const advance = hRunning < 0 ? Math.abs(hRunning) : 0;
+    const status = hRunning > 0 ? "DUE" : hRunning < 0 ? "ADVANCE" : "SETTLED";
+
+    assert(
+      !(due > 0 && advance > 0),
+      `Sequential Invariant: Entry ${i + 1} (${entry.VoucherNumber || entry.TripRef}) has mutually exclusive Advance and Due`
+    );
+    if (i === 0) {
+      assert(due === 85500 && advance === 0 && status === "DUE", "Entry 1: Advance: —, Due: 85,500, Status: DUE");
+    } else if (i === 1) {
+      assert(due === 45000 && advance === 0 && status === "DUE", "Entry 2: Advance: —, Due: 45,000, Status: DUE");
+    } else if (i === 2) {
+      assert(due === 40000 && advance === 0 && status === "DUE", "Entry 3: Advance: —, Due: 40,000, Status: DUE");
+    } else if (i === 3) {
+      assert(due === 0 && advance === 5000 && status === "ADVANCE", "Entry 4: Advance: 5,000, Due: —, Status: ADVANCE");
+    }
+  }
+  console.log();
+
+  // --------------------------------------------------------------------------
+  // TEST SCENARIO I: Supplier Refund & Inflow Pipeline Integration
+  // --------------------------------------------------------------------------
+  console.log("👉 SCENARIO I: Supplier Refund & Inflow Pipeline Integration");
+
+  const suppI_id = 2001;
+  memoryStore.suppliers.push({
+    Id: suppI_id,
+    Name: "Test Fuel Supplier I",
+    BalanceDue: 0,
+    Advance: 15000,
+    Phone: "0321-9999999",
+  } as any);
+
+  // Supplier gives refund of Rs. 5,000 (reduces advance we paid them)
+  postSupplierRefund({
+    supplierId: suppI_id,
+    amount: 5000,
+    paymentMethod: "Cash",
+    date: "2026-11-18",
+    description: "Fuel deposit refund",
+  });
+
+  const suppI = memoryStore.suppliers.find((s) => s.Id === suppI_id)!;
+  assert(
+    suppI.Advance === 10000 && suppI.BalanceDue === 0,
+    "Supplier refund reduced Advance from Rs. 15,000 to Rs. 10,000",
+    `Actual Advance: ${suppI.Advance}, Due: ${suppI.BalanceDue}`
+  );
+
+  // Test processVoucher pipeline routing for Supplier Cash Receipt (Refund)
+  processVoucher({
+    VoucherNumber: "CR-SUPP-REFUND-01",
+    Date: "2026-11-18",
+    PaymentType: "CashReceipt",
+    PartyType: "Supplier",
+    SupplierId: suppI_id,
+    Amount: 2000,
+    Remarks: "processVoucher supplier refund integration test",
+  });
+  assert(
+    suppI.Advance === 8000,
+    "processVoucher correctly updates supplier ledger & advance on CashReceipt",
+    `Expected Advance: 8,000, Actual: ${suppI.Advance}`
   );
   console.log();
 

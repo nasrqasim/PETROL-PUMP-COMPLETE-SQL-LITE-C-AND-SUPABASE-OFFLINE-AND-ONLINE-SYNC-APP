@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { fetchFromCSharp } from "@/lib/csharp-client";
 import { RoznamchaSchema } from "@/lib/validations";
-import { memoryStore } from "@/lib/memory-store";
+import { memoryStore, persistStore } from "@/lib/memory-store";
 import {
   postCustomerTripCharge,
   postCustomerPayment,
@@ -238,6 +238,8 @@ export async function POST(req: NextRequest) {
   } catch (trackErr) {
     console.error("Vehicle tracking sync warning:", trackErr);
   }
+
+  persistStore();
 
   return NextResponse.json(newItem, { status: 201 });
 }

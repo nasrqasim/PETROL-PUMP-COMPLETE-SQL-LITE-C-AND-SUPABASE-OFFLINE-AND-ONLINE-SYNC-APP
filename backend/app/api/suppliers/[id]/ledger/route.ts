@@ -77,16 +77,39 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   let running = openingBalance;
   const transactionsWithRunning = filteredTx.map((t) => {
-    running = running + (Number(t.Credit) || 0) - (Number(t.Debit) || 0);
+    const purchases = Number(t.Credit) || 0;
+    const payments = Number(t.Debit) || 0;
+    running = running + purchases - payments;
+
+    const runningDue = running > 0 ? running : 0;
+    const runningAdvance = running < 0 ? Math.abs(running) : 0;
+    const status: "DUE" | "ADVANCE" | "SETTLED" =
+      running > 0 ? "DUE" : running < 0 ? "ADVANCE" : "SETTLED";
+
     return {
       ...t,
+      Debit: payments,
+      Credit: purchases,
+      Purchases: purchases,
+      Payment: payments,
       RunningBalance: running,
+      Advance: runningAdvance,
+      Due: runningDue,
+      Status: status,
     };
   });
 
   const totalPurchases = filteredTx.reduce((sum, t) => sum + (Number(t.Credit) || 0), 0);
   const totalPayments = filteredTx.reduce((sum, t) => sum + (Number(t.Debit) || 0), 0);
   const lastTxDate = allTx.length > 0 ? allTx[allTx.length - 1].Date : null;
+
+  const openingDue = openingBalance > 0 ? openingBalance : 0;
+  const openingAdvance = openingBalance < 0 ? Math.abs(openingBalance) : 0;
+  const openingStatus = openingBalance > 0 ? "DUE" : openingBalance < 0 ? "ADVANCE" : "SETTLED";
+
+  const closingDue = running > 0 ? running : 0;
+  const closingAdvance = running < 0 ? Math.abs(running) : 0;
+  const closingStatus = running > 0 ? "DUE" : running < 0 ? "ADVANCE" : "SETTLED";
 
   return NextResponse.json({
     supplier: {
@@ -100,9 +123,16 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     },
     summary: {
       openingBalance,
+      openingDue,
+      openingAdvance,
+      openingStatus,
       totalPurchases,
       totalPayments,
       closingPayable: running,
+      closingBalance: running,
+      closingDue,
+      closingAdvance,
+      closingStatus,
       currentPayable: Number(supplier.BalanceDue) || 0,
       currentAdvance: Number(supplier.Advance) || 0,
       lastTransactionDate: lastTxDate,

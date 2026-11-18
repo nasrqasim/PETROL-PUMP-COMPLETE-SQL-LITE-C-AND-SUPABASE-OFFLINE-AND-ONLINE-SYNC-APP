@@ -45,6 +45,7 @@ export default function SupplierLedgerPage() {
   const [paymentSubmitting, setPaymentSubmitting] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
   const [paymentForm, setPaymentForm] = useState({
+    nature: "outflow" as "outflow" | "inflow",
     amount: "",
     paymentMethod: "Cash" as "Cash" | "Bank",
     bankAccountId: "",
@@ -96,26 +97,60 @@ export default function SupplierLedgerPage() {
     printTableDocument({
       title: `${data.supplier.name} — Supplier & Vendor Ledger Statement`,
       subtitle: `Contact: ${data.supplier.phone} | Address: ${data.supplier.address} | Period: ${filter.toUpperCase()}`,
-      headers: ["#", "Date", "Voucher #", "Description", "Debit (Paid)", "Credit (Purchases)", "Running Payable", "Mode"],
-      columnAlignments: ["center", "center", "left", "left", "right", "right", "right", "center"],
+      headers: [
+        "#",
+        "Date",
+        "Voucher #",
+        "Description",
+        "Purchases",
+        "Payment Paid",
+        "Advance",
+        "Payable Due",
+        "Running Balance",
+        "Status",
+        "Mode",
+      ],
+      columnAlignments: [
+        "center",
+        "center",
+        "left",
+        "left",
+        "right",
+        "right",
+        "right",
+        "right",
+        "right",
+        "center",
+        "center",
+      ],
       rows: (data.transactions || []).map((t: any, idx: number) => [
         idx + 1,
         t.Date,
         t.VoucherNumber,
         t.Description,
-        Number(t.Debit || 0) > 0 ? `Rs. ${Number(t.Debit).toLocaleString()}` : "—",
-        Number(t.Credit || 0) > 0 ? `Rs. ${Number(t.Credit).toLocaleString()}` : "—",
+        Number(t.Purchases || t.Credit || 0) > 0 ? `Rs. ${Number(t.Purchases || t.Credit).toLocaleString()}` : "—",
+        Number(t.Payment || t.Debit || 0) > 0 ? `Rs. ${Number(t.Payment || t.Debit).toLocaleString()}` : "—",
+        Number(t.Advance || 0) > 0 ? `Rs. ${Number(t.Advance).toLocaleString()}` : "—",
+        Number(t.Due || 0) > 0 ? `Rs. ${Number(t.Due).toLocaleString()}` : "—",
         `Rs. ${Number(t.RunningBalance || 0).toLocaleString()}`,
+        t.Status || (Number(t.RunningBalance || 0) > 0 ? "DUE" : Number(t.RunningBalance || 0) < 0 ? "ADVANCE" : "SETTLED"),
         t.PaymentMethod || "Cash",
       ]),
       footers: [
         "",
         "",
         "",
-        `Closing Payable (Balance Due: Rs. ${data.summary.currentPayable.toLocaleString()} | Advance: Rs. ${data.summary.currentAdvance.toLocaleString()})`,
-        `Rs. ${data.summary.totalPayments.toLocaleString()}`,
-        `Rs. ${data.summary.totalPurchases.toLocaleString()}`,
-        `Rs. ${data.summary.closingPayable.toLocaleString()}`,
+        `Closing Position (Net: Rs. ${Number(data.summary.closingPayable || data.summary.closingBalance || 0).toLocaleString()})`,
+        `Rs. ${Number(data.summary.totalPurchases || 0).toLocaleString()}`,
+        `Rs. ${Number(data.summary.totalPayments || 0).toLocaleString()}`,
+        Number(data.summary.closingAdvance ?? data.summary.currentAdvance ?? 0) > 0
+          ? `Rs. ${Number(data.summary.closingAdvance ?? data.summary.currentAdvance).toLocaleString()}`
+          : "—",
+        Number(data.summary.closingDue ?? data.summary.currentPayable ?? 0) > 0
+          ? `Rs. ${Number(data.summary.closingDue ?? data.summary.currentPayable).toLocaleString()}`
+          : "—",
+        `Rs. ${Number(data.summary.closingPayable || data.summary.closingBalance || 0).toLocaleString()}`,
+        data.summary.closingStatus || "SETTLED",
         "",
       ],
     });
@@ -123,15 +158,30 @@ export default function SupplierLedgerPage() {
 
   const handleExportCSV = () => {
     if (!data || !data.transactions?.length) return;
-    const headers = ["Index", "Date", "VoucherNumber", "Description", "Debit_Paid", "Credit_Purchases", "RunningPayable", "PaymentMethod"];
+    const headers = [
+      "Index",
+      "Date",
+      "VoucherNumber",
+      "Description",
+      "Purchases",
+      "PaymentPaid",
+      "Advance",
+      "PayableDue",
+      "RunningBalance",
+      "Status",
+      "PaymentMethod",
+    ];
     const rows = data.transactions.map((t: any, idx: number) => [
       idx + 1,
       `"${t.Date}"`,
       `"${t.VoucherNumber}"`,
       `"${(t.Description || "").replace(/"/g, '""')}"`,
-      t.Debit || 0,
-      t.Credit || 0,
+      t.Purchases || t.Credit || 0,
+      t.Payment || t.Debit || 0,
+      t.Advance || 0,
+      t.Due || 0,
       t.RunningBalance || 0,
+      `"${t.Status || ""}"`,
       `"${t.PaymentMethod || ""}"`,
     ]);
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r: any) => r.join(","))].join("\n");
@@ -161,15 +211,15 @@ export default function SupplierLedgerPage() {
           date: t.Date,
           voucher: t.VoucherNumber,
           desc: t.Description,
-          inAmount: Number(t.Credit) || 0,
-          outAmount: Number(t.Debit) || 0,
+          inAmount: Number(t.Purchases || t.Credit) || 0,
+          outAmount: Number(t.Payment || t.Debit) || 0,
           balance: Number(t.RunningBalance) || 0,
         })),
       });
 
       const filename = `Supplier-${data.supplier.name.replace(/\s+/g, "_")}-Statement.png`;
       const shareTitle = `${data.supplier.name} - Statement`;
-      const shareText = `*Muslim Construction & Transport*\n*Supplier / Vendor Statement: ${data.supplier.name}*\nPayable Due: *Rs. ${data.summary.currentPayable.toLocaleString()}*\nAdvance Paid: *Rs. ${data.summary.currentAdvance.toLocaleString()}*\nNet Payable: *Rs. ${data.summary.closingPayable.toLocaleString()}*\n\nSoftware By Roonjha Developers: 03152914836`;
+      const shareText = `*Muslim Construction & Transport*\n*Supplier / Vendor Statement: ${data.supplier.name}*\nPayable Due: *Rs. ${Number(data.summary.currentPayable || 0).toLocaleString()}*\nAdvance Paid: *Rs. ${Number(data.summary.currentAdvance || 0).toLocaleString()}*\nNet Payable: *Rs. ${Number(data.summary.closingPayable || 0).toLocaleString()}*\nStatus: *${data.summary.closingStatus || "SETTLED"}*\n\nSoftware By Roonjha Developers: 03152914836`;
 
       await shareOrDownloadWhatsApp({
         blob,
@@ -186,21 +236,23 @@ export default function SupplierLedgerPage() {
     e.preventDefault();
     const amt = parseFloat(paymentForm.amount);
     if (!amt || amt <= 0) {
-      alert("Please enter a valid disbursement amount.");
+      alert("Please enter a valid amount.");
       return;
     }
     if (paymentForm.paymentMethod === "Bank" && !paymentForm.bankAccountId) {
-      alert("Please select a disbursing bank account.");
+      alert("Please select a bank account.");
       return;
     }
 
     setPaymentSubmitting(true);
     try {
+      const isIn = paymentForm.nature === "inflow";
       const res = await fetch(`/api/suppliers/${supplierId}/payments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: amt,
+          isInflow: isIn,
           paymentMethod: paymentForm.paymentMethod,
           bankAccountId: paymentForm.bankAccountId,
           date: paymentForm.date,
@@ -212,14 +264,19 @@ export default function SupplierLedgerPage() {
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "Failed to disburse payment.");
+        throw new Error(errJson.error || "Failed to post transaction.");
       }
 
-      setPaymentSuccess(`Disbursed Rs. ${amt.toLocaleString()} to ${data.supplier.name} successfully!`);
+      setPaymentSuccess(
+        isIn
+          ? `Recorded refund of Rs. ${amt.toLocaleString()} from ${data.supplier.name} successfully!`
+          : `Disbursed Rs. ${amt.toLocaleString()} to ${data.supplier.name} successfully!`
+      );
       setTimeout(() => {
         setPaymentSuccess(null);
         setShowPaymentModal(false);
         setPaymentForm({
+          nature: "outflow",
           amount: "",
           paymentMethod: "Cash",
           bankAccountId: "",
@@ -245,11 +302,29 @@ export default function SupplierLedgerPage() {
   let previewAdvance = currentAdvVal;
 
   if (inputAmt > 0) {
-    if (inputAmt <= currentPayableVal) {
-      previewPayable = currentPayableVal - inputAmt;
+    if (paymentForm.nature === "outflow") {
+      // Disbursing money to supplier
+      if (inputAmt <= currentPayableVal) {
+        previewPayable = currentPayableVal - inputAmt;
+        previewAdvance = currentAdvVal;
+      } else {
+        previewPayable = 0;
+        previewAdvance = currentAdvVal + (inputAmt - currentPayableVal);
+      }
     } else {
-      previewPayable = 0;
-      previewAdvance = currentAdvVal + (inputAmt - currentPayableVal);
+      // Inflow / refund from supplier
+      if (currentAdvVal > 0) {
+        if (inputAmt <= currentAdvVal) {
+          previewAdvance = currentAdvVal - inputAmt;
+          previewPayable = 0;
+        } else {
+          previewAdvance = 0;
+          previewPayable = currentPayableVal + (inputAmt - currentAdvVal);
+        }
+      } else {
+        previewPayable = currentPayableVal + inputAmt;
+        previewAdvance = 0;
+      }
     }
   }
 
@@ -453,45 +528,71 @@ export default function SupplierLedgerPage() {
                 <th className="py-3 px-3">Date</th>
                 <th className="py-3 px-3">Voucher / Bill #</th>
                 <th className="py-3 px-3">Description / Narration</th>
-                <th className="py-3 px-3 text-right">Debit (Payments)</th>
-                <th className="py-3 px-3 text-right">Credit (Purchases)</th>
-                <th className="py-3 px-3 text-right">Running Payable</th>
-                <th className="py-3 px-3 text-center">Payment Method</th>
+                <th className="py-3 px-3 text-right">Purchases (Bill)</th>
+                <th className="py-3 px-3 text-right">Payment Paid</th>
+                <th className="py-3 px-3 text-right text-emerald-400">Advance</th>
+                <th className="py-3 px-3 text-right text-rose-400">Payable Due</th>
+                <th className="py-3 px-3 text-right">Running Balance</th>
+                <th className="py-3 px-3 text-center">Status</th>
+                <th className="py-3 px-3 text-center">Mode</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                  <td colSpan={10} className="py-8 text-center text-slate-400">
                     Loading supplier ledger records...
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-rose-500 font-bold">
+                  <td colSpan={10} className="py-8 text-center text-rose-500 font-bold">
                     {error}
                   </td>
                 </tr>
               ) : !data?.transactions || data.transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-400">
+                  <td colSpan={10} className="py-8 text-center text-slate-400">
                     No transactions found in this date period.
                   </td>
                 </tr>
               ) : (
                 data.transactions.map((tx: any) => (
                   <tr key={tx.Id} className="hover:bg-slate-50 transition">
-                    <td className="py-2.5 px-3 font-medium text-slate-700">{tx.Date}</td>
-                    <td className="py-2.5 px-3 font-mono font-bold text-slate-800">{tx.VoucherNumber}</td>
+                    <td className="py-2.5 px-3 font-medium text-slate-700 whitespace-nowrap">{tx.Date}</td>
+                    <td className="py-2.5 px-3 font-mono font-bold text-slate-800 whitespace-nowrap">{tx.VoucherNumber}</td>
                     <td className="py-2.5 px-3 text-slate-700">{tx.Description}</td>
-                    <td className="py-2.5 px-3 text-right font-semibold text-emerald-700">
-                      {Number(tx.Debit || 0) > 0 ? `Rs. ${Number(tx.Debit).toLocaleString()}` : "—"}
+                    <td className="py-2.5 px-3 text-right font-semibold text-slate-800">
+                      {Number(tx.Purchases || tx.Credit || 0) > 0 ? `Rs. ${Number(tx.Purchases || tx.Credit).toLocaleString()}` : "—"}
                     </td>
-                    <td className="py-2.5 px-3 text-right font-semibold text-indigo-700">
-                      {Number(tx.Credit || 0) > 0 ? `Rs. ${Number(tx.Credit).toLocaleString()}` : "—"}
+                    <td className="py-2.5 px-3 text-right font-semibold text-slate-800">
+                      {Number(tx.Payment || tx.Debit || 0) > 0 ? `Rs. ${Number(tx.Payment || tx.Debit).toLocaleString()}` : "—"}
                     </td>
-                    <td className="py-2.5 px-3 text-right font-black text-slate-900">
+                    <td className="py-2.5 px-3 text-right font-black text-emerald-700">
+                      {Number(tx.Advance || 0) > 0 ? `Rs. ${Number(tx.Advance).toLocaleString()}` : "—"}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-black text-rose-700">
+                      {Number(tx.Due || 0) > 0 ? `Rs. ${Number(tx.Due).toLocaleString()}` : "—"}
+                    </td>
+                    <td className="py-2.5 px-3 text-right font-black text-slate-900 font-mono">
                       Rs. {Number(tx.RunningBalance || 0).toLocaleString()}
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      {tx.Status === "DUE" || (!tx.Status && Number(tx.RunningBalance || 0) > 0) ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-rose-100 text-rose-800 border border-rose-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-600"></span>
+                          DUE
+                        </span>
+                      ) : tx.Status === "ADVANCE" || (!tx.Status && Number(tx.RunningBalance || 0) < 0) ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                          ADVANCE
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+                          SETTLED
+                        </span>
+                      )}
                     </td>
                     <td className="py-2.5 px-3 text-center">
                       <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">
@@ -506,16 +607,39 @@ export default function SupplierLedgerPage() {
               <tfoot className="bg-slate-100 border-t-2 border-slate-300 font-bold text-slate-900 text-xs">
                 <tr>
                   <td colSpan={3} className="py-3 px-3 uppercase font-black text-[11px]">
-                    Period Totals
+                    Closing Position Summary
                   </td>
-                  <td className="py-3 px-3 text-right font-black text-emerald-700">
-                    Rs. {Number(data.summary.totalPayments || 0).toLocaleString()}
-                  </td>
-                  <td className="py-3 px-3 text-right font-black text-indigo-700">
+                  <td className="py-3 px-3 text-right font-black text-slate-900">
                     Rs. {Number(data.summary.totalPurchases || 0).toLocaleString()}
                   </td>
                   <td className="py-3 px-3 text-right font-black text-slate-900">
-                    Rs. {Number(data.summary.closingPayable || 0).toLocaleString()}
+                    Rs. {Number(data.summary.totalPayments || 0).toLocaleString()}
+                  </td>
+                  <td className="py-3 px-3 text-right font-black text-emerald-700">
+                    {Number(data.summary.closingAdvance ?? data.summary.currentAdvance ?? 0) > 0
+                      ? `Rs. ${Number(data.summary.closingAdvance ?? data.summary.currentAdvance).toLocaleString()}`
+                      : "—"}
+                  </td>
+                  <td className="py-3 px-3 text-right font-black text-rose-700">
+                    {Number(data.summary.closingDue ?? data.summary.currentPayable ?? 0) > 0
+                      ? `Rs. ${Number(data.summary.closingDue ?? data.summary.currentPayable).toLocaleString()}`
+                      : "—"}
+                  </td>
+                  <td className="py-3 px-3 text-right font-black text-slate-900 font-mono">
+                    Rs. {Number(data.summary.closingPayable || data.summary.closingBalance || 0).toLocaleString()}
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <span
+                      className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-black ${
+                        (data.summary.closingStatus || "SETTLED") === "DUE"
+                          ? "bg-rose-100 text-rose-800"
+                          : (data.summary.closingStatus || "SETTLED") === "ADVANCE"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {data.summary.closingStatus || "SETTLED"}
+                    </span>
                   </td>
                   <td></td>
                 </tr>
@@ -533,7 +657,7 @@ export default function SupplierLedgerPage() {
               <div>
                 <h3 className="font-bold text-base flex items-center gap-2">
                   <Coins className="w-4 h-4 text-emerald-400" />
-                  <span>Disburse Supplier Payment</span>
+                  <span>Record Supplier Payment / Voucher</span>
                 </h3>
                 <p className="text-[11px] text-slate-400">
                   Vendor: <strong>{data?.supplier?.name}</strong>
@@ -551,11 +675,40 @@ export default function SupplierLedgerPage() {
             {paymentSuccess ? (
               <div className="p-8 text-center space-y-3">
                 <CheckCircle className="w-12 h-12 text-emerald-500 mx-auto" />
-                <h4 className="font-black text-base text-slate-800">Payment Successfully Disbursed!</h4>
+                <h4 className="font-black text-base text-slate-800">Recorded Successfully!</h4>
                 <p className="text-xs text-slate-600">{paymentSuccess}</p>
               </div>
             ) : (
               <form onSubmit={handlePaySupplierSubmit} className="p-6 space-y-4 text-xs">
+                {/* Transaction Nature Toggle */}
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Transaction Nature *</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentForm({ ...paymentForm, nature: "outflow" })}
+                      className={`py-2 rounded-xl font-bold border transition text-center ${
+                        paymentForm.nature === "outflow"
+                          ? "bg-rose-600 text-white border-rose-600 shadow-xs"
+                          : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      - Disburse Payment (Outflow)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentForm({ ...paymentForm, nature: "inflow" })}
+                      className={`py-2 rounded-xl font-bold border transition text-center ${
+                        paymentForm.nature === "inflow"
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                          : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                      }`}
+                    >
+                      + Supplier Refund (Inflow)
+                    </button>
+                  </div>
+                </div>
+
                 {/* Outstanding & Advance Summary */}
                 <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
                   <div>
@@ -575,7 +728,7 @@ export default function SupplierLedgerPage() {
                 {/* Amount */}
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    Disbursement Amount (Rs.) <span className="text-rose-500">*</span>
+                    Amount (Rs.) <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -593,11 +746,11 @@ export default function SupplierLedgerPage() {
                 {inputAmt > 0 && (
                   <div className="p-2.5 bg-amber-50 rounded-xl border border-amber-200 text-[11px] text-slate-800 space-y-1">
                     <div className="flex justify-between">
-                      <span>Remaining Payable After Payment:</span>
+                      <span>{paymentForm.nature === "outflow" ? "Remaining Payable After Payment:" : "New Payable After Refund:"}</span>
                       <strong className="text-indigo-700">Rs. {previewPayable.toLocaleString()}</strong>
                     </div>
                     <div className="flex justify-between">
-                      <span>New Advance Balance:</span>
+                      <span>{paymentForm.nature === "outflow" ? "New Advance Balance:" : "Remaining Advance Balance:"}</span>
                       <strong className="text-emerald-700">Rs. {previewAdvance.toLocaleString()}</strong>
                     </div>
                   </div>
@@ -695,9 +848,17 @@ export default function SupplierLedgerPage() {
                   <button
                     type="submit"
                     disabled={paymentSubmitting}
-                    className="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-black shadow transition disabled:opacity-50"
+                    className={`px-6 py-2 rounded-xl font-black shadow transition disabled:opacity-50 text-white ${
+                      paymentForm.nature === "outflow"
+                        ? "bg-rose-600 hover:bg-rose-700"
+                        : "bg-emerald-600 hover:bg-emerald-700"
+                    }`}
                   >
-                    {paymentSubmitting ? "Disbursing..." : "Disburse Payment"}
+                    {paymentSubmitting
+                      ? "Recording..."
+                      : paymentForm.nature === "outflow"
+                      ? "Disburse Payment Out"
+                      : "Record Supplier Refund"}
                   </button>
                 </div>
               </form>

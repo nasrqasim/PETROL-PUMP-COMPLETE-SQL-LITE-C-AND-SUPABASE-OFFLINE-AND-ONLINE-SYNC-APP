@@ -290,6 +290,134 @@ export function postCustomerPayment(params: {
     reference: voucherNum,
   });
 
+  persistStore();
+
+  return { ledgerEntry, cashEntry, bankEntry, voucher };
+}
+
+// ==========================================
+// 3B. CUSTOMER DISBURSEMENT / OUTFLOW ENGINE
+// ==========================================
+
+export function postCustomerDisbursement(params: {
+  customerId: number | string;
+  date: string;
+  voucherNumber?: string;
+  amount?: number;
+  paymentAmount?: number;
+  paymentMethod: "Cash" | "Bank";
+  bankAccountId?: number | string;
+  description?: string;
+  paidBy?: string;
+}): {
+  ledgerEntry: CustomerLedgerEntry;
+  cashEntry?: CashTransactionData;
+  bankEntry?: BankTransactionData | null;
+  voucher: VoucherData;
+} {
+  const custId = Number(params.customerId);
+  const customer = memoryStore.customers.find((c) => Number(c.Id) === custId);
+  if (!customer) throw new Error(`Customer with ID ${custId} not found`);
+
+  const amount = Math.max(0, Number(params.amount ?? params.paymentAmount) || 0);
+  const prevDue = Number(customer.BalanceDue) || 0;
+  const prevAdvance = Number(customer.Advance) || 0;
+
+  // When money is paid OUT to customer (Cash Out / Bank Out):
+  // It increases what customer owes us, or reduces advance they previously deposited.
+  // Example A: Due = 10,000, Advance = 0. Pay 5,000 -> New Due = 15,000, Advance = 0, Status: DUE
+  // Example B: Advance = 10,000, Due = 0. Pay 5,000 -> Advance = 5,000, Due = 0, Status: ADVANCE
+  // Example C: Balance = 0. Pay 5,000 -> Due = 5,000, Advance = 0, Status: DUE
+  // Example E: Advance = 2,000. Pay 5,000 -> Advance consumed (0), Due = 3,000, Status: DUE
+  if (prevAdvance > 0) {
+    if (amount <= prevAdvance) {
+      customer.Advance = prevAdvance - amount;
+      customer.BalanceDue = 0;
+    } else {
+      const excess = amount - prevAdvance;
+      customer.Advance = 0;
+      customer.BalanceDue = prevDue + excess;
+    }
+  } else {
+    customer.BalanceDue = prevDue + amount;
+    customer.Advance = 0;
+  }
+
+  customer.UpdatedAt = new Date().toISOString();
+  const currentNet = customer.BalanceDue - customer.Advance;
+  const voucherNum =
+    params.voucherNumber ||
+    `${params.paymentMethod === "Cash" ? "CP" : "BP"}-${params.date.replace(/-/g, "")}-${String(memoryStore.vouchers.length + 1).padStart(2, "0")}`;
+
+  const ledgerEntry: CustomerLedgerEntry = {
+    Id: Date.now() + Math.floor(Math.random() * 1000),
+    CustomerId: custId,
+    Date: params.date,
+    VoucherNumber: voucherNum,
+    Description: params.description || `Payment disbursed / refunded to customer ${customer.Name}`,
+    Debit: amount, // Charges / Outflow increases customer debt
+    Credit: 0,
+    RunningBalance: currentNet,
+    PaymentMethod: params.paymentMethod,
+  };
+  memoryStore.customerLedgers.push(ledgerEntry);
+
+  let cashEntry: CashTransactionData | undefined;
+  let bankEntry: BankTransactionData | null | undefined;
+
+  // Update Cash or Bank Outflow
+  if (params.paymentMethod === "Cash") {
+    cashEntry = postCashTransaction({
+      date: params.date,
+      voucherNumber: voucherNum,
+      description: `Customer Cash Payment Out: ${customer.Name}`,
+      transactionType: "Customer Payment",
+      cashIn: 0,
+      cashOut: amount,
+    });
+  } else if (params.paymentMethod === "Bank" && params.bankAccountId) {
+    bankEntry = postBankTransaction({
+      bankAccountId: Number(params.bankAccountId),
+      date: params.date,
+      voucherNumber: voucherNum,
+      description: `Customer Bank Payment Out: ${customer.Name}`,
+      transactionType: "Customer Payment",
+      bankIn: 0,
+      bankOut: amount,
+    });
+  }
+
+  // Ensure Voucher is registered in memoryStore.vouchers
+  let voucher = memoryStore.vouchers.find((v) => v.VoucherNumber === voucherNum);
+  if (!voucher) {
+    voucher = {
+      Id: Date.now() + Math.floor(Math.random() * 1000),
+      VoucherNumber: voucherNum,
+      Date: params.date,
+      PaymentType: params.paymentMethod === "Cash" ? "CashPayment" : "BankPayment",
+      PartyType: "Customer",
+      CustomerId: custId,
+      Customer: { Name: customer.Name },
+      BankAccountId: params.bankAccountId ? Number(params.bankAccountId) : undefined,
+      Amount: amount,
+      Remarks: params.description || `Disbursement / refund to customer ${customer.Name}`,
+    };
+    memoryStore.vouchers.unshift(voucher);
+  }
+
+  addAuditLog({
+    username: params.paidBy || "admin",
+    action: "CUSTOMER_DISBURSEMENT",
+    module: "Customers",
+    recordId: custId,
+    details: `Disbursement of Rs. ${amount.toLocaleString()} (${params.paymentMethod}) paid to customer ${customer.Name}. Prev Due: Rs. ${prevDue.toLocaleString()}, Prev Adv: Rs. ${prevAdvance.toLocaleString()} -> New Due: Rs. ${customer.BalanceDue.toLocaleString()}, New Adv: Rs. ${customer.Advance.toLocaleString()}`,
+    oldValue: `BalanceDue: ${prevDue}, Advance: ${prevAdvance}`,
+    newValue: `BalanceDue: ${customer.BalanceDue}, Advance: ${customer.Advance}`,
+    reference: voucherNum,
+  });
+
+  persistStore();
+
   return { ledgerEntry, cashEntry, bankEntry, voucher };
 }
 
@@ -447,6 +575,128 @@ export function postSupplierPayment(params: {
     reference: voucherNum,
   });
 
+  persistStore();
+
+  return { ledgerEntry, cashEntry, bankEntry, voucher };
+}
+
+// ==========================================
+// 4B. SUPPLIER REFUND / INFLOW ENGINE
+// ==========================================
+
+export function postSupplierRefund(params: {
+  supplierId: number | string;
+  date: string;
+  voucherNumber?: string;
+  amount?: number;
+  paymentAmount?: number;
+  paymentMethod: "Cash" | "Bank";
+  bankAccountId?: number | string;
+  description?: string;
+  receivedBy?: string;
+}): {
+  ledgerEntry: SupplierLedgerEntry;
+  cashEntry?: CashTransactionData;
+  bankEntry?: BankTransactionData | null;
+  voucher: VoucherData;
+} {
+  const suppId = Number(params.supplierId);
+  const supplier = memoryStore.suppliers.find((s) => Number(s.Id) === suppId);
+  if (!supplier) throw new Error(`Supplier with ID ${suppId} not found`);
+
+  const amount = Math.max(0, Number(params.amount ?? params.paymentAmount) || 0);
+  const prevDue = Number(supplier.BalanceDue) || 0;
+  const prevAdvance = Number(supplier.Advance) || 0;
+
+  // When supplier refunds us money (Cash In / Bank In):
+  // It reduces advance we previously paid them, or increases our payable due.
+  if (prevAdvance > 0) {
+    if (amount <= prevAdvance) {
+      supplier.Advance = prevAdvance - amount;
+      supplier.BalanceDue = 0;
+    } else {
+      const excess = amount - prevAdvance;
+      supplier.Advance = 0;
+      supplier.BalanceDue = prevDue + excess;
+    }
+  } else {
+    supplier.BalanceDue = prevDue + amount;
+    supplier.Advance = 0;
+  }
+
+  supplier.UpdatedAt = new Date().toISOString();
+  const currentNet = supplier.BalanceDue - supplier.Advance;
+  const voucherNum =
+    params.voucherNumber ||
+    `${params.paymentMethod === "Cash" ? "CR" : "BR"}-${params.date.replace(/-/g, "")}-${String(memoryStore.vouchers.length + 1).padStart(2, "0")}`;
+
+  const ledgerEntry: SupplierLedgerEntry = {
+    Id: Date.now() + Math.floor(Math.random() * 1000),
+    SupplierId: suppId,
+    Date: params.date,
+    VoucherNumber: voucherNum,
+    Description: params.description || `Refund received from supplier ${supplier.Name}`,
+    Debit: 0,
+    Credit: amount, // Inward receipt reduces advance or increases payable
+    RunningBalance: currentNet,
+    PaymentMethod: params.paymentMethod,
+  };
+  memoryStore.supplierLedgers.push(ledgerEntry);
+
+  let cashEntry: CashTransactionData | undefined;
+  let bankEntry: BankTransactionData | null | undefined;
+
+  if (params.paymentMethod === "Cash") {
+    cashEntry = postCashTransaction({
+      date: params.date,
+      voucherNumber: voucherNum,
+      description: `Supplier Cash Refund: ${supplier.Name}`,
+      transactionType: "Supplier Refund",
+      cashIn: amount,
+      cashOut: 0,
+    });
+  } else if (params.paymentMethod === "Bank" && params.bankAccountId) {
+    bankEntry = postBankTransaction({
+      bankAccountId: Number(params.bankAccountId),
+      date: params.date,
+      voucherNumber: voucherNum,
+      description: `Supplier Bank Refund: ${supplier.Name}`,
+      transactionType: "Supplier Refund",
+      bankIn: amount,
+      bankOut: 0,
+    });
+  }
+
+  let voucher = memoryStore.vouchers.find((v) => v.VoucherNumber === voucherNum);
+  if (!voucher) {
+    voucher = {
+      Id: Date.now() + Math.floor(Math.random() * 1000),
+      VoucherNumber: voucherNum,
+      Date: params.date,
+      PaymentType: params.paymentMethod === "Cash" ? "CashReceipt" : "BankReceipt",
+      PartyType: "Supplier",
+      SupplierId: suppId,
+      Supplier: { Name: supplier.Name },
+      BankAccountId: params.bankAccountId ? Number(params.bankAccountId) : undefined,
+      Amount: amount,
+      Remarks: params.description || `Refund from supplier ${supplier.Name}`,
+    };
+    memoryStore.vouchers.unshift(voucher);
+  }
+
+  addAuditLog({
+    username: params.receivedBy || "admin",
+    action: "SUPPLIER_REFUND",
+    module: "Suppliers",
+    recordId: suppId,
+    details: `Refund of Rs. ${amount.toLocaleString()} (${params.paymentMethod}) received from supplier ${supplier.Name}. Prev Due: Rs. ${prevDue.toLocaleString()}, Prev Adv: Rs. ${prevAdvance.toLocaleString()} -> New Due: Rs. ${supplier.BalanceDue.toLocaleString()}, New Adv: Rs. ${supplier.Advance.toLocaleString()}`,
+    oldValue: `BalanceDue: ${prevDue}, Advance: ${prevAdvance}`,
+    newValue: `BalanceDue: ${supplier.BalanceDue}, Advance: ${supplier.Advance}`,
+    reference: voucherNum,
+  });
+
+  persistStore();
+
   return { ledgerEntry, cashEntry, bankEntry, voucher };
 }
 
@@ -494,6 +744,17 @@ export function processVoucher(v: {
         bankAccountId: v.BankAccountId ? Number(v.BankAccountId) : undefined,
         description: v.Remarks,
       });
+    } else {
+      // Customer Outflow / Disbursement (CRITICAL ACCOUNTING BUG FIX)
+      postCustomerDisbursement({
+        customerId: Number(v.CustomerId),
+        date: v.Date,
+        voucherNumber: vNum,
+        amount: amount,
+        paymentMethod: isCash ? "Cash" : "Bank",
+        bankAccountId: v.BankAccountId ? Number(v.BankAccountId) : undefined,
+        description: v.Remarks,
+      });
     }
   } else if (v.PartyType === "Supplier" && v.SupplierId) {
     if (!isInflow) {
@@ -502,6 +763,17 @@ export function processVoucher(v: {
         date: v.Date,
         voucherNumber: vNum,
         paymentAmount: amount,
+        paymentMethod: isCash ? "Cash" : "Bank",
+        bankAccountId: v.BankAccountId ? Number(v.BankAccountId) : undefined,
+        description: v.Remarks,
+      });
+    } else {
+      // Supplier Inflow / Refund
+      postSupplierRefund({
+        supplierId: Number(v.SupplierId),
+        date: v.Date,
+        voucherNumber: vNum,
+        amount: amount,
         paymentMethod: isCash ? "Cash" : "Bank",
         bankAccountId: v.BankAccountId ? Number(v.BankAccountId) : undefined,
         description: v.Remarks,
@@ -601,26 +873,35 @@ export function processVoucher(v: {
     if (st) staffObj = { Name: st.Name };
   }
 
-  const voucherRecord: VoucherData = {
-    Id: Date.now() + Math.floor(Math.random() * 100),
-    VoucherNumber: vNum,
-    Date: v.Date,
-    PaymentType: v.PaymentType,
-    PartyType: v.PartyType,
-    CustomerId: v.CustomerId,
-    SupplierId: v.SupplierId,
-    StaffId: v.StaffId,
-    BankAccountId: v.BankAccountId,
-    GariNo: v.GariNo,
-    DriverName: v.DriverName,
-    Customer: custObj,
-    Supplier: suppObj,
-    Staff: staffObj,
-    Amount: amount,
-    Remarks: v.Remarks,
-  };
+  let voucherRecord = memoryStore.vouchers.find((vRec) => vRec.VoucherNumber === vNum);
+  if (voucherRecord) {
+    if (custObj && !voucherRecord.Customer) voucherRecord.Customer = custObj;
+    if (suppObj && !voucherRecord.Supplier) voucherRecord.Supplier = suppObj;
+    if (staffObj && !voucherRecord.Staff) voucherRecord.Staff = staffObj;
+    if (v.Remarks && !voucherRecord.Remarks) voucherRecord.Remarks = v.Remarks;
+  } else {
+    voucherRecord = {
+      Id: Date.now() + Math.floor(Math.random() * 100),
+      VoucherNumber: vNum,
+      Date: v.Date,
+      PaymentType: v.PaymentType,
+      PartyType: v.PartyType,
+      CustomerId: v.CustomerId,
+      SupplierId: v.SupplierId,
+      StaffId: v.StaffId,
+      BankAccountId: v.BankAccountId,
+      GariNo: v.GariNo,
+      DriverName: v.DriverName,
+      Customer: custObj,
+      Supplier: suppObj,
+      Staff: staffObj,
+      Amount: amount,
+      Remarks: v.Remarks,
+    };
+    memoryStore.vouchers.unshift(voucherRecord);
+  }
 
-  memoryStore.vouchers.unshift(voucherRecord);
+  persistStore();
   return voucherRecord;
 }
 
