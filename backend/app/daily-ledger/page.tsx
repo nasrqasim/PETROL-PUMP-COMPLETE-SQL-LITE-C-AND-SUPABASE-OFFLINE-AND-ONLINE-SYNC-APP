@@ -32,6 +32,7 @@ import {
   createDailyEntryImageBlob,
   shareOrDownloadWhatsApp,
 } from "@/lib/whatsapp-image";
+import { offlineDb } from "@/lib/offline-db";
 
 interface RoznamchaItem {
   id: number;
@@ -125,8 +126,26 @@ export default function AajKiEntryPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const loadData = async () => {
-    setLoading(true);
-    setError(null);
+    // 1. Instant local load from IndexedDB
+    try {
+      const [localGari, localRoz, localProd, localLoc] = await Promise.all([
+        offlineDb.getAll<any>("gariyan"),
+        offlineDb.getAll<RoznamchaItem>("roznamcha"),
+        offlineDb.getAll<any>("products"),
+        offlineDb.getAll<any>("locations"),
+      ]);
+      if (localGari.length > 0) setGariyan(localGari);
+      if (localRoz.length > 0) {
+        setEntries(localRoz);
+        setLoading(false);
+      }
+      if (localProd.length > 0) setProducts(localProd);
+      if (localLoc.length > 0) setLocationsList(localLoc);
+    } catch {
+      // Proceed to network
+    }
+
+    // 2. Fetch fresh from network
     try {
       const [gariRes, rozRes, prodRes, locRes] = await Promise.all([
         fetch("/api/gariyan"),
@@ -140,12 +159,24 @@ export default function AajKiEntryPage() {
       const prodData = prodRes.ok ? await prodRes.json().catch(() => []) : [];
       const locData = locRes && locRes.ok ? await locRes.json().catch(() => []) : [];
 
-      setGariyan(Array.isArray(gariData) ? gariData : []);
-      setEntries(Array.isArray(rozData) ? rozData : []);
-      setProducts(Array.isArray(prodData) ? prodData : []);
-      setLocationsList(Array.isArray(locData) ? locData : []);
+      if (Array.isArray(gariData) && gariData.length > 0) {
+        setGariyan(gariData);
+        offlineDb.bulkPut("gariyan", gariData);
+      }
+      if (Array.isArray(rozData) && rozData.length > 0) {
+        setEntries(rozData);
+        offlineDb.bulkPut("roznamcha", rozData);
+      }
+      if (Array.isArray(prodData) && prodData.length > 0) {
+        setProducts(prodData);
+        offlineDb.bulkPut("products", prodData);
+      }
+      if (Array.isArray(locData) && locData.length > 0) {
+        setLocationsList(locData);
+        offlineDb.bulkPut("locations", locData);
+      }
     } catch (err: any) {
-      setError(err?.message || "Failed to load data.");
+      console.warn("Offline: Serving Daily Roznamcha from local IndexedDB");
     } finally {
       setLoading(false);
     }
@@ -263,8 +294,8 @@ export default function AajKiEntryPage() {
     }
 
     try {
-      const res = await fetch(`/api/roznamcha/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Delete failed.");
+      await offlineDb.delete("roznamcha", id);
+      await fetch(`/api/roznamcha/${id}`, { method: "DELETE" }).catch(() => null);
       setSuccess("Entry deleted successfully.");
       setTimeout(() => setSuccess(null), 3000);
       loadData();
@@ -375,6 +406,9 @@ export default function AajKiEntryPage() {
         advance: payload.advance,
         baqaya: liveBaqaya,
       };
+
+      // Persist immediately in local IndexedDB
+      await offlineDb.put("roznamcha", currentItem);
 
       setSuccess(editingId ? "Entry updated successfully!" : "New daily entry saved successfully!");
       setTimeout(() => setSuccess(null), 4000);

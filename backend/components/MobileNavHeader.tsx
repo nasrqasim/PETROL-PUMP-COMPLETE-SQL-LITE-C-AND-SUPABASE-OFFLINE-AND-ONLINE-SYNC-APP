@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import SyncStatusBadge from "./SyncStatusBadge";
 import {
   LayoutDashboard,
   Package,
@@ -128,6 +129,9 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
+            {/* Live Online / Offline Sync Badge */}
+            <SyncStatusBadge />
+
             {/* Install App Button - on desktop & tablet */}
             <button
               type="button"

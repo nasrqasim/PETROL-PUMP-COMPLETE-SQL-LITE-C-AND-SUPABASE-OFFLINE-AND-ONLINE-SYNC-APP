@@ -1,6 +1,9 @@
 // In-Memory Store for Muslim Construction ERP
 // Production-Ready Interconnected Financial Ledgers, Bank Accounts, Customers & Roznamcha
 
+import fs from "fs";
+import path from "path";
+
 export interface CustomerData {
   Id: number;
   Name: string;
@@ -354,7 +357,7 @@ if (!global.__memoryStore) {
       { Id: 4, Name: "Crush Stone 1/2 Inch (Material)", Category: "Construction Material", Unit: "Dumpers / Tons", SalePrice: 38000, PurchasePrice: 32000, StockQuantity: 45, LowStockAlert: 5, CreatedAt: new Date().toISOString(), UpdatedAt: new Date().toISOString() },
     ],
     sales: [
-      { Id: 1, InvoiceNumber: "INV-MC-00101", Date: todayStr, CustomerId: 1, Customer: { Name: "Al-Madina Builders" }, PaymentMode: "Credit", SubTotal: 85500, Discount: 0, Tax: 0, GrandTotal: 85500, PaidAmount: 40500, Remarks: "Diesel supply 300L for heavy machinery" },
+      { Id: 1, InvoiceNumber: "INV-MC-00101", Date: todayStr, CustomerId: 1, Customer: { Name: "Al-Madina Builders" }, PaymentMode: "Credit", SubTotal: 85500, Discount: 0, Tax: 0, GrandTotal: 85500, PaidAmount: 45500, Remarks: "Diesel supply 300L for heavy machinery (Part cash payment Rs. 5,000 applied)" },
       { Id: 2, InvoiceNumber: "INV-MC-00102", Date: todayStr, CustomerId: 2, Customer: { Name: "Lasbela Mining Corporation" }, PaymentMode: "Cash", SubTotal: 76000, Discount: 0, Tax: 0, GrandTotal: 76000, PaidAmount: 76000, Remarks: "Crush stone 2 dumpers trip delivery" },
     ],
     purchases: [
@@ -379,7 +382,8 @@ if (!global.__memoryStore) {
       { Id: 1, Date: todayStr, VoucherNumber: "OP-CASH-001", Description: "Opening Cash in Hand", Reference: "System", TransactionType: "Opening Cash", CashIn: 150000, CashOut: 0, RunningBalance: 150000 },
       { Id: 2, Date: todayStr, VoucherNumber: "CR-20261115-02", Description: "Customer Receipt: Lasbela Mining Corporation", Reference: "TRIP-01", TransactionType: "Customer Receipt", CashIn: 50000, CashOut: 0, RunningBalance: 200000 },
       { Id: 3, Date: todayStr, VoucherNumber: "CP-20261115-01", Description: "Staff Payment: Iqbal Driver (Monthly Salary advance)", Reference: "STAFF-01", TransactionType: "Staff Payment", CashIn: 0, CashOut: 15000, RunningBalance: 185000 },
-      { Id: 4, Date: todayStr, VoucherNumber: "CR-20261117-05", Description: "Customer Receipt: Al-Madina Builders", Reference: "VOUCH-5", TransactionType: "Customer Receipt", CashIn: 5000, CashOut: 0, RunningBalance: 190000 },
+      { Id: 4, Date: todayStr, VoucherNumber: "CP-20261115-03", Description: "Vehicle Payment: 786 (Brake shoes & maintenance)", Reference: "VEH-786", TransactionType: "Vehicle Payment", CashIn: 0, CashOut: 8000, RunningBalance: 177000 },
+      { Id: 5, Date: todayStr, VoucherNumber: "CR-20261117-05", Description: "Customer Receipt: Al-Madina Builders", Reference: "VOUCH-5", TransactionType: "Customer Receipt", CashIn: 5000, CashOut: 0, RunningBalance: 182000 },
     ],
     bankTransactions: [
       { Id: 1, BankAccountId: 1, Date: todayStr, VoucherNumber: "OP-BANK-001", Description: "Opening Balance Meezan Bank", TransactionType: "Opening Balance", BankIn: 450000, BankOut: 0, RunningBalance: 450000 },
@@ -570,6 +574,46 @@ if (!global.__memoryStore) {
       },
     ],
   };
+}
+
+const DATA_FILE_PATH = path.join(process.cwd(), "data", "erp-store.json");
+
+export function persistStore(): boolean {
+  try {
+    if (!global.__memoryStore) return false;
+    const dir = path.dirname(DATA_FILE_PATH);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(global.__memoryStore, null, 2), "utf8");
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
+export function loadStoreFromDisk(): boolean {
+  try {
+    if (fs.existsSync(DATA_FILE_PATH)) {
+      const content = fs.readFileSync(DATA_FILE_PATH, "utf8");
+      if (content && content.trim()) {
+        const parsed = JSON.parse(content);
+        if (parsed && typeof parsed === "object" && Array.isArray(parsed.customers)) {
+          global.__memoryStore = parsed;
+          return true;
+        }
+      }
+    }
+  } catch (err) {
+    // Ignore and proceed with default
+  }
+  return false;
+}
+
+// On first load, check if persisted disk data exists
+if (typeof process !== "undefined" && typeof process.cwd === "function") {
+  loadStoreFromDisk();
+  persistStore();
 }
 
 export const memoryStore = global.__memoryStore!;

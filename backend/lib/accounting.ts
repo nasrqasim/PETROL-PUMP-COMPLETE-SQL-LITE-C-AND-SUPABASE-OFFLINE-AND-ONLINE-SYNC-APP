@@ -1,5 +1,6 @@
 import {
   memoryStore,
+  persistStore,
   BankAccountData,
   CashTransactionData,
   BankTransactionData,
@@ -40,6 +41,7 @@ export function addAuditLog(entry: {
   };
   if (!memoryStore.auditLogs) memoryStore.auditLogs = [];
   memoryStore.auditLogs.unshift(log);
+  persistStore();
   return log;
 }
 

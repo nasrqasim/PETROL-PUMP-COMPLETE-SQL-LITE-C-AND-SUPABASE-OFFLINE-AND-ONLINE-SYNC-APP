@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
   const totalKharcha = dayEntries.reduce((acc, r) => acc + (r.kharcha || 0), 0);
   const totalAdvance = dayEntries.reduce((acc, r) => acc + (r.advance || 0), 0);
   const totalDieselLiter = dayEntries.reduce((acc, r) => acc + (r.dieselLiter || 0), 0);
+  const totalBaqaya = dayEntries.reduce((acc, r) => acc + (Number(r.baqaya) || 0), 0);
   const totalBachat = totalKiraya - totalKharcha - totalAdvance;
   const uniqueVehicles = new Set(dayEntries.map((r) => r.gariNo)).size;
 
@@ -71,7 +72,9 @@ export async function GET(req: NextRequest) {
     totalDiesel: totalDieselLiter,
     totalDieselLiter,
     totalBachat,
-    totalBaqaya: totalBachat,
+    totalBaqaya: totalBaqaya > 0 ? totalBaqaya : totalBachat,
+    netFreightReceivable: totalBaqaya,
+    operatingBachat: totalBachat,
     records,
     entries: records,
   });
