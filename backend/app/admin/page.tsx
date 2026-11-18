@@ -22,6 +22,9 @@ import {
   LogOut,
   UserCheck,
   Zap,
+  Building2,
+  FileSpreadsheet,
+  Navigation,
 } from "lucide-react";
 
 interface TrialStatusData {
@@ -314,7 +317,56 @@ export default function SuperAdminPage() {
         ) : null}
       </div>
 
-      {/* Section 2: Quick Links to All ERP Modules */}
+      {/* Section 2: Enterprise Configuration & Auditing */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Link
+          href="/admin/company-profile"
+          className="group bg-gradient-to-br from-white to-amber-50/30 p-5 rounded-3xl border border-amber-200/80 shadow-xs hover:shadow-md transition flex items-start gap-4"
+        >
+          <div className="p-3 rounded-2xl bg-amber-500/10 text-amber-600 border border-amber-500/20 group-hover:bg-amber-500 group-hover:text-slate-950 transition">
+            <Building2 className="w-6 h-6" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-slate-900 group-hover:text-amber-600 transition">
+                Company Profile & Branding
+              </h3>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 group-hover:text-amber-600 transition" />
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              Customize company name, phone, address, and upload custom company logo for all printable vouchers, receipts & WhatsApp statements.
+            </p>
+            <span className="inline-block mt-2 text-[10px] font-bold text-amber-800 bg-amber-100/70 px-2 py-0.5 rounded">
+              Branding & Headers
+            </span>
+          </div>
+        </Link>
+
+        <Link
+          href="/admin/audit-log"
+          className="group bg-gradient-to-br from-white to-blue-50/30 p-5 rounded-3xl border border-blue-200/80 shadow-xs hover:shadow-md transition flex items-start gap-4"
+        >
+          <div className="p-3 rounded-2xl bg-blue-500/10 text-blue-600 border border-blue-500/20 group-hover:bg-blue-600 group-hover:text-white transition">
+            <FileSpreadsheet className="w-6 h-6" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition">
+                Security & Financial Audit Log
+              </h3>
+              <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-1 group-hover:text-blue-600 transition" />
+            </div>
+            <p className="text-xs text-slate-500 mt-1">
+              View immutable audit trails of customer payments, supplier disbursements, voucher creations, and admin branding updates.
+            </p>
+            <span className="inline-block mt-2 text-[10px] font-bold text-blue-800 bg-blue-100/70 px-2 py-0.5 rounded">
+              Tamper-evident Trail
+            </span>
+          </div>
+        </Link>
+      </div>
+
+      {/* Section 3: Quick Links to All ERP Modules */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 sm:p-6 space-y-4">
         <div>
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
@@ -322,7 +374,7 @@ export default function SuperAdminPage() {
             ERP Modules & Management Ledgers
           </h2>
           <p className="text-xs text-slate-500">
-            As Super Admin, you have unrestricted, permanent access to all 14 modules.
+            As Super Admin, you have unrestricted, permanent access to all 15 modules.
           </p>
         </div>
 
@@ -330,6 +382,7 @@ export default function SuperAdminPage() {
           {[
             { href: "/dashboard", label: "Dashboard", color: "border-sky-200 text-sky-800 bg-sky-50/50" },
             { href: "/daily-ledger", label: "Daily Ledger", color: "border-amber-200 text-amber-900 bg-amber-50/70 font-bold" },
+            { href: "/vehicle-tracking", label: "Vehicle Tracking", color: "border-emerald-200 text-emerald-900 bg-emerald-50/70 font-bold" },
             { href: "/din-ka-khulasa", label: "Daily Summary", color: "border-rose-200 text-rose-800 bg-rose-50/50" },
             { href: "/gari-khata", label: "Vehicle Ledger", color: "border-blue-200 text-blue-800 bg-blue-50/50" },
             { href: "/driver-khata", label: "Driver Ledger", color: "border-emerald-200 text-emerald-800 bg-emerald-50/50" },

@@ -101,58 +101,60 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
   return (
     <>
       <header className="bg-slate-900 text-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-          <div className="flex items-center space-x-2.5">
+        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 flex justify-between items-center h-16 gap-1.5 sm:gap-4 overflow-hidden">
+          <div className="flex items-center space-x-1.5 sm:space-x-2.5 min-w-0 flex-shrink">
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className="lg:hidden p-2 rounded-lg bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition"
+              className="lg:hidden p-1.5 sm:p-2 rounded-lg bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition flex-shrink-0"
               aria-label="Toggle Navigation Menu"
             >
               {menuOpen ? <X className="w-5 h-5 text-amber-400" /> : <Menu className="w-5 h-5" />}
             </button>
 
-            <Link href="/dashboard" className="flex items-center space-x-2.5 group">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-amber-500 flex items-center justify-center font-black text-slate-900 text-lg sm:text-xl shadow group-hover:bg-amber-400 transition flex-shrink-0">
+            <Link href="/dashboard" className="flex items-center space-x-2 min-w-0 group">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-500 flex items-center justify-center font-black text-slate-900 text-base sm:text-xl shadow group-hover:bg-amber-400 transition flex-shrink-0">
                 🏗️
               </div>
-              <div>
-                <h1 className="text-sm sm:text-base md:text-lg font-bold tracking-tight leading-tight">
+              <div className="min-w-0">
+                <h1 className="text-xs sm:text-base md:text-lg font-bold tracking-tight leading-tight truncate">
                   Muslim Construction
                 </h1>
-                <p className="text-[10px] sm:text-[11px] text-amber-400 font-medium truncate max-w-[190px] sm:max-w-none">
+                <p className="hidden sm:block text-[11px] text-amber-400 font-medium truncate">
                   Construction & Transport Management System
                 </p>
               </div>
             </Link>
           </div>
 
-          <div className="flex items-center space-x-2">
-            {/* Install App Button */}
+          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
+            {/* Install App Button - on desktop & tablet */}
             <button
               type="button"
               onClick={handleInstallApp}
-              className="flex items-center space-x-1 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2.5 py-1.5 rounded-lg shadow transition"
+              className="hidden md:flex items-center space-x-1 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2.5 py-1.5 rounded-lg shadow transition flex-shrink-0"
               title="Install Web App on your phone or PC"
             >
               <Download className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Install</span> App
+              <span>Install App</span>
             </button>
 
-            {/* Quick New Roznamcha Entry */}
+            {/* Quick New Roznamcha Entry - perfectly sized for mobile */}
             <Link
               href="/daily-ledger"
-              className="flex items-center space-x-1 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-2.5 py-1.5 rounded-lg shadow transition"
+              className="flex items-center space-x-1 text-xs bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black px-2 sm:px-2.5 py-1.5 rounded-lg shadow transition flex-shrink-0 whitespace-nowrap"
+              title="Add New Daily Trip Entry"
             >
-              <PlusCircle className="w-3.5 h-3.5" />
-              <span className="hidden xs:inline">New</span> Entry
+              <PlusCircle className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline">New Entry</span>
+              <span className="sm:hidden text-[11px] font-bold">Entry</span>
             </Link>
 
             {/* Sign Out Button */}
             <button
               type="button"
               onClick={handleLogout}
-              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-900/60 text-slate-300 hover:text-rose-300 transition"
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-rose-900/60 text-slate-300 hover:text-rose-300 transition flex-shrink-0"
               title="Sign Out of ERP"
             >
               <LogOut className="w-4 h-4" />
@@ -250,52 +252,52 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
       </main>
 
       {/* Bottom Sticky Mobile Navigation Bar (PWA Style) */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 lg:hidden px-2 py-1.5 flex justify-around items-center">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/98 backdrop-blur-md border-t border-slate-800 lg:hidden px-1 py-1.5 flex justify-around items-center safe-area-bottom">
         <Link
           href="/dashboard"
-          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-medium transition ${
+          className={`flex-1 flex flex-col items-center py-1 px-1 rounded-lg text-[10px] font-medium transition text-center truncate ${
             pathname === "/dashboard" ? "text-amber-400 font-bold" : "text-slate-400 hover:text-slate-200"
           }`}
         >
-          <LayoutDashboard className="w-5 h-5 mb-0.5" />
-          <span>Home</span>
+          <LayoutDashboard className="w-4 h-4 mb-0.5" />
+          <span className="truncate">Home</span>
         </Link>
         <Link
           href="/daily-ledger"
-          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-medium transition ${
+          className={`flex-1 flex flex-col items-center py-1 px-1 rounded-lg text-[10px] font-medium transition text-center truncate ${
             pathname === "/daily-ledger" ? "text-amber-400 font-bold" : "text-slate-400 hover:text-slate-200"
           }`}
         >
-          <Calendar className="w-5 h-5 mb-0.5" />
-          <span>Ledger</span>
+          <Calendar className="w-4 h-4 mb-0.5" />
+          <span className="truncate">Roznamcha</span>
+        </Link>
+        <Link
+          href="/vehicle-tracking"
+          className={`flex-1 flex flex-col items-center py-1 px-1 rounded-lg text-[10px] font-medium transition text-center truncate ${
+            pathname === "/vehicle-tracking" ? "text-amber-400 font-bold" : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          <Navigation className="w-4 h-4 mb-0.5" />
+          <span className="truncate">Tracking</span>
         </Link>
         <Link
           href="/din-ka-khulasa"
-          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-medium transition ${
+          className={`flex-1 flex flex-col items-center py-1 px-1 rounded-lg text-[10px] font-medium transition text-center truncate ${
             pathname === "/din-ka-khulasa" ? "text-amber-400 font-bold" : "text-slate-400 hover:text-slate-200"
           }`}
         >
-          <BarChart3 className="w-5 h-5 mb-0.5" />
-          <span>Summary</span>
-        </Link>
-        <Link
-          href="/staff"
-          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-medium transition ${
-            pathname === "/staff" ? "text-amber-400 font-bold" : "text-slate-400 hover:text-slate-200"
-          }`}
-        >
-          <HardHat className="w-5 h-5 mb-0.5" />
-          <span>Staff</span>
+          <BarChart3 className="w-4 h-4 mb-0.5" />
+          <span className="truncate">Summary</span>
         </Link>
         <button
           type="button"
           onClick={() => setMenuOpen(!menuOpen)}
-          className={`flex flex-col items-center py-1 px-2 rounded-lg text-[10px] font-medium transition ${
+          className={`flex-1 flex flex-col items-center py-1 px-1 rounded-lg text-[10px] font-medium transition text-center truncate ${
             menuOpen ? "text-amber-400 font-bold" : "text-slate-400 hover:text-slate-200"
           }`}
         >
-          <Menu className="w-5 h-5 mb-0.5" />
-          <span>More</span>
+          <Menu className="w-4 h-4 mb-0.5" />
+          <span className="truncate">More</span>
         </button>
       </div>
 

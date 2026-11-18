@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Building, Search, Phone, MapPin, Plus, CheckCircle, X, Trash2, Edit2, Printer, Share2 } from "lucide-react";
+import { Building, Search, Phone, MapPin, Plus, CheckCircle, X, Trash2, Edit2, Printer, Share2, FileText } from "lucide-react";
 import { printTableDocument } from "@/lib/print-table";
 import {
   createLedgerStatementImageBlob,
@@ -289,7 +289,15 @@ export default function SuppliersPage() {
                       Rs. {Number(s.Advance || 0).toLocaleString()}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <div className="flex justify-center items-center gap-2">
+                      <div className="flex justify-center items-center gap-1.5">
+                        <Link
+                          href={`/suppliers/${s.Id}/ledger`}
+                          className="flex items-center gap-1 text-[11px] font-bold text-white bg-indigo-600 hover:bg-indigo-700 px-2 py-1 rounded shadow-xs transition"
+                          title="View Complete Supplier Ledger"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Ledger</span>
+                        </Link>
                         <button
                           onClick={() => handleShareSupplierWhatsApp(s)}
                           className="text-emerald-600 hover:text-emerald-800 p-1 rounded hover:bg-emerald-50 transition"

@@ -7,7 +7,41 @@ import {
   SupplierLedgerEntry,
   VoucherData,
   RoznamchaItemData,
+  AuditLogData,
 } from "./memory-store";
+
+// ==========================================
+// 0. AUDIT LOG HELPER
+// ==========================================
+
+export function addAuditLog(entry: {
+  userId?: string;
+  username?: string;
+  action: string;
+  module: string;
+  recordId?: string | number;
+  details: string;
+  oldValue?: string;
+  newValue?: string;
+  reference?: string;
+}): AuditLogData {
+  const log: AuditLogData = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    userId: entry.userId || "admin",
+    username: entry.username || "Super Admin",
+    action: entry.action,
+    module: entry.module,
+    recordId: entry.recordId,
+    details: entry.details,
+    oldValue: entry.oldValue,
+    newValue: entry.newValue,
+    timestamp: new Date().toISOString(),
+    reference: entry.reference,
+  };
+  if (!memoryStore.auditLogs) memoryStore.auditLogs = [];
+  memoryStore.auditLogs.unshift(log);
+  return log;
+}
 
 // ==========================================
 // 1. CASH LEDGER ENGINE
@@ -103,16 +137,19 @@ export function postCustomerTripCharge(params: {
   description: string;
   chargeAmount: number;
 }): CustomerLedgerEntry | null {
-  const customer = memoryStore.customers.find((c) => c.Id === params.customerId);
+  const custId = Number(params.customerId);
+  const customer = memoryStore.customers.find((c) => Number(c.Id) === custId);
   if (!customer) return null;
 
   const charge = Math.max(0, Number(params.chargeAmount) || 0);
-  customer.BalanceDue = (Number(customer.BalanceDue) || 0) + charge;
+  const prevDue = Number(customer.BalanceDue) || 0;
+  customer.BalanceDue = prevDue + charge;
+  customer.UpdatedAt = new Date().toISOString();
   const currentNet = customer.BalanceDue - (Number(customer.Advance) || 0);
 
   const entry: CustomerLedgerEntry = {
     Id: Date.now() + Math.floor(Math.random() * 1000),
-    CustomerId: params.customerId,
+    CustomerId: custId,
     Date: params.date,
     VoucherNumber: `TRIP-${params.tripRef}`,
     TripRef: params.tripRef,
@@ -124,46 +161,68 @@ export function postCustomerTripCharge(params: {
   };
 
   memoryStore.customerLedgers.push(entry);
+
+  addAuditLog({
+    action: "TRIP_CHARGE",
+    module: "Customers",
+    recordId: custId,
+    details: `Trip charge of Rs. ${charge.toLocaleString()} posted to customer ${customer.Name}. New due: Rs. ${customer.BalanceDue.toLocaleString()}`,
+    oldValue: `BalanceDue: ${prevDue}`,
+    newValue: `BalanceDue: ${customer.BalanceDue}`,
+    reference: `TRIP-${params.tripRef}`,
+  });
+
   return entry;
 }
 
 export function postCustomerPayment(params: {
-  customerId: number;
+  customerId: number | string;
   date: string;
-  voucherNumber: string;
-  paymentAmount: number;
+  voucherNumber?: string;
+  paymentAmount?: number;
+  amount?: number;
   paymentMethod: "Cash" | "Bank";
-  bankAccountId?: number;
+  bankAccountId?: number | string;
   description?: string;
   tripRef?: string;
+  receivedBy?: string;
 }): {
   ledgerEntry: CustomerLedgerEntry | null;
   cashEntry?: CashTransactionData;
   bankEntry?: BankTransactionData | null;
+  voucher: VoucherData;
 } {
-  const customer = memoryStore.customers.find((c) => c.Id === params.customerId);
-  if (!customer) return { ledgerEntry: null };
+  const custId = Number(params.customerId);
+  const customer = memoryStore.customers.find((c) => Number(c.Id) === custId);
+  if (!customer) throw new Error(`Customer with ID ${custId} not found`);
 
-  const amount = Math.max(0, Number(params.paymentAmount) || 0);
-  const due = Number(customer.BalanceDue) || 0;
-  const advance = Number(customer.Advance) || 0;
+  const amount = Math.max(0, Number(params.amount ?? params.paymentAmount) || 0);
+  const prevDue = Number(customer.BalanceDue) || 0;
+  const prevAdvance = Number(customer.Advance) || 0;
 
-  // Rule: Reduce outstanding due first; excess becomes advance
-  if (amount <= due) {
-    customer.BalanceDue = due - amount;
+  // Strict Accounting Rules A, B, C, D:
+  // Scenario A & B: Amount <= Due -> Reduces Due
+  // Scenario C: Amount > Due -> Due becomes 0, excess increases Advance
+  // Scenario D: Due == 0 -> Full amount increases Advance
+  if (amount <= prevDue) {
+    customer.BalanceDue = prevDue - amount;
   } else {
-    const excess = amount - due;
+    const excess = amount - prevDue;
     customer.BalanceDue = 0;
-    customer.Advance = advance + excess;
+    customer.Advance = prevAdvance + excess;
   }
 
+  customer.UpdatedAt = new Date().toISOString();
   const currentNet = customer.BalanceDue - customer.Advance;
+  const voucherNum =
+    params.voucherNumber ||
+    `CR-${params.date.replace(/-/g, "")}-${String(memoryStore.vouchers.length + 1).padStart(2, "0")}`;
 
   const ledgerEntry: CustomerLedgerEntry = {
     Id: Date.now() + Math.floor(Math.random() * 1000),
-    CustomerId: params.customerId,
+    CustomerId: custId,
     Date: params.date,
-    VoucherNumber: params.voucherNumber,
+    VoucherNumber: voucherNum,
     TripRef: params.tripRef,
     Description: params.description || `Payment received from ${customer.Name}`,
     Debit: 0,
@@ -180,7 +239,7 @@ export function postCustomerPayment(params: {
   if (params.paymentMethod === "Cash") {
     cashEntry = postCashTransaction({
       date: params.date,
-      voucherNumber: params.voucherNumber,
+      voucherNumber: voucherNum,
       description: `Customer Receipt: ${customer.Name}`,
       reference: params.tripRef,
       transactionType: "Customer Receipt",
@@ -189,9 +248,9 @@ export function postCustomerPayment(params: {
     });
   } else if (params.paymentMethod === "Bank" && params.bankAccountId) {
     bankEntry = postBankTransaction({
-      bankAccountId: params.bankAccountId,
+      bankAccountId: Number(params.bankAccountId),
       date: params.date,
-      voucherNumber: params.voucherNumber,
+      voucherNumber: voucherNum,
       description: `Customer Bank Receipt: ${customer.Name}`,
       transactionType: "Customer Receipt",
       bankIn: amount,
@@ -200,7 +259,36 @@ export function postCustomerPayment(params: {
     });
   }
 
-  return { ledgerEntry, cashEntry, bankEntry };
+  // Ensure Voucher is registered in memoryStore.vouchers
+  let voucher = memoryStore.vouchers.find((v) => v.VoucherNumber === voucherNum);
+  if (!voucher) {
+    voucher = {
+      Id: Date.now() + Math.floor(Math.random() * 1000),
+      VoucherNumber: voucherNum,
+      Date: params.date,
+      PaymentType: params.paymentMethod === "Cash" ? "CashReceipt" : "BankReceipt",
+      PartyType: "Customer",
+      CustomerId: custId,
+      Customer: { Name: customer.Name },
+      BankAccountId: params.bankAccountId ? Number(params.bankAccountId) : undefined,
+      Amount: amount,
+      Remarks: params.description || `Receipt from ${customer.Name}`,
+    };
+    memoryStore.vouchers.unshift(voucher);
+  }
+
+  addAuditLog({
+    username: params.receivedBy || "admin",
+    action: "CUSTOMER_PAYMENT",
+    module: "Customers",
+    recordId: custId,
+    details: `Payment of Rs. ${amount.toLocaleString()} (${params.paymentMethod}) received from ${customer.Name}. Prev Due: Rs. ${prevDue.toLocaleString()}, New Due: Rs. ${customer.BalanceDue.toLocaleString()}, Advance: Rs. ${customer.Advance.toLocaleString()}`,
+    oldValue: `BalanceDue: ${prevDue}, Advance: ${prevAdvance}`,
+    newValue: `BalanceDue: ${customer.BalanceDue}, Advance: ${customer.Advance}`,
+    reference: voucherNum,
+  });
+
+  return { ledgerEntry, cashEntry, bankEntry, voucher };
 }
 
 export function applyCustomerAdvance(params: {
@@ -209,19 +297,21 @@ export function applyCustomerAdvance(params: {
   tripRef: string;
   appliedAmount: number;
 }): CustomerLedgerEntry | null {
-  const customer = memoryStore.customers.find((c) => c.Id === params.customerId);
+  const custId = Number(params.customerId);
+  const customer = memoryStore.customers.find((c) => Number(c.Id) === custId);
   if (!customer) return null;
 
   const applied = Math.max(0, Number(params.appliedAmount) || 0);
-  const advance = Number(customer.Advance) || 0;
-  const actualApplied = Math.min(applied, advance);
+  const prevAdvance = Number(customer.Advance) || 0;
+  const actualApplied = Math.min(applied, prevAdvance);
 
-  customer.Advance = advance - actualApplied;
+  customer.Advance = prevAdvance - actualApplied;
+  customer.UpdatedAt = new Date().toISOString();
   const currentNet = (Number(customer.BalanceDue) || 0) - customer.Advance;
 
   const entry: CustomerLedgerEntry = {
     Id: Date.now() + Math.floor(Math.random() * 1000),
-    CustomerId: params.customerId,
+    CustomerId: custId,
     Date: params.date,
     VoucherNumber: `ADV-ADJ-${params.tripRef}`,
     TripRef: params.tripRef,
@@ -233,6 +323,17 @@ export function applyCustomerAdvance(params: {
   };
 
   memoryStore.customerLedgers.push(entry);
+
+  addAuditLog({
+    action: "ADVANCE_APPLIED",
+    module: "Customers",
+    recordId: custId,
+    details: `Applied advance Rs. ${actualApplied.toLocaleString()} for ${customer.Name} on Trip #${params.tripRef}. Remaining advance: Rs. ${customer.Advance.toLocaleString()}`,
+    oldValue: `Advance: ${prevAdvance}`,
+    newValue: `Advance: ${customer.Advance}`,
+    reference: `ADV-ADJ-${params.tripRef}`,
+  });
+
   return entry;
 }
 
@@ -241,40 +342,48 @@ export function applyCustomerAdvance(params: {
 // ==========================================
 
 export function postSupplierPayment(params: {
-  supplierId: number;
+  supplierId: number | string;
   date: string;
-  voucherNumber: string;
-  paymentAmount: number;
+  voucherNumber?: string;
+  paymentAmount?: number;
+  amount?: number;
   paymentMethod: "Cash" | "Bank";
-  bankAccountId?: number;
+  bankAccountId?: number | string;
   description?: string;
+  paidBy?: string;
 }): {
   ledgerEntry: SupplierLedgerEntry | null;
   cashEntry?: CashTransactionData;
   bankEntry?: BankTransactionData | null;
+  voucher: VoucherData;
 } {
-  const supplier = memoryStore.suppliers.find((s) => s.Id === params.supplierId);
-  if (!supplier) return { ledgerEntry: null };
+  const suppId = Number(params.supplierId);
+  const supplier = memoryStore.suppliers.find((s) => Number(s.Id) === suppId);
+  if (!supplier) throw new Error(`Supplier with ID ${suppId} not found`);
 
-  const amount = Math.max(0, Number(params.paymentAmount) || 0);
-  const due = Number(supplier.BalanceDue) || 0;
-  const advance = Number(supplier.Advance) || 0;
+  const amount = Math.max(0, Number(params.amount ?? params.paymentAmount) || 0);
+  const prevDue = Number(supplier.BalanceDue) || 0;
+  const prevAdvance = Number(supplier.Advance) || 0;
 
-  if (amount <= due) {
-    supplier.BalanceDue = due - amount;
+  if (amount <= prevDue) {
+    supplier.BalanceDue = prevDue - amount;
   } else {
-    const excess = amount - due;
+    const excess = amount - prevDue;
     supplier.BalanceDue = 0;
-    supplier.Advance = advance + excess;
+    supplier.Advance = prevAdvance + excess;
   }
 
+  supplier.UpdatedAt = new Date().toISOString();
   const currentNet = supplier.BalanceDue - supplier.Advance;
+  const voucherNum =
+    params.voucherNumber ||
+    `CP-${params.date.replace(/-/g, "")}-${String(memoryStore.vouchers.length + 1).padStart(2, "0")}`;
 
   const ledgerEntry: SupplierLedgerEntry = {
     Id: Date.now() + Math.floor(Math.random() * 1000),
-    SupplierId: params.supplierId,
+    SupplierId: suppId,
     Date: params.date,
-    VoucherNumber: params.voucherNumber,
+    VoucherNumber: voucherNum,
     Description: params.description || `Payment disbursed to ${supplier.Name}`,
     Debit: amount, // Reduces our liability
     Credit: 0,
@@ -289,7 +398,7 @@ export function postSupplierPayment(params: {
   if (params.paymentMethod === "Cash") {
     cashEntry = postCashTransaction({
       date: params.date,
-      voucherNumber: params.voucherNumber,
+      voucherNumber: voucherNum,
       description: `Supplier Payment: ${supplier.Name}`,
       transactionType: "Supplier Payment",
       cashIn: 0,
@@ -297,9 +406,9 @@ export function postSupplierPayment(params: {
     });
   } else if (params.paymentMethod === "Bank" && params.bankAccountId) {
     bankEntry = postBankTransaction({
-      bankAccountId: params.bankAccountId,
+      bankAccountId: Number(params.bankAccountId),
       date: params.date,
-      voucherNumber: params.voucherNumber,
+      voucherNumber: voucherNum,
       description: `Supplier Bank Payment: ${supplier.Name}`,
       transactionType: "Supplier Payment",
       bankIn: 0,
@@ -307,7 +416,36 @@ export function postSupplierPayment(params: {
     });
   }
 
-  return { ledgerEntry, cashEntry, bankEntry };
+  // Ensure Voucher is registered in memoryStore.vouchers
+  let voucher = memoryStore.vouchers.find((v) => v.VoucherNumber === voucherNum);
+  if (!voucher) {
+    voucher = {
+      Id: Date.now() + Math.floor(Math.random() * 1000),
+      VoucherNumber: voucherNum,
+      Date: params.date,
+      PaymentType: params.paymentMethod === "Cash" ? "CashPayment" : "BankPayment",
+      PartyType: "Supplier",
+      SupplierId: suppId,
+      Supplier: { Name: supplier.Name },
+      BankAccountId: params.bankAccountId ? Number(params.bankAccountId) : undefined,
+      Amount: amount,
+      Remarks: params.description || `Payment to ${supplier.Name}`,
+    };
+    memoryStore.vouchers.unshift(voucher);
+  }
+
+  addAuditLog({
+    username: params.paidBy || "admin",
+    action: "SUPPLIER_PAYMENT",
+    module: "Suppliers",
+    recordId: suppId,
+    details: `Payment of Rs. ${amount.toLocaleString()} (${params.paymentMethod}) disbursed to ${supplier.Name}. Prev Due: Rs. ${prevDue.toLocaleString()}, New Due: Rs. ${supplier.BalanceDue.toLocaleString()}, Advance: Rs. ${supplier.Advance.toLocaleString()}`,
+    oldValue: `BalanceDue: ${prevDue}, Advance: ${prevAdvance}`,
+    newValue: `BalanceDue: ${supplier.BalanceDue}, Advance: ${supplier.Advance}`,
+    reference: voucherNum,
+  });
+
+  return { ledgerEntry, cashEntry, bankEntry, voucher };
 }
 
 // ==========================================
@@ -317,8 +455,8 @@ export function postSupplierPayment(params: {
 export function processVoucher(v: {
   VoucherNumber?: string;
   Date: string;
-  PaymentType: "CashPayment" | "CashReceipt" | "BankPayment" | "BankReceipt";
-  PartyType: "Customer" | "Supplier" | "Staff" | "Driver" | "Vehicle" | "General";
+  PaymentType: string;
+  PartyType: string;
   PartyId?: number;
   CustomerId?: number;
   SupplierId?: number;
@@ -334,31 +472,36 @@ export function processVoucher(v: {
     v.VoucherNumber ||
     `${v.PaymentType.substring(0, 2).toUpperCase()}-${v.Date.replace(/-/g, "")}-${Math.floor(100 + Math.random() * 900)}`;
 
-  const isCash = v.PaymentType === "CashPayment" || v.PaymentType === "CashReceipt";
-  const isInflow = v.PaymentType === "CashReceipt" || v.PaymentType === "BankReceipt";
+  const isCash = v.PaymentType.startsWith("Cash") || v.PaymentType.includes("Cash");
+  const isInflow =
+    v.PaymentType.includes("Receipt") ||
+    v.PaymentType === "CustomerReceipt" ||
+    v.PaymentType === "CashReceipt" ||
+    v.PaymentType === "BankReceipt" ||
+    v.PaymentType === "OtherIncome";
 
   // 1. Process Party-Specific Ledgers
   if (v.PartyType === "Customer" && v.CustomerId) {
     if (isInflow) {
       postCustomerPayment({
-        customerId: v.CustomerId,
+        customerId: Number(v.CustomerId),
         date: v.Date,
         voucherNumber: vNum,
         paymentAmount: amount,
         paymentMethod: isCash ? "Cash" : "Bank",
-        bankAccountId: v.BankAccountId,
+        bankAccountId: v.BankAccountId ? Number(v.BankAccountId) : undefined,
         description: v.Remarks,
       });
     }
   } else if (v.PartyType === "Supplier" && v.SupplierId) {
     if (!isInflow) {
       postSupplierPayment({
-        supplierId: v.SupplierId,
+        supplierId: Number(v.SupplierId),
         date: v.Date,
         voucherNumber: vNum,
         paymentAmount: amount,
         paymentMethod: isCash ? "Cash" : "Bank",
-        bankAccountId: v.BankAccountId,
+        bankAccountId: v.BankAccountId ? Number(v.BankAccountId) : undefined,
         description: v.Remarks,
       });
     }
@@ -625,4 +768,155 @@ export function updateVehicleStatus(params: {
 
   memoryStore.vehicleStatusHistory.push(historyRecord);
   return { dailyStatus, historyRecord };
+}
+
+// ==========================================
+// 8. BALANCE RECONCILIATION & AUDIT ENGINE
+// ==========================================
+
+export function reconcileCustomerBalance(customerId: number): {
+  customer: any;
+  openingBalance: number;
+  totalDebits: number;
+  totalCredits: number;
+  calculatedClosing: number;
+  calculatedDue: number;
+  actualDue: number;
+  currentDue: number;
+  currentAdvance: number;
+  isReconciled: boolean;
+  isConsistent: boolean;
+} {
+  const custId = Number(customerId);
+  const customer = memoryStore.customers.find((c) => Number(c.Id) === custId);
+  if (!customer) throw new Error("Customer not found");
+
+  const transactions = memoryStore.customerLedgers.filter((t) => Number(t.CustomerId) === custId);
+  const openingBalance = 0;
+  const totalDebits = transactions.reduce((sum, t) => sum + (Number(t.Debit) || 0), 0);
+  const totalCredits = transactions.reduce((sum, t) => sum + (Number(t.Credit) || 0), 0);
+  const calculatedClosing = openingBalance + totalDebits - totalCredits;
+
+  const currentDue = Number(customer.BalanceDue) || 0;
+  const currentAdvance = Number(customer.Advance) || 0;
+  const currentNet = currentDue - currentAdvance;
+
+  const isReconciled = calculatedClosing === currentNet;
+
+  return {
+    customer,
+    openingBalance,
+    totalDebits,
+    totalCredits,
+    calculatedClosing,
+    calculatedDue: currentDue,
+    actualDue: currentDue,
+    currentDue,
+    currentAdvance,
+    isReconciled,
+    isConsistent: isReconciled,
+  };
+}
+
+export function reconcileSupplierBalance(supplierId: number): {
+  supplier: any;
+  openingBalance: number;
+  totalPurchases: number;
+  totalPayments: number;
+  calculatedPayable: number;
+  currentPayable: number;
+  actualPayable: number;
+  currentAdvance: number;
+  isReconciled: boolean;
+  isConsistent: boolean;
+} {
+  const suppId = Number(supplierId);
+  const supplier = memoryStore.suppliers.find((s) => Number(s.Id) === suppId);
+  if (!supplier) throw new Error("Supplier not found");
+
+  const transactions = memoryStore.supplierLedgers.filter((t) => Number(t.SupplierId) === suppId);
+  const openingBalance = 0;
+  const totalPurchases = transactions.reduce((sum, t) => sum + (Number(t.Credit) || 0), 0);
+  const totalPayments = transactions.reduce((sum, t) => sum + (Number(t.Debit) || 0), 0);
+  const calculatedPayable = openingBalance + totalPurchases - totalPayments;
+
+  const currentPayable = Number(supplier.BalanceDue) || 0;
+  const currentAdvance = Number(supplier.Advance) || 0;
+  const currentNet = currentPayable - currentAdvance;
+  const isReconciled = calculatedPayable === currentNet;
+
+  return {
+    supplier,
+    openingBalance,
+    totalPurchases,
+    totalPayments,
+    calculatedPayable,
+    currentPayable,
+    actualPayable: currentPayable,
+    currentAdvance,
+    isReconciled,
+    isConsistent: isReconciled,
+  };
+}
+
+export function reconcileCashBalance(): {
+  openingCash: number;
+  totalCashIn: number;
+  totalCashOut: number;
+  calculatedCash: number;
+  currentCash: number;
+  isReconciled: boolean;
+} {
+  const openingEntry = memoryStore.cashTransactions.find((t) => t.TransactionType === "Opening Cash");
+  const openingCash = openingEntry ? Number(openingEntry.CashIn) || 0 : 0;
+
+  const totalCashIn = memoryStore.cashTransactions.reduce((acc, t) => acc + (Number(t.CashIn) || 0), 0);
+  const totalCashOut = memoryStore.cashTransactions.reduce((acc, t) => acc + (Number(t.CashOut) || 0), 0);
+  const calculatedCash = totalCashIn - totalCashOut;
+  const currentCash = getCurrentCashBalance();
+
+  return {
+    openingCash,
+    totalCashIn,
+    totalCashOut,
+    calculatedCash,
+    currentCash,
+    isReconciled: calculatedCash === currentCash,
+  };
+}
+
+export function reconcileBankBalance(bankAccountId: number): {
+  account: BankAccountData;
+  openingBalance: number;
+  totalBankIn: number;
+  totalBankOut: number;
+  calculatedBalance: number;
+  calculatedClosing: number;
+  currentBalance: number;
+  actualBalance: number;
+  isReconciled: boolean;
+  isConsistent: boolean;
+} {
+  const bId = Number(bankAccountId);
+  const account = memoryStore.bankAccounts.find((b) => Number(b.Id) === bId);
+  if (!account) throw new Error("Bank account not found");
+
+  const txs = memoryStore.bankTransactions.filter((t) => Number(t.BankAccountId) === bId);
+  const totalBankIn = txs.reduce((acc, t) => acc + (Number(t.BankIn) || 0), 0);
+  const totalBankOut = txs.reduce((acc, t) => acc + (Number(t.BankOut) || 0), 0);
+  const calculatedBalance = totalBankIn - totalBankOut;
+  const currentBalance = Number(account.CurrentBalance) || 0;
+
+  return {
+    account,
+    openingBalance: Number(account.OpeningBalance) || 0,
+    totalBankIn,
+    totalBankOut,
+    calculatedBalance,
+    calculatedClosing: calculatedBalance,
+    currentBalance,
+    actualBalance: currentBalance,
+    isReconciled: calculatedBalance === currentBalance,
+    isConsistent: calculatedBalance === currentBalance,
+  };
 }

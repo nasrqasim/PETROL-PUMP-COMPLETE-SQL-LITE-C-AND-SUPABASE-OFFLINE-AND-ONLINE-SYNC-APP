@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, Search, Phone, MapPin, UserPlus, CheckCircle, X, Trash2, Edit2, Printer, Share2 } from "lucide-react";
+import { Users, Search, Phone, MapPin, UserPlus, CheckCircle, X, Trash2, Edit2, Printer, Share2, FileText, Coins } from "lucide-react";
 import { printTableDocument } from "@/lib/print-table";
 import {
   createLedgerStatementImageBlob,
@@ -289,7 +289,15 @@ export default function CustomersPage() {
                       Rs. {Number(c.Advance || 0).toLocaleString()}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <div className="flex justify-center items-center gap-2">
+                      <div className="flex justify-center items-center gap-1.5">
+                        <Link
+                          href={`/customers/${c.Id}/ledger`}
+                          className="flex items-center gap-1 text-[11px] font-bold text-slate-800 bg-amber-400 hover:bg-amber-500 px-2 py-1 rounded shadow-xs transition"
+                          title="View Complete Customer Ledger"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Ledger</span>
+                        </Link>
                         <button
                           onClick={() => handleShareCustomerWhatsApp(c)}
                           className="text-emerald-600 hover:text-emerald-800 p-1 rounded hover:bg-emerald-50 transition"

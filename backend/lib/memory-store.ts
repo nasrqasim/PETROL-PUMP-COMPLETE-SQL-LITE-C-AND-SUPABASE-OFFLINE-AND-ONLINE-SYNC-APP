@@ -280,6 +280,33 @@ export interface VehicleDailyStatusRecord {
   updatedBy: string;
 }
 
+export interface CompanySettingsData {
+  companyName: string;
+  tagline: string;
+  address: string;
+  phone: string;
+  email?: string;
+  description?: string;
+  logoUrl?: string;
+  permanentCredit: string;
+  developerAttribution?: string;
+  updatedAt: string;
+}
+
+export interface AuditLogData {
+  id: number;
+  userId: string;
+  username: string;
+  action: string;
+  module: string;
+  recordId?: string | number;
+  details: string;
+  oldValue?: string;
+  newValue?: string;
+  timestamp: string;
+  reference?: string;
+}
+
 declare global {
   var __memoryStore: {
     customers: CustomerData[];
@@ -300,6 +327,8 @@ declare global {
     roznamcha: RoznamchaItemData[];
     vehicleStatuses: VehicleDailyStatusRecord[];
     vehicleStatusHistory: VehicleStatusHistoryRecord[];
+    companySettings: CompanySettingsData;
+    auditLogs: AuditLogData[];
   } | undefined;
 }
 
@@ -309,7 +338,7 @@ if (!global.__memoryStore) {
 
   global.__memoryStore = {
     customers: [
-      { Id: 1, Name: "Al-Madina Builders", Phone: "03001234567", Address: "Site Area Hub / Karachi", BalanceDue: 45000, Advance: 0, CreatedAt: new Date().toISOString(), UpdatedAt: new Date().toISOString() },
+      { Id: 1, Name: "Al-Madina Builders", Phone: "03001234567", Address: "Site Area Hub / Karachi", BalanceDue: 40000, Advance: 0, CreatedAt: new Date().toISOString(), UpdatedAt: new Date().toISOString() },
       { Id: 2, Name: "Lasbela Mining Corporation", Phone: "03152914836", Address: "Winder Lasbela", BalanceDue: 120000, Advance: 0, CreatedAt: new Date().toISOString(), UpdatedAt: new Date().toISOString() },
       { Id: 3, Name: "Nasrullah Construction Co", Phone: "03108444612", Address: "Uthal District Lasbela", BalanceDue: 0, Advance: 25000, CreatedAt: new Date().toISOString(), UpdatedAt: new Date().toISOString() },
     ],
@@ -350,6 +379,7 @@ if (!global.__memoryStore) {
       { Id: 1, Date: todayStr, VoucherNumber: "OP-CASH-001", Description: "Opening Cash in Hand", Reference: "System", TransactionType: "Opening Cash", CashIn: 150000, CashOut: 0, RunningBalance: 150000 },
       { Id: 2, Date: todayStr, VoucherNumber: "CR-20261115-02", Description: "Customer Receipt: Lasbela Mining Corporation", Reference: "TRIP-01", TransactionType: "Customer Receipt", CashIn: 50000, CashOut: 0, RunningBalance: 200000 },
       { Id: 3, Date: todayStr, VoucherNumber: "CP-20261115-01", Description: "Staff Payment: Iqbal Driver (Monthly Salary advance)", Reference: "STAFF-01", TransactionType: "Staff Payment", CashIn: 0, CashOut: 15000, RunningBalance: 185000 },
+      { Id: 4, Date: todayStr, VoucherNumber: "CR-20261117-05", Description: "Customer Receipt: Al-Madina Builders", Reference: "VOUCH-5", TransactionType: "Customer Receipt", CashIn: 5000, CashOut: 0, RunningBalance: 190000 },
     ],
     bankTransactions: [
       { Id: 1, BankAccountId: 1, Date: todayStr, VoucherNumber: "OP-BANK-001", Description: "Opening Balance Meezan Bank", TransactionType: "Opening Balance", BankIn: 450000, BankOut: 0, RunningBalance: 450000 },
@@ -358,6 +388,7 @@ if (!global.__memoryStore) {
     customerLedgers: [
       { Id: 1, CustomerId: 1, Date: todayStr, VoucherNumber: "TRIP-101", TripRef: "101", Description: "Diesel delivery trip to Site Hub", Debit: 85500, Credit: 0, RunningBalance: 85500, PaymentMethod: "Credit" },
       { Id: 2, CustomerId: 1, Date: todayStr, VoucherNumber: "CR-101", TripRef: "101", Description: "Cash part payment received", Debit: 0, Credit: 40500, RunningBalance: 45000, PaymentMethod: "Cash" },
+      { Id: 5, CustomerId: 1, Date: todayStr, VoucherNumber: "CR-20261117-05", TripRef: "VOUCH-5", Description: "Customer cash part payment received", Debit: 0, Credit: 5000, RunningBalance: 40000, PaymentMethod: "Cash" },
       { Id: 3, CustomerId: 2, Date: todayStr, VoucherNumber: "TRIP-102", TripRef: "102", Description: "Crush stone 2 dumpers delivery", Debit: 170000, Credit: 0, RunningBalance: 170000, PaymentMethod: "Credit" },
       { Id: 4, CustomerId: 2, Date: todayStr, VoucherNumber: "CR-102", TripRef: "102", Description: "Cash received from Lasbela Mining", Debit: 0, Credit: 50000, RunningBalance: 120000, PaymentMethod: "Cash" },
     ],
@@ -376,6 +407,7 @@ if (!global.__memoryStore) {
       { Id: 1, VoucherNumber: "CP-20261115-01", Date: todayStr, PaymentType: "CashPayment", PartyType: "Staff", StaffId: 1, Staff: { Name: "Iqbal Driver" }, DriverName: "Iqbal Driver", Amount: 15000, Remarks: "Monthly Salary advance payment" },
       { Id: 2, VoucherNumber: "CR-20261115-02", Date: todayStr, PaymentType: "CashReceipt", PartyType: "Customer", CustomerId: 2, Customer: { Name: "Lasbela Mining Corporation" }, Amount: 50000, Remarks: "Running bill cash clearance" },
       { Id: 3, VoucherNumber: "CP-20261115-03", Date: todayStr, PaymentType: "CashPayment", PartyType: "Vehicle", GariNo: "786", DriverName: "Rashid Driver", Amount: 8000, Remarks: "Vehicle maintenance & brake shoes" },
+      { Id: 4, VoucherNumber: "CR-20261117-05", Date: todayStr, PaymentType: "CashReceipt", PartyType: "Customer", CustomerId: 1, Customer: { Name: "Al-Madina Builders" }, Amount: 5000, Remarks: "Running bill partial payment received in cash" },
     ],
     gariyan: [
       { id: 1, gariNo: "786", driverName: "Rashid Driver", malik: "Haji Najeeb (Muslim Construction)", phone: "03152914836", modelYear: "2024", capacity: "25 Ton Dumper", status: "Active" },
@@ -499,6 +531,42 @@ if (!global.__memoryStore) {
         remarks: "Vehicle arrived at destination site, queueing for unloading.",
         updatedBy: "Site Supervisor",
         createdAt: new Date().toISOString(),
+      },
+    ],
+    companySettings: {
+      companyName: "Muslim Construction",
+      tagline: "Construction & Transport Management System",
+      address: "Site Area Hub, Lasbela & Transport Chowk, Pakistan",
+      phone: "+92 315 2914836",
+      email: "info@muslimconstruction.com",
+      description: "Heavy Earthmoving, Aggregate Supply & Transport Logistics",
+      logoUrl: "/icons/icon-192x192.png",
+      permanentCredit: "Software By Roonjha Developers : 03152914836",
+      developerAttribution: "Software By Roonjha Developers : 03152914836",
+      updatedAt: new Date().toISOString(),
+    },
+    auditLogs: [
+      {
+        id: 1,
+        userId: "admin",
+        username: "Super Admin",
+        action: "PAYMENT",
+        module: "Customers",
+        recordId: 1,
+        details: "Cash payment of Rs. 5,000 received from Al-Madina Builders. Balance reduced to Rs. 40,000.",
+        oldValue: "BalanceDue: 45000",
+        newValue: "BalanceDue: 40000",
+        timestamp: new Date().toISOString(),
+        reference: "CR-20261117-05",
+      },
+      {
+        id: 2,
+        userId: "admin",
+        username: "Super Admin",
+        action: "SYSTEM_INIT",
+        module: "Authentication",
+        details: "System security audit and trial account initialization completed.",
+        timestamp: new Date().toISOString(),
       },
     ],
   };
