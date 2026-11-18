@@ -30,37 +30,18 @@ import {
   Navigation,
 } from "lucide-react";
 
+import { triggerPWAInstall } from "@/lib/pwa";
+import { openPWAInstallGuide } from "@/components/PWAInstallPrompt";
+
 export function MobileNavHeader({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [installPromptEvent, setInstallPromptEvent] = useState<any>(null);
-  const [canInstall, setCanInstall] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e: any) => {
-      e.preventDefault();
-      setInstallPromptEvent(e);
-      setCanInstall(true);
-    };
-
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-
-    return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
-    };
-  }, []);
-
   const handleInstallApp = async () => {
-    if (!installPromptEvent) {
-      alert("To install on mobile: Open browser menu (three dots or Share) and select 'Add to Home Screen' or 'Install App'.");
-      return;
-    }
-    installPromptEvent.prompt();
-    const { outcome } = await installPromptEvent.userChoice;
-    if (outcome === "accepted") {
-      setCanInstall(false);
-      setInstallPromptEvent(null);
+    const res = await triggerPWAInstall();
+    if (!res.success) {
+      openPWAInstallGuide();
     }
   };
 
@@ -102,22 +83,22 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
   return (
     <>
       <header className="bg-slate-900 text-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 flex justify-between items-center h-16 gap-1.5 sm:gap-4 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 flex justify-between items-center h-16 gap-1 sm:gap-3">
           <div className="flex items-center space-x-1.5 sm:space-x-2.5 min-w-0 flex-shrink">
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className="lg:hidden p-1.5 sm:p-2 rounded-lg bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition flex-shrink-0"
+              className="lg:hidden p-1.5 rounded-lg bg-slate-800 text-slate-200 hover:text-white hover:bg-slate-700 transition flex-shrink-0"
               aria-label="Toggle Navigation Menu"
             >
               {menuOpen ? <X className="w-5 h-5 text-amber-400" /> : <Menu className="w-5 h-5" />}
             </button>
 
-            <Link href="/dashboard" className="flex items-center space-x-2 min-w-0 group">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-amber-500 flex items-center justify-center font-black text-slate-900 text-base sm:text-xl shadow group-hover:bg-amber-400 transition flex-shrink-0">
+            <Link href="/dashboard" className="flex items-center space-x-1.5 sm:space-x-2 min-w-0 group">
+              <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center font-black text-slate-900 text-base sm:text-xl shadow group-hover:bg-amber-400 transition flex-shrink-0">
                 🏗️
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 truncate">
                 <h1 className="text-xs sm:text-base md:text-lg font-bold tracking-tight leading-tight truncate">
                   Muslim Construction
                 </h1>
@@ -128,30 +109,30 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
 
-          <div className="flex items-center space-x-1.5 sm:space-x-2 flex-shrink-0">
+          <div className="flex items-center space-x-1 sm:space-x-2 flex-shrink-0">
             {/* Live Online / Offline Sync Badge */}
             <SyncStatusBadge />
 
-            {/* Install App Button - on desktop & tablet */}
+            {/* Install App Button - visible on both Mobile and Desktop */}
             <button
               type="button"
               onClick={handleInstallApp}
-              className="hidden md:flex items-center space-x-1 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-2.5 py-1.5 rounded-lg shadow transition flex-shrink-0"
+              className="flex items-center space-x-1 text-[11px] sm:text-xs bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold px-2 sm:px-2.5 py-1.5 rounded-lg shadow transition flex-shrink-0"
               title="Install Web App on your phone or PC"
             >
-              <Download className="w-3.5 h-3.5" />
-              <span>Install App</span>
+              <Download className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline">Install App</span>
             </button>
 
-            {/* Quick New Roznamcha Entry - perfectly sized for mobile */}
+            {/* Quick New Roznamcha Entry - strictly contained within navbar */}
             <Link
               href="/daily-ledger"
-              className="flex items-center space-x-1 text-xs bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black px-2 sm:px-2.5 py-1.5 rounded-lg shadow transition flex-shrink-0 whitespace-nowrap"
+              className="flex items-center space-x-1 text-[11px] sm:text-xs bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black px-2 sm:px-2.5 py-1.5 rounded-lg shadow transition flex-shrink-0 whitespace-nowrap"
               title="Add New Daily Trip Entry"
             >
               <PlusCircle className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="hidden sm:inline">New Entry</span>
-              <span className="sm:hidden text-[11px] font-bold">Entry</span>
+              <span className="sm:hidden font-black">Entry</span>
             </Link>
 
             {/* Sign Out Button */}

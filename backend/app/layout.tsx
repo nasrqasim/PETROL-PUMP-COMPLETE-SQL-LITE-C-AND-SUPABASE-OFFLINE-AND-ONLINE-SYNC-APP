@@ -5,24 +5,33 @@ import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 
 export const metadata: Metadata = {
   title: "Muslim Construction - Roznamcha & Accounts Management",
-  description: "Muslim Construction - Daily Roznamcha, Vehicle Ledger, Accounting & Project Financials. Software by Roonjha Developers: 03152914836",
+  description:
+    "Muslim Construction - Daily Roznamcha, Vehicle Ledger, Accounting & Project Financials. Software by Roonjha Developers: 03152914836",
   manifest: "/manifest.json",
+  applicationName: "Muslim Construction",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Muslim Construction",
   },
   icons: {
-    icon: "/icons/icon-192x192.png",
-    apple: "/icons/icon-192x192.png",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/favicon.png", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+    ],
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 5,
   themeColor: "#0f172a",
 };
 
@@ -32,12 +41,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ur" dir="ltr">
+    <html lang="en" dir="ltr">
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+        <link rel="icon" href="/favicon.ico" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Muslim Construction" />
+        <meta name="apple-mobile-web-app-title" content="Muslim ERP" />
+        <meta name="application-name" content="Muslim ERP" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </head>
       <body className="min-h-screen bg-slate-50 flex flex-col text-slate-800 antialiased selection:bg-amber-500 selection:text-slate-900">
         <MobileNavHeader>{children}</MobileNavHeader>
