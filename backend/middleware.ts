@@ -52,9 +52,13 @@ export async function middleware(req: NextRequest) {
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/icons") ||
+    pathname.startsWith("/screenshots") ||
     pathname.startsWith("/public") ||
+    pathname.match(/\.(?:png|jpg|jpeg|gif|svg|ico|webp|json|js|css|woff|woff2|txt)$/) ||
     pathname === "/manifest.json" ||
     pathname === "/favicon.ico" ||
+    pathname === "/favicon.png" ||
+    pathname === "/apple-touch-icon.png" ||
     pathname === "/sw.js"
   ) {
     return NextResponse.next();
@@ -108,11 +112,8 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
+     * Match all request paths except for static files, manifest, sw, icons, screenshots, images
      */
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    "/((?!_next/static|_next/image|favicon.ico|favicon.png|manifest.json|sw.js|icons/|screenshots/|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|json|js|css|woff2?)$).*)",
   ],
 };

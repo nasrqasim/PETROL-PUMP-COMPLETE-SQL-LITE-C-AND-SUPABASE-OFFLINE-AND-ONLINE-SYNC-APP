@@ -68,24 +68,39 @@ export function subscribePWAState(callback: (state: PWAState) => void): () => vo
 
 // Global initialization in browser
 if (typeof window !== "undefined") {
+  // Check if early inline script in <head> already captured the prompt
+  if ((window as any).__pwaDeferredPrompt) {
+    deferredPrompt = (window as any).__pwaDeferredPrompt;
+  }
+
   // 1. Listen for Chromium beforeinstallprompt
   window.addEventListener("beforeinstallprompt", (e: Event) => {
     e.preventDefault();
     deferredPrompt = e;
+    (window as any).__pwaDeferredPrompt = e;
     console.log("[PWA] beforeinstallprompt captured successfully.");
     notifyListeners();
+  });
+
+  // Custom event when prompt is captured early
+  window.addEventListener("pwa_prompt_ready", () => {
+    if ((window as any).__pwaDeferredPrompt) {
+      deferredPrompt = (window as any).__pwaDeferredPrompt;
+      notifyListeners();
+    }
   });
 
   // 2. Listen for appinstalled
   window.addEventListener("appinstalled", () => {
     console.log("[PWA] App successfully installed.");
     deferredPrompt = null;
+    (window as any).__pwaDeferredPrompt = null;
     notifyListeners();
   });
 
-  // 3. Register Service Worker with robust error handling
-  if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => {
+  // 3. Register Service Worker with robust error handling (immediate or on load)
+  const registerServiceWorker = () => {
+    if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw.js", { scope: "/" })
         .then((reg) => {
@@ -105,7 +120,13 @@ if (typeof window !== "undefined") {
         .catch((err) => {
           console.warn("[PWA] Service Worker registration failed:", err);
         });
-    });
+    }
+  };
+
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    registerServiceWorker();
+  } else {
+    window.addEventListener("load", registerServiceWorker);
   }
 }
 
@@ -117,19 +138,24 @@ export async function triggerPWAInstall(): Promise<{
   outcome?: "accepted" | "dismissed";
   needsManualGuide: boolean;
   platform: "desktop" | "android" | "ios" | "unknown";
+  hasNativePrompt: boolean;
 }> {
   const platform = detectPlatform();
+  const prompt = deferredPrompt || (typeof window !== "undefined" && (window as any).__pwaDeferredPrompt);
 
-  if (deferredPrompt) {
+  if (prompt) {
     try {
-      deferredPrompt.prompt();
-      const choice = await deferredPrompt.userChoice;
+      await prompt.prompt();
+      const choice = await prompt.userChoice;
       const accepted = choice.outcome === "accepted";
       if (accepted) {
         deferredPrompt = null;
+        if (typeof window !== "undefined") {
+          (window as any).__pwaDeferredPrompt = null;
+        }
         notifyListeners();
       }
-      return { success: accepted, outcome: choice.outcome, needsManualGuide: false, platform };
+      return { success: accepted, outcome: choice.outcome, needsManualGuide: !accepted, platform, hasNativePrompt: true };
     } catch (err) {
       console.warn("[PWA] Prompt call failed:", err);
     }
@@ -140,5 +166,6 @@ export async function triggerPWAInstall(): Promise<{
     success: false,
     needsManualGuide: true,
     platform,
+    hasNativePrompt: false,
   };
 }

@@ -37,6 +37,7 @@ export function PWAInstallPrompt() {
   const [showBanner, setShowBanner] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<"desktop" | "android" | "ios">("desktop");
+  const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const unsub = subscribePWAState((state) => {
@@ -53,6 +54,7 @@ export function PWAInstallPrompt() {
     });
 
     const handleOpenEvent = () => {
+      setFeedbackMessage(null);
       setShowModal(true);
     };
 
@@ -65,17 +67,32 @@ export function PWAInstallPrompt() {
   }, []);
 
   const handleInstallClick = async () => {
+    setFeedbackMessage(null);
     const res = await triggerPWAInstall();
     if (res.success) {
       setShowBanner(false);
       setShowModal(false);
-    } else {
-      // If native prompt is not directly available, show the interactive guide
-      if (res.platform === "ios") setActiveTab("ios");
-      else if (res.platform === "android") setActiveTab("android");
-      else setActiveTab("desktop");
-      setShowModal(true);
+      return;
     }
+
+    // Switch tab according to detected platform
+    if (res.platform === "ios") setActiveTab("ios");
+    else if (res.platform === "android") setActiveTab("android");
+    else setActiveTab("desktop");
+
+    if (res.outcome === "dismissed") {
+      setFeedbackMessage("Installation prompt was dismissed. You can install anytime using the instructions below.");
+    } else if (!res.hasNativePrompt) {
+      if (res.platform === "ios") {
+        setFeedbackMessage("On iPhone/iPad Safari, tap the Share icon (📤) at the bottom, then choose 'Add to Home Screen'.");
+      } else if (res.platform === "android") {
+        setFeedbackMessage("Tap Chrome menu (⋮) at top-right $\rightarrow$ tap 'Install app' (or 'Add to Home screen').");
+      } else {
+        setFeedbackMessage("Look at your browser's address bar (top right) and click the Install icon (🖥️ or ➕) to install immediately.");
+      }
+    }
+
+    setShowModal(true);
   };
 
   const handleDismissBanner = () => {
@@ -154,20 +171,38 @@ export function PWAInstallPrompt() {
             </div>
 
             {/* Quick One-Click Trigger Button */}
-            <div className="p-5 border-b border-slate-100 bg-amber-50/60 flex items-center justify-between gap-3">
+            <div className="p-5 border-b border-slate-100 bg-amber-50/70 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <p className="font-black text-xs text-slate-900">Direct 1-Click Install</p>
-                <p className="text-[11px] text-slate-600">Click below to launch your browser&apos;s installer</p>
+                <p className="font-black text-xs text-slate-900 flex items-center gap-1.5">
+                  <span>⚡</span>
+                  <span>{pwaState.canInstall && pwaState.platform !== "ios" ? "Ready to Install" : "Install Application"}</span>
+                </p>
+                <p className="text-[11px] text-slate-600">
+                  {pwaState.canInstall && pwaState.platform !== "ios"
+                    ? "Click Install Now to launch native installer popup"
+                    : "Works on Android, PC / Laptop (Chrome / Edge), and iPhone (Safari)"}
+                </p>
               </div>
               <button
                 type="button"
                 onClick={handleInstallClick}
-                className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl shadow transition"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-black text-xs px-5 py-2.5 rounded-xl shadow transition flex-shrink-0"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-4 h-4 flex-shrink-0" />
                 <span>Install Now</span>
               </button>
             </div>
+
+            {/* Prompt Feedback / Instruction Highlight if clicked without native dialog */}
+            {feedbackMessage && (
+              <div className="mx-4 my-3 p-3 rounded-xl bg-amber-100 border border-amber-300 text-amber-950 text-xs flex items-start gap-2.5 animate-in slide-in-from-top-1">
+                <span className="text-base flex-shrink-0">👉</span>
+                <div className="space-y-0.5">
+                  <p className="font-bold text-[11px] text-amber-900 uppercase tracking-wide">Next Step:</p>
+                  <p className="text-slate-800 leading-snug">{feedbackMessage}</p>
+                </div>
+              </div>
+            )}
 
             {/* Platform Selection Tabs */}
             <div className="flex border-b border-slate-200 bg-slate-50 text-xs font-bold">

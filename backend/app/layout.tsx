@@ -52,6 +52,20 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Muslim ERP" />
         <meta name="application-name" content="Muslim ERP" />
         <meta name="mobile-web-app-capable" content="yes" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                window.__pwaDeferredPrompt = null;
+                window.addEventListener('beforeinstallprompt', function(e) {
+                  e.preventDefault();
+                  window.__pwaDeferredPrompt = e;
+                  window.dispatchEvent(new CustomEvent('pwa_prompt_ready'));
+                });
+              } catch (_) {}
+            `,
+          }}
+        />
       </head>
       <body className="min-h-screen bg-slate-50 flex flex-col text-slate-800 antialiased selection:bg-amber-500 selection:text-slate-900">
         <MobileNavHeader>{children}</MobileNavHeader>
