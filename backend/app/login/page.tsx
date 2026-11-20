@@ -14,7 +14,10 @@ import {
   HardHat,
   Truck,
   CheckCircle2,
+  Download,
 } from "lucide-react";
+import { triggerPWAInstall } from "@/lib/pwa";
+import { openPWAInstallGuide } from "@/components/PWAInstallPrompt";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,6 +26,13 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const handleInstallClick = async () => {
+    const res = await triggerPWAInstall();
+    if (!res.success) {
+      openPWAInstallGuide();
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,12 +96,23 @@ export default function LoginPage() {
             </div>
           </Link>
 
-          <Link
-            href="/"
-            className="text-xs text-slate-400 hover:text-white font-semibold transition"
-          >
-            ← Back to Homepage
-          </Link>
+          <div className="flex items-center space-x-3">
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold transition shadow"
+              title="Install Web App on your phone or PC"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Install App</span>
+            </button>
+            <Link
+              href="/"
+              className="text-xs text-slate-400 hover:text-white font-semibold transition"
+            >
+              ← Back
+            </Link>
+          </div>
         </div>
       </header>
 

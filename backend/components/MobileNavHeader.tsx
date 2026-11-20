@@ -82,9 +82,9 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <header className="bg-slate-900 text-white shadow-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 flex justify-between items-center h-16 gap-1 sm:gap-3">
-          <div className="flex items-center space-x-1.5 sm:space-x-2.5 min-w-0 flex-shrink">
+      <header className="bg-slate-900 text-white shadow-md sticky top-0 z-50 w-full overflow-x-hidden">
+        <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 flex justify-between items-center h-16">
+          <div className="flex items-center space-x-1.5 sm:space-x-2.5 flex-1 min-w-0 mr-1 sm:mr-3">
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
@@ -94,15 +94,16 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
               {menuOpen ? <X className="w-5 h-5 text-amber-400" /> : <Menu className="w-5 h-5" />}
             </button>
 
-            <Link href="/dashboard" className="flex items-center space-x-1.5 sm:space-x-2 min-w-0 group">
+            <Link href="/dashboard" className="flex items-center space-x-1.5 sm:space-x-2 flex-1 min-w-0 truncate group">
               <div className="w-8 h-8 rounded-lg bg-amber-500 flex items-center justify-center font-black text-slate-900 text-base sm:text-xl shadow group-hover:bg-amber-400 transition flex-shrink-0">
                 🏗️
               </div>
               <div className="min-w-0 truncate">
                 <h1 className="text-xs sm:text-base md:text-lg font-bold tracking-tight leading-tight truncate">
-                  Muslim Construction
+                  <span className="sm:hidden">Muslim ERP</span>
+                  <span className="hidden sm:inline">Muslim Construction</span>
                 </h1>
-                <p className="hidden sm:block text-[11px] text-amber-400 font-medium truncate">
+                <p className="hidden md:block text-[11px] text-amber-400 font-medium truncate">
                   Construction & Transport Management System
                 </p>
               </div>
@@ -117,7 +118,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
             <button
               type="button"
               onClick={handleInstallApp}
-              className="flex items-center space-x-1 text-[11px] sm:text-xs bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold px-2 sm:px-2.5 py-1.5 rounded-lg shadow transition flex-shrink-0"
+              className="flex items-center space-x-1 text-[11px] sm:text-xs bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold px-1.5 sm:px-2.5 py-1.5 rounded-lg shadow transition flex-shrink-0"
               title="Install Web App on your phone or PC"
             >
               <Download className="w-3.5 h-3.5 flex-shrink-0" />
@@ -132,7 +133,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
             >
               <PlusCircle className="w-3.5 h-3.5 flex-shrink-0" />
               <span className="hidden sm:inline">New Entry</span>
-              <span className="sm:hidden font-black">Entry</span>
+              <span className="sm:hidden">Entry</span>
             </Link>
 
             {/* Sign Out Button */}

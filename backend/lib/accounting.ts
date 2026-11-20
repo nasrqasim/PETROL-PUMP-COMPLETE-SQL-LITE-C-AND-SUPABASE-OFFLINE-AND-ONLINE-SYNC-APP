@@ -1203,3 +1203,203 @@ export function reconcileBankBalance(bankAccountId: number): {
     isConsistent: calculatedBalance === currentBalance,
   };
 }
+
+// ==========================================
+// 10. COMPREHENSIVE DATABASE AUDIT & CLEANING ENGINE
+// ==========================================
+
+export function auditAndCleanDatabase(): {
+  success: boolean;
+  timestamp: string;
+  customersAudited: number;
+  suppliersAudited: number;
+  cashReconciled: boolean;
+  bankAccountsReconciled: number;
+  correctionsMade: string[];
+  summary: {
+    totalCustomers: number;
+    totalSuppliers: number;
+    totalRoznamcha: number;
+    totalVouchers: number;
+    totalProducts: number;
+    totalStaff: number;
+    totalBankAccounts: number;
+    cashBalance: number;
+  };
+} {
+  const corrections: string[] = [];
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  // 1. Audit & Clean Customers
+  memoryStore.customers.forEach((customer) => {
+    const custId = Number(customer.Id);
+    let ledgers = memoryStore.customerLedgers.filter((l) => Number(l.CustomerId) === custId);
+
+    // If customer has a balance or advance but 0 ledger entries, create opening entry
+    if (ledgers.length === 0) {
+      if ((customer.BalanceDue || 0) > 0) {
+        const opEntry: CustomerLedgerEntry = {
+          Id: Date.now() + Math.floor(Math.random() * 1000),
+          CustomerId: custId,
+          Date: customer.CreatedAt ? customer.CreatedAt.split("T")[0] : todayStr,
+          VoucherNumber: `OP-DUE-${custId}`,
+          Description: `Opening Balance Due for ${customer.Name}`,
+          Debit: Number(customer.BalanceDue) || 0,
+          Credit: 0,
+          RunningBalance: Number(customer.BalanceDue) || 0,
+          PaymentMethod: "Credit",
+        };
+        memoryStore.customerLedgers.push(opEntry);
+        corrections.push(`Added opening due ledger entry for customer ${customer.Name} (Rs. ${customer.BalanceDue})`);
+      } else if ((customer.Advance || 0) > 0) {
+        const opEntry: CustomerLedgerEntry = {
+          Id: Date.now() + Math.floor(Math.random() * 1000),
+          CustomerId: custId,
+          Date: customer.CreatedAt ? customer.CreatedAt.split("T")[0] : todayStr,
+          VoucherNumber: `OP-ADV-${custId}`,
+          Description: `Opening Advance Balance for ${customer.Name}`,
+          Debit: 0,
+          Credit: Number(customer.Advance) || 0,
+          RunningBalance: -(Number(customer.Advance) || 0),
+          PaymentMethod: "Bank",
+        };
+        memoryStore.customerLedgers.push(opEntry);
+        corrections.push(`Added opening advance ledger entry for customer ${customer.Name} (Rs. ${customer.Advance})`);
+      }
+    }
+
+    // Recalculate sequential ledger balances
+    ledgers = memoryStore.customerLedgers.filter((l) => Number(l.CustomerId) === custId);
+    let runningNet = 0;
+    ledgers.forEach((entry) => {
+      runningNet += (Number(entry.Debit) || 0) - (Number(entry.Credit) || 0);
+      entry.RunningBalance = runningNet;
+    });
+
+    const expectedDue = runningNet > 0 ? runningNet : 0;
+    const expectedAdvance = runningNet < 0 ? Math.abs(runningNet) : 0;
+
+    if (customer.BalanceDue !== expectedDue || customer.Advance !== expectedAdvance) {
+      corrections.push(
+        `Synchronized customer ${customer.Name}: Due changed from ${customer.BalanceDue} to ${expectedDue}, Advance changed from ${customer.Advance} to ${expectedAdvance}`
+      );
+      customer.BalanceDue = expectedDue;
+      customer.Advance = expectedAdvance;
+      customer.UpdatedAt = new Date().toISOString();
+    }
+  });
+
+  // 2. Audit & Clean Suppliers
+  memoryStore.suppliers.forEach((supplier) => {
+    const suppId = Number(supplier.Id);
+    let ledgers = memoryStore.supplierLedgers.filter((l) => Number(l.SupplierId) === suppId);
+
+    // If supplier has a balance or advance but 0 ledger entries, create opening entry
+    if (ledgers.length === 0) {
+      if ((supplier.BalanceDue || 0) > 0) {
+        const opEntry: SupplierLedgerEntry = {
+          Id: Date.now() + Math.floor(Math.random() * 1000),
+          SupplierId: suppId,
+          Date: supplier.CreatedAt ? supplier.CreatedAt.split("T")[0] : todayStr,
+          VoucherNumber: `OP-DUE-SUP-${suppId}`,
+          Description: `Opening Payable Balance for ${supplier.Name}`,
+          Debit: 0,
+          Credit: Number(supplier.BalanceDue) || 0,
+          RunningBalance: Number(supplier.BalanceDue) || 0,
+          PaymentMethod: "Credit",
+        };
+        memoryStore.supplierLedgers.push(opEntry);
+        corrections.push(`Added opening payable ledger entry for supplier ${supplier.Name} (Rs. ${supplier.BalanceDue})`);
+      } else if ((supplier.Advance || 0) > 0) {
+        const opEntry: SupplierLedgerEntry = {
+          Id: Date.now() + Math.floor(Math.random() * 1000),
+          SupplierId: suppId,
+          Date: supplier.CreatedAt ? supplier.CreatedAt.split("T")[0] : todayStr,
+          VoucherNumber: `OP-ADV-SUP-${suppId}`,
+          Description: `Opening Advance Deposit for ${supplier.Name}`,
+          Debit: Number(supplier.Advance) || 0,
+          Credit: 0,
+          RunningBalance: Number(supplier.Advance) || 0,
+          PaymentMethod: "Bank",
+        };
+        memoryStore.supplierLedgers.push(opEntry);
+        corrections.push(`Added opening advance deposit entry for supplier ${supplier.Name} (Rs. ${supplier.Advance})`);
+      }
+    }
+
+    // Recalculate sequential supplier ledger balances
+    ledgers = memoryStore.supplierLedgers.filter((l) => Number(l.SupplierId) === suppId);
+    let runningNet = 0;
+    ledgers.forEach((entry) => {
+      runningNet += (Number(entry.Credit) || 0) - (Number(entry.Debit) || 0);
+      entry.RunningBalance = runningNet;
+    });
+
+    const expectedDue = runningNet > 0 ? runningNet : 0;
+    const expectedAdvance = runningNet < 0 ? Math.abs(runningNet) : 0;
+
+    if (supplier.BalanceDue !== expectedDue || supplier.Advance !== expectedAdvance) {
+      corrections.push(
+        `Synchronized supplier ${supplier.Name}: Due changed from ${supplier.BalanceDue} to ${expectedDue}, Advance changed from ${supplier.Advance} to ${expectedAdvance}`
+      );
+      supplier.BalanceDue = expectedDue;
+      supplier.Advance = expectedAdvance;
+      supplier.UpdatedAt = new Date().toISOString();
+    }
+  });
+
+  // 3. Audit & Clean Cash Ledger
+  let cashRunning = 0;
+  memoryStore.cashTransactions.forEach((tx) => {
+    cashRunning += (Number(tx.CashIn) || 0) - (Number(tx.CashOut) || 0);
+    if (tx.RunningBalance !== cashRunning) {
+      corrections.push(`Adjusted cash voucher ${tx.VoucherNumber} running balance to ${cashRunning}`);
+      tx.RunningBalance = cashRunning;
+    }
+  });
+
+  // 4. Audit & Clean Bank Accounts
+  memoryStore.bankAccounts.forEach((account) => {
+    const accId = Number(account.Id);
+    const txs = memoryStore.bankTransactions.filter((t) => Number(t.BankAccountId) === accId);
+    let bankRunning = 0;
+    txs.forEach((tx) => {
+      bankRunning += (Number(tx.BankIn) || 0) - (Number(tx.BankOut) || 0);
+      tx.RunningBalance = bankRunning;
+    });
+    if (account.CurrentBalance !== bankRunning && txs.length > 0) {
+      corrections.push(`Synchronized bank account ${account.BankName} balance to ${bankRunning}`);
+      account.CurrentBalance = bankRunning;
+    }
+  });
+
+  // 5. Add Audit Log
+  addAuditLog({
+    action: "DATABASE_CLEAN_AUDIT",
+    module: "Database",
+    details: `Cleaned and audited database: ${corrections.length} correction(s) applied. Complete relational ledger integrity verified.`,
+  });
+
+  // 6. Persist to Disk
+  persistStore();
+
+  return {
+    success: true,
+    timestamp: new Date().toISOString(),
+    customersAudited: memoryStore.customers.length,
+    suppliersAudited: memoryStore.suppliers.length,
+    cashReconciled: true,
+    bankAccountsReconciled: memoryStore.bankAccounts.length,
+    correctionsMade: corrections,
+    summary: {
+      totalCustomers: memoryStore.customers.length,
+      totalSuppliers: memoryStore.suppliers.length,
+      totalRoznamcha: memoryStore.roznamcha.length,
+      totalVouchers: memoryStore.vouchers.length,
+      totalProducts: memoryStore.products.length,
+      totalStaff: memoryStore.staff.length,
+      totalBankAccounts: memoryStore.bankAccounts.length,
+      cashBalance: getCurrentCashBalance(),
+    },
+  };
+}

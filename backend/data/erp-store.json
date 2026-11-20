@@ -402,6 +402,17 @@
       "Credit": 50000,
       "RunningBalance": 120000,
       "PaymentMethod": "Cash"
+    },
+    {
+      "Id": 1795174348780,
+      "CustomerId": 3,
+      "Date": "2026-11-18",
+      "VoucherNumber": "OP-ADV-3",
+      "Description": "Opening Advance Balance for Nasrullah Construction Co",
+      "Debit": 0,
+      "Credit": 25000,
+      "RunningBalance": -25000,
+      "PaymentMethod": "Bank"
     }
   ],
   "supplierLedgers": [
@@ -426,6 +437,28 @@
       "Credit": 0,
       "RunningBalance": 85000,
       "PaymentMethod": "Cash"
+    },
+    {
+      "Id": 1795174349025,
+      "SupplierId": 2,
+      "Date": "2026-11-18",
+      "VoucherNumber": "OP-ADV-SUP-2",
+      "Description": "Opening Advance Deposit for Attock Petroleum Hub",
+      "Debit": 50000,
+      "Credit": 0,
+      "RunningBalance": 50000,
+      "PaymentMethod": "Bank"
+    },
+    {
+      "Id": 1795174349100,
+      "SupplierId": 3,
+      "Date": "2026-11-18",
+      "VoucherNumber": "OP-DUE-SUP-3",
+      "Description": "Opening Payable Balance for Al-Rehman Spare Parts & Tyres",
+      "Debit": 0,
+      "Credit": 34000,
+      "RunningBalance": 34000,
+      "PaymentMethod": "Credit"
     }
   ],
   "locations": [

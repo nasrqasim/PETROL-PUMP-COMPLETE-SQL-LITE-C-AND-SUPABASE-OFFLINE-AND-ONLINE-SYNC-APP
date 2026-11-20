@@ -27,10 +27,20 @@ import {
   Share2,
   Settings,
   Flame,
+  Download,
 } from "lucide-react";
+import { triggerPWAInstall } from "@/lib/pwa";
+import { openPWAInstallGuide } from "@/components/PWAInstallPrompt";
 
 export default function PublicHomePage() {
   const [activeTab, setActiveTab] = useState<"fleet" | "materials" | "erp">("fleet");
+
+  const handleInstallClick = async () => {
+    const res = await triggerPWAInstall();
+    if (!res.success) {
+      openPWAInstallGuide();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-amber-500 selection:text-slate-950">
@@ -96,14 +106,23 @@ export default function PublicHomePage() {
             <a href="#contact" className="hover:text-amber-400 transition">Contact</a>
           </nav>
 
-          {/* Main CTA: Prominent Login Button */}
-          <div className="flex items-center space-x-3">
+          {/* Main CTA: Prominent Login Button & Install Button */}
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <button
+              type="button"
+              onClick={handleInstallClick}
+              className="flex items-center space-x-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs sm:text-sm font-bold shadow-lg transition"
+              title="Install App on Phone or PC"
+            >
+              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>Install App</span>
+            </button>
             <Link
               href="/login"
-              className="flex items-center space-x-2 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-amber-500 via-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:from-amber-600 active:to-amber-700 text-slate-950 text-xs sm:text-sm font-black uppercase tracking-wider shadow-xl transition-all transform hover:-translate-y-0.5 hover:shadow-amber-500/25"
+              className="flex items-center space-x-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:from-amber-600 active:to-amber-700 text-slate-950 text-xs sm:text-sm font-black uppercase tracking-wider shadow-xl transition-all transform hover:-translate-y-0.5"
             >
               <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              <span>Login to System</span>
+              <span>Login</span>
             </Link>
           </div>
         </div>
@@ -157,12 +176,21 @@ export default function PublicHomePage() {
                   <ArrowRight className="w-4 h-4" />
                 </Link>
 
+                <button
+                  type="button"
+                  onClick={handleInstallClick}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-7 py-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-sm uppercase tracking-wider shadow-2xl transition-all transform hover:scale-105"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Install App / Add to Home</span>
+                </button>
+
                 <a
                   href="#features"
-                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-7 py-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 font-bold text-sm transition backdrop-blur-sm"
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-4 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-slate-200 border border-slate-700/80 font-bold text-sm transition backdrop-blur-sm"
                 >
                   <Settings className="w-4 h-4 text-amber-400" />
-                  <span>Explore System Features</span>
+                  <span>Features</span>
                 </a>
               </div>
 
