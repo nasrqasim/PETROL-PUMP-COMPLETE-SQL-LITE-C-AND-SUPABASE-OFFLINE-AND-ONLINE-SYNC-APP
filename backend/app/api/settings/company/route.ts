@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { NextRequest, NextResponse } from "next/server";
 import { memoryStore } from "@/lib/memory-store";
+import { persistStore } from "@/lib/memory-store";
 import { addAuditLog } from "@/lib/accounting";
 
 export async function GET() {
@@ -28,6 +29,7 @@ export async function PUT(req: NextRequest) {
     logoUrl: body.logoUrl || existing.logoUrl,
     // Permanent non-editable credit strictly locked
     permanentCredit: "Software By Roonjha Developers : 03152914836",
+    developerAttribution: "Software By Roonjha Developers : 03152914836",
     updatedAt: new Date().toISOString(),
   };
 
@@ -35,6 +37,9 @@ export async function PUT(req: NextRequest) {
   const newValues = `Name: ${updated.companyName}, Phone: ${updated.phone}, Address: ${updated.address}`;
 
   memoryStore.companySettings = updated;
+
+  // Persist to disk immediately so settings survive cold starts
+  persistStore();
 
   addAuditLog({
     action: "BRANDING_UPDATE",

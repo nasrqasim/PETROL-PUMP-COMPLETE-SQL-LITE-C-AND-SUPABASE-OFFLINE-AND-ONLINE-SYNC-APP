@@ -46,6 +46,7 @@ export default function CashBankPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const [form, setForm] = useState({
+    Date: new Date().toISOString().split("T")[0],
     PaymentType: "CashPayment",
     PartyType: "Customer",
     CustomerId: "",
@@ -99,6 +100,7 @@ export default function CashBankPage() {
   const resetForm = () => {
     setEditingId(null);
     setForm({
+      Date: new Date().toISOString().split("T")[0],
       PaymentType: "CashPayment",
       PartyType: "Customer",
       CustomerId: "",
@@ -116,6 +118,7 @@ export default function CashBankPage() {
   const handleEdit = (v: any) => {
     setEditingId(v.Id);
     setForm({
+      Date: v.Date || new Date().toISOString().split("T")[0],
       PaymentType: v.PaymentType || "CashPayment",
       PartyType: v.PartyType || "Customer",
       CustomerId: v.CustomerId ? String(v.CustomerId) : "",
@@ -144,6 +147,7 @@ export default function CashBankPage() {
       const method = editingId ? "PUT" : "POST";
 
       const payload = {
+        Date: form.Date,
         PaymentType: form.PaymentType,
         PartyType: form.PartyType,
         CustomerId: form.CustomerId ? Number(form.CustomerId) : undefined,
@@ -540,6 +544,18 @@ export default function CashBankPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-3.5 text-xs">
+              {/* Date Field */}
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Transaction Date *</label>
+                <input
+                  type="date"
+                  required
+                  value={form.Date}
+                  onChange={(e) => setForm({ ...form, Date: e.target.value })}
+                  className="w-full border border-slate-300 rounded-xl px-3 py-2 bg-white"
+                />
+              </div>
+
               {/* Row 1: Payment Type & Bank Selector */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
