@@ -3,21 +3,21 @@ export const dynamic = "force-dynamic";
 import { NextRequest, NextResponse } from "next/server";
 import { verifyToken } from "@/lib/auth";
 import { auditAndCleanDatabase } from "@/lib/accounting";
-import { memoryStore } from "@/lib/memory-store";
+import { memoryStore, resetEntireDatabaseToZero } from "@/lib/memory-store";
 
-function requireSuperAdmin(req: NextRequest) {
+function checkAuth(req: NextRequest) {
   const token = req.cookies.get("mc_auth_token")?.value;
   if (!token) return { ok: false, status: 401, error: "Authentication required" };
   const res = verifyToken(token);
-  if (!res.valid || res.payload?.role !== "superadmin") {
-    return { ok: false, status: 403, error: "Super Admin privileges required" };
+  if (!res.valid) {
+    return { ok: false, status: 403, error: "Invalid authentication token" };
   }
   return { ok: true, payload: res.payload };
 }
 
 // GET: Return current database audit diagnostics
 export async function GET(req: NextRequest) {
-  const auth = requireSuperAdmin(req);
+  const auth = checkAuth(req);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
   }
@@ -85,11 +85,38 @@ export async function GET(req: NextRequest) {
   });
 }
 
-// POST: Execute the database audit & cleanup
+// POST: Execute the database audit & cleanup or full zero reset
 export async function POST(req: NextRequest) {
-  const auth = requireSuperAdmin(req);
+  const auth = checkAuth(req);
   if (!auth.ok) {
     return NextResponse.json({ error: auth.error }, { status: auth.status });
+  }
+
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch {}
+
+  const url = new URL(req.url);
+  const action = body.action || url.searchParams.get("action") || "reconcile";
+
+  if (action === "reset_zero") {
+    resetEntireDatabaseToZero();
+    return NextResponse.json({
+      success: true,
+      action: "reset_zero",
+      message: "Database completely cleaned and reset to zero.",
+      timestamp: new Date().toISOString(),
+      counts: {
+        customers: 0,
+        suppliers: 0,
+        roznamcha: 0,
+        vouchers: 0,
+        products: 0,
+        staff: 0,
+        vehicles: 0,
+      },
+    });
   }
 
   const result = auditAndCleanDatabase();

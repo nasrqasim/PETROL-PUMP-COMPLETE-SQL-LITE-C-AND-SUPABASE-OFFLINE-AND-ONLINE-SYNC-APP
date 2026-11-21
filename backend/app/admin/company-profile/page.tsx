@@ -36,12 +36,35 @@ export default function CompanyProfilePage() {
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const loadSettings = async () => {
+    // 1. Instant local load from localStorage
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("mc_company_settings");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.companyName) {
+            setForm((prev) => ({
+              ...prev,
+              companyName: parsed.companyName,
+              tagline: parsed.tagline || prev.tagline,
+              address: parsed.address || prev.address,
+              phone: parsed.phone || prev.phone,
+              email: parsed.email || prev.email,
+              description: parsed.description || prev.description,
+              logoUrl: parsed.logoUrl || prev.logoUrl,
+            }));
+            setLoading(false);
+          }
+        }
+      } catch {}
+    }
+
     setLoading(true);
     try {
       const res = await fetch("/api/settings/company");
       if (res.ok) {
         const data = await res.json();
-        setForm({
+        const updated = {
           companyName: data.companyName || "Muslim Construction",
           tagline: data.tagline || "Construction & Transport Management System",
           address: data.address || "Site Area Hub, Lasbela & Transport Chowk, Pakistan",
@@ -50,7 +73,11 @@ export default function CompanyProfilePage() {
           description: data.description || "Heavy Earthmoving, Aggregate Supply & Transport Logistics",
           logoUrl: data.logoUrl || "/icons/icon-192x192.png",
           permanentCredit: "Software By Roonjha Developers : 03152914836",
-        });
+        };
+        setForm(updated);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("mc_company_settings", JSON.stringify(updated));
+        }
       }
     } catch (e) {
     } finally {
@@ -102,6 +129,14 @@ export default function CompanyProfilePage() {
 
       if (!res.ok) {
         throw new Error("Failed to update company branding.");
+      }
+
+      const updated = await res.json().catch(() => form);
+
+      // Save to localStorage & broadcast event so MobileNavHeader updates instantly!
+      if (typeof window !== "undefined") {
+        localStorage.setItem("mc_company_settings", JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent("company_settings_updated", { detail: updated }));
       }
 
       setMessage({ type: "success", text: "Company branding & profile updated successfully!" });

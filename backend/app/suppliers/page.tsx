@@ -68,7 +68,7 @@ export default function SuppliersPage() {
         const data = await res.json();
         const list = Array.isArray(data) ? data : data.suppliers || [];
         setSuppliers(list);
-        await offlineDb.bulkPut("suppliers", list);
+        await offlineDb.replaceAll("suppliers", list);
       }
     } catch (err) {
       console.warn("Offline: Serving suppliers from local database");

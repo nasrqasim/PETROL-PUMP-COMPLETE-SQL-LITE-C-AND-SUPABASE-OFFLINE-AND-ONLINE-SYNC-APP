@@ -72,7 +72,7 @@ export default function CustomersPage() {
         const data = await res.json();
         const list = Array.isArray(data) ? data : data.customers || [];
         setCustomers(list);
-        await offlineDb.bulkPut("customers", list);
+        await offlineDb.replaceAll("customers", list);
       }
     } catch (err) {
       console.warn("Offline: Serving customers from local database");

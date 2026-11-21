@@ -25,7 +25,10 @@ import {
   Building2,
   FileSpreadsheet,
   Navigation,
+  Trash2,
+  Wrench,
 } from "lucide-react";
+import { offlineDb } from "@/lib/offline-db";
 
 interface TrialStatusData {
   username: string;
@@ -98,6 +101,74 @@ export default function SuperAdminPage() {
       }
     } catch (err: any) {
       setError(err?.message || "Failed to update trial account.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleCleanDbToZero = async () => {
+    const confirmed = window.confirm(
+      "WARNING: Are you sure you want to clean and reset the entire database to ZERO (0)?\n\nThis will remove all customers, suppliers, trips, vouchers, cash/bank transactions, and sales from both server and your local browser storage. Master locations and company settings will be preserved."
+    );
+    if (!confirmed) return;
+
+    setUpdating(true);
+    setError(null);
+    try {
+      // 1. Wipe server database
+      const res = await fetch("/api/admin/clean-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset_zero" }),
+      });
+      if (!res.ok) throw new Error("Failed to reset database on server.");
+
+      // 2. Wipe browser local IndexedDB stores
+      await offlineDb.clearAll();
+
+      setSuccess("Database successfully reset to ZERO on server and local browser cache!");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err: any) {
+      setError(err?.message || "Error cleaning database.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleRunAudit = async () => {
+    setUpdating(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/admin/clean-db", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reconcile" }),
+      });
+      if (!res.ok) throw new Error("Audit execution failed.");
+      const data = await res.json();
+      const corrCount = data.correctionsMade?.length || 0;
+      setSuccess(
+        `Audit Completed! System Reconciled: ${data.customersAudited || 0} customers & ${data.suppliersAudited || 0} suppliers audited. ${corrCount === 0 ? "100% CLEAN - No balance discrepancies found!" : `${corrCount} balance adjustments synchronized.`}`
+      );
+    } catch (err: any) {
+      setError(err?.message || "Audit failed.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleClearLocalCache = async () => {
+    setUpdating(true);
+    try {
+      await offlineDb.clearAll();
+      setSuccess("Browser local IndexedDB cache completely flushed and cleaned!");
+      setTimeout(() => {
+        window.location.reload();
+      }, 1200);
+    } catch (err: any) {
+      setError("Failed to clear local cache.");
     } finally {
       setUpdating(false);
     }
@@ -364,6 +435,93 @@ export default function SuperAdminPage() {
             </span>
           </div>
         </Link>
+      </div>
+
+      {/* Database Management & Deep Clean Control */}
+      <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 sm:p-6 rounded-3xl border border-slate-700 shadow-xl space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-700/80 pb-4">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+              <Database className="w-5 h-5" />
+            </span>
+            <div>
+              <h2 className="text-base font-black tracking-tight text-white flex items-center gap-2">
+                Database Management & Forensic Audit
+              </h2>
+              <p className="text-xs text-slate-300">
+                Wipe all records to zero or perform comprehensive double-entry accounting reconciliation.
+              </p>
+            </div>
+          </div>
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-500/30 self-start sm:self-auto">
+            LIVE DB CONTROLS
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          {/* Action 1: Forensic Accounting Audit */}
+          <button
+            type="button"
+            disabled={updating}
+            onClick={handleRunAudit}
+            className="flex flex-col items-start p-4 rounded-2xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-600 transition text-left group disabled:opacity-50"
+          >
+            <div className="flex items-center justify-between w-full mb-2">
+              <span className="p-2 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                <CheckCircle2 className="w-4 h-4" />
+              </span>
+              <span className="text-[10px] font-bold text-blue-400">Audit & Sync</span>
+            </div>
+            <h3 className="text-xs font-black text-white group-hover:text-blue-300 transition">
+              Run Forensic Audit
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Audit customer & supplier ledgers, verify double-entry math, and fix discrepancies.
+            </p>
+          </button>
+
+          {/* Action 2: Wipe Browser Local Storage */}
+          <button
+            type="button"
+            disabled={updating}
+            onClick={handleClearLocalCache}
+            className="flex flex-col items-start p-4 rounded-2xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-600 transition text-left group disabled:opacity-50"
+          >
+            <div className="flex items-center justify-between w-full mb-2">
+              <span className="p-2 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                <Wrench className="w-4 h-4" />
+              </span>
+              <span className="text-[10px] font-bold text-amber-400">Local Cache</span>
+            </div>
+            <h3 className="text-xs font-black text-white group-hover:text-amber-300 transition">
+              Flush Local Browser DB
+            </h3>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Clear browser IndexedDB cache so all views load 100% fresh data from the server.
+            </p>
+          </button>
+
+          {/* Action 3: Reset Database to ZERO */}
+          <button
+            type="button"
+            disabled={updating}
+            onClick={handleCleanDbToZero}
+            className="flex flex-col items-start p-4 rounded-2xl bg-rose-950/40 hover:bg-rose-900/50 border border-rose-800/60 transition text-left group disabled:opacity-50"
+          >
+            <div className="flex items-center justify-between w-full mb-2">
+              <span className="p-2 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                <Trash2 className="w-4 h-4" />
+              </span>
+              <span className="text-[10px] font-bold text-rose-400">Danger Zone</span>
+            </div>
+            <h3 className="text-xs font-black text-rose-200 group-hover:text-rose-100 transition">
+              Clean DB — Reset to ZERO
+            </h3>
+            <p className="text-[11px] text-rose-300/80 mt-1">
+              Zero out all customers, suppliers, trips, vouchers & sales on server and browser.
+            </p>
+          </button>
+        </div>
       </div>
 
       {/* Section 3: Quick Links to All ERP Modules */}

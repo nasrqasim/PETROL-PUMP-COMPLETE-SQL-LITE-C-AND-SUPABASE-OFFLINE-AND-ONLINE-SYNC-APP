@@ -159,21 +159,21 @@ export default function AajKiEntryPage() {
       const prodData = prodRes.ok ? await prodRes.json().catch(() => []) : [];
       const locData = locRes && locRes.ok ? await locRes.json().catch(() => []) : [];
 
-      if (Array.isArray(gariData) && gariData.length > 0) {
+      if (Array.isArray(gariData)) {
         setGariyan(gariData);
-        offlineDb.bulkPut("gariyan", gariData);
+        offlineDb.replaceAll("gariyan", gariData);
       }
-      if (Array.isArray(rozData) && rozData.length > 0) {
+      if (Array.isArray(rozData)) {
         setEntries(rozData);
-        offlineDb.bulkPut("roznamcha", rozData);
+        offlineDb.replaceAll("roznamcha", rozData);
       }
-      if (Array.isArray(prodData) && prodData.length > 0) {
+      if (Array.isArray(prodData)) {
         setProducts(prodData);
-        offlineDb.bulkPut("products", prodData);
+        offlineDb.replaceAll("products", prodData);
       }
-      if (Array.isArray(locData) && locData.length > 0) {
+      if (Array.isArray(locData)) {
         setLocationsList(locData);
-        offlineDb.bulkPut("locations", locData);
+        offlineDb.replaceAll("locations", locData);
       }
     } catch (err: any) {
       console.warn("Offline: Serving Daily Roznamcha from local IndexedDB");

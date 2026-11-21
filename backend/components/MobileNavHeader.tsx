@@ -35,8 +35,51 @@ import { openPWAInstallGuide } from "@/components/PWAInstallPrompt";
 
 export function MobileNavHeader({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [companyName, setCompanyName] = useState<string>("Muslim Construction");
+  const [tagline, setTagline] = useState<string>("Construction & Transport Management System");
   const pathname = usePathname();
   const router = useRouter();
+
+  // Dynamic Company Branding Loader
+  useEffect(() => {
+    // 1. Instant local load
+    if (typeof window !== "undefined") {
+      try {
+        const cached = localStorage.getItem("mc_company_settings");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (parsed && parsed.companyName) {
+            setCompanyName(parsed.companyName);
+            if (parsed.tagline) setTagline(parsed.tagline);
+          }
+        }
+      } catch {}
+    }
+
+    // 2. Fetch latest from API
+    fetch("/api/settings/company")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && data.companyName) {
+          setCompanyName(data.companyName);
+          if (data.tagline) setTagline(data.tagline);
+          if (typeof window !== "undefined") {
+            localStorage.setItem("mc_company_settings", JSON.stringify(data));
+          }
+        }
+      })
+      .catch(() => {});
+
+    // 3. Listen to live updates from company profile page
+    const handleBrandingUpdate = (e: any) => {
+      if (e.detail && e.detail.companyName) {
+        setCompanyName(e.detail.companyName);
+        if (e.detail.tagline) setTagline(e.detail.tagline);
+      }
+    };
+    window.addEventListener("company_settings_updated", handleBrandingUpdate);
+    return () => window.removeEventListener("company_settings_updated", handleBrandingUpdate);
+  }, []);
 
   const handleInstallApp = async () => {
     const res = await triggerPWAInstall();
@@ -100,11 +143,11 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
               </div>
               <div className="min-w-0 truncate">
                 <h1 className="text-xs sm:text-base md:text-lg font-bold tracking-tight leading-tight truncate">
-                  <span className="sm:hidden">Muslim ERP</span>
-                  <span className="hidden sm:inline">Muslim Construction</span>
+                  <span className="sm:hidden">{companyName}</span>
+                  <span className="hidden sm:inline">{companyName}</span>
                 </h1>
                 <p className="hidden md:block text-[11px] text-amber-400 font-medium truncate">
-                  Construction & Transport Management System
+                  {tagline}
                 </p>
               </div>
             </Link>
@@ -291,7 +334,7 @@ export function MobileNavHeader({ children }: { children: React.ReactNode }) {
       <footer className="bg-white border-t border-slate-200 text-xs text-slate-600 py-4 px-4 text-center mt-auto">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <p className="font-semibold text-slate-800">
-            Muslim Construction & Transport Daily Ledger Management System
+            {companyName} & Transport Daily Ledger Management System
           </p>
           <p className="font-bold text-amber-600">
             Software by Roonjha Developers : 03152914836

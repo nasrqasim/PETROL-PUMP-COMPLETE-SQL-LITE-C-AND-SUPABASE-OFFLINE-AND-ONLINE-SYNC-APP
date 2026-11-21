@@ -76,8 +76,8 @@ export function useSyncEngine(): SyncStatus {
           if (res.ok) {
             const data = await res.json();
             const list = p.extract(data);
-            if (Array.isArray(list) && list.length > 0) {
-              await offlineDb.bulkPut(p.store, list);
+            if (Array.isArray(list)) {
+              await offlineDb.replaceAll(p.store, list);
             }
           }
         } catch {

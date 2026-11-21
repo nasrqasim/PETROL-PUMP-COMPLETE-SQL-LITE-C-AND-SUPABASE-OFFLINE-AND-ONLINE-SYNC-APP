@@ -3,6 +3,7 @@
 
 import fs from "fs";
 import path from "path";
+import os from "os";
 
 export interface CustomerData {
   Id: number;
@@ -391,15 +392,31 @@ if (!global.__memoryStore) {
 }
 
 const DATA_FILE_PATH = path.join(process.cwd(), "data", "erp-store.json");
+const TMP_FILE_PATH = path.join(os.tmpdir(), "mc-erp-store.json");
 
 export function persistStore(): boolean {
   try {
     if (!global.__memoryStore) return false;
-    const dir = path.dirname(DATA_FILE_PATH);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+    const jsonStr = JSON.stringify(global.__memoryStore, null, 2);
+
+    // 1. Always write to OS tmpdir (reliable in AWS Lambda / Vercel serverless without EROFS errors)
+    try {
+      fs.writeFileSync(TMP_FILE_PATH, jsonStr, "utf8");
+    } catch (e) {
+      // Ignore tmp write fail
     }
-    fs.writeFileSync(DATA_FILE_PATH, JSON.stringify(global.__memoryStore, null, 2), "utf8");
+
+    // 2. Also attempt writing to project data directory if writable
+    try {
+      const dir = path.dirname(DATA_FILE_PATH);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(DATA_FILE_PATH, jsonStr, "utf8");
+    } catch (e) {
+      // EROFS on serverless is expected and safely backed up by TMP_FILE_PATH
+    }
+
     return true;
   } catch (err) {
     return false;
@@ -408,45 +425,90 @@ export function persistStore(): boolean {
 
 export function loadStoreFromDisk(): boolean {
   try {
-    if (fs.existsSync(DATA_FILE_PATH)) {
-      const content = fs.readFileSync(DATA_FILE_PATH, "utf8");
-      if (content && content.trim()) {
-        const parsed = JSON.parse(content);
-        if (parsed && typeof parsed === "object" && Array.isArray(parsed.customers)) {
-          // Deep merge: disk data wins for all arrays and settings
-          // But ensure required keys exist (backward compat with old DB schemas)
-          if (!parsed.customerLedgers) parsed.customerLedgers = [];
-          if (!parsed.supplierLedgers) parsed.supplierLedgers = [];
-          if (!parsed.vouchers) parsed.vouchers = [];
-          if (!parsed.gariyan) parsed.gariyan = [];
-          if (!parsed.roznamcha) parsed.roznamcha = [];
-          if (!parsed.vehicleStatuses) parsed.vehicleStatuses = [];
-          if (!parsed.vehicleStatusHistory) parsed.vehicleStatusHistory = [];
-          if (!parsed.auditLogs) parsed.auditLogs = [];
-          if (!parsed.locations) parsed.locations = [];
-          if (!parsed.companySettings) {
-            parsed.companySettings = global.__memoryStore?.companySettings ?? {
-              companyName: "Muslim Construction",
-              tagline: "Construction & Transport Management System",
-              address: "Site Area Hub, Lasbela & Transport Chowk, Pakistan",
-              phone: "+92 315 2914836",
-              email: "info@muslimconstruction.com",
-              description: "Heavy Earthmoving, Aggregate Supply & Transport Logistics",
-              logoUrl: "/icons/icon-192x192.png",
-              permanentCredit: "Software By Roonjha Developers : 03152914836",
-              developerAttribution: "Software By Roonjha Developers : 03152914836",
-              updatedAt: new Date().toISOString(),
-            };
-          }
-          global.__memoryStore = parsed;
-          return true;
+    let content = "";
+    // 1. Check TMP_FILE_PATH first for serverless warm environments
+    if (fs.existsSync(TMP_FILE_PATH)) {
+      try {
+        content = fs.readFileSync(TMP_FILE_PATH, "utf8");
+      } catch {}
+    }
+
+    // 2. Fallback to DATA_FILE_PATH
+    if (!content && fs.existsSync(DATA_FILE_PATH)) {
+      try {
+        content = fs.readFileSync(DATA_FILE_PATH, "utf8");
+      } catch {}
+    }
+
+    if (content && content.trim()) {
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed === "object" && Array.isArray(parsed.customers)) {
+        // Deep merge: disk data wins for all arrays and settings
+        if (!parsed.customerLedgers) parsed.customerLedgers = [];
+        if (!parsed.supplierLedgers) parsed.supplierLedgers = [];
+        if (!parsed.vouchers) parsed.vouchers = [];
+        if (!parsed.gariyan) parsed.gariyan = [];
+        if (!parsed.roznamcha) parsed.roznamcha = [];
+        if (!parsed.vehicleStatuses) parsed.vehicleStatuses = [];
+        if (!parsed.vehicleStatusHistory) parsed.vehicleStatusHistory = [];
+        if (!parsed.auditLogs) parsed.auditLogs = [];
+        if (!parsed.locations) parsed.locations = [];
+        if (!parsed.companySettings) {
+          parsed.companySettings = global.__memoryStore?.companySettings ?? {
+            companyName: "Muslim Construction",
+            tagline: "Construction & Transport Management System",
+            address: "Site Area Hub, Lasbela & Transport Chowk, Pakistan",
+            phone: "+92 315 2914836",
+            email: "info@muslimconstruction.com",
+            description: "Heavy Earthmoving, Aggregate Supply & Transport Logistics",
+            logoUrl: "/icons/icon-192x192.png",
+            permanentCredit: "Software By Roonjha Developers : 03152914836",
+            developerAttribution: "Software By Roonjha Developers : 03152914836",
+            updatedAt: new Date().toISOString(),
+          };
         }
+        global.__memoryStore = parsed;
+        return true;
       }
     }
   } catch (err) {
     // Ignore and proceed with default
   }
   return false;
+}
+
+export function resetEntireDatabaseToZero(): void {
+  if (!global.__memoryStore) return;
+  global.__memoryStore.customers = [];
+  global.__memoryStore.suppliers = [];
+  global.__memoryStore.products = [];
+  global.__memoryStore.sales = [];
+  global.__memoryStore.purchases = [];
+  global.__memoryStore.expenses = [];
+  global.__memoryStore.staff = [];
+  global.__memoryStore.bankAccounts = [];
+  global.__memoryStore.cashTransactions = [];
+  global.__memoryStore.bankTransactions = [];
+  global.__memoryStore.customerLedgers = [];
+  global.__memoryStore.supplierLedgers = [];
+  global.__memoryStore.vouchers = [];
+  global.__memoryStore.gariyan = [];
+  global.__memoryStore.roznamcha = [];
+  global.__memoryStore.vehicleStatuses = [];
+  global.__memoryStore.vehicleStatusHistory = [];
+  
+  if (!global.__memoryStore.auditLogs) global.__memoryStore.auditLogs = [];
+  global.__memoryStore.auditLogs.unshift({
+    id: Date.now(),
+    userId: "admin",
+    username: "Super Admin",
+    action: "DB_RESET_ZERO",
+    module: "System",
+    details: "Master database reset to zero: all transactions, ledgers, vouchers, and accounts cleaned.",
+    timestamp: new Date().toISOString(),
+  });
+
+  persistStore();
 }
 
 // On first load, check if persisted disk data exists

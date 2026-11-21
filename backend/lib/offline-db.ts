@@ -140,6 +140,60 @@ export const offlineDb = {
     }
   },
 
+  async replaceAll<T extends Record<string, any>>(storeName: StoreName, items: T[]): Promise<void> {
+    try {
+      const db = await getDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        store.clear();
+        if (Array.isArray(items)) {
+          for (const item of items) {
+            store.put(item);
+          }
+        }
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+    } catch (err) {
+      console.warn(`[offlineDb] Replace all failed for ${storeName}:`, err);
+    }
+  },
+
+  async clear(storeName: StoreName): Promise<void> {
+    try {
+      const db = await getDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, "readwrite");
+        const store = tx.objectStore(storeName);
+        const req = store.clear();
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    } catch (err) {
+      console.error(`[offlineDb] Failed to clear ${storeName}:`, err);
+    }
+  },
+
+  async clearAll(): Promise<void> {
+    try {
+      const db = await getDb();
+      for (const store of STORES) {
+        if (db.objectStoreNames.contains(store)) {
+          await new Promise<void>((resolve, reject) => {
+            const tx = db.transaction(store, "readwrite");
+            const s = tx.objectStore(store);
+            const req = s.clear();
+            req.onsuccess = () => resolve();
+            req.onerror = () => reject(req.error);
+          });
+        }
+      }
+    } catch (err) {
+      console.error("[offlineDb] Failed to clear all stores:", err);
+    }
+  },
+
   async delete(storeName: StoreName, id: number | string): Promise<void> {
     try {
       const db = await getDb();
